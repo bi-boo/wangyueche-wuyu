@@ -1,0 +1,713 @@
+  /* ========= V8: 常驻调度台 ========= */
+  .inspector-col {
+    min-height: 0;
+  }
+  .inspector-tab-shell {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .inspector-tabs {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    background: rgba(240,226,188,0.78);
+    border: 2px solid var(--line-ui);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12);
+  }
+  .inspector-tabs button {
+    height: 30px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .inspector-tabs button.active {
+    background: var(--gold);
+    color: var(--ink);
+    border-color: var(--ink);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
+  }
+  .inspector-panel {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    background:
+      linear-gradient(180deg, rgba(255,217,61,0.10), transparent 120px),
+      var(--card);
+  }
+  .inspector-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 2px;
+  }
+  .log-inspector-scroll {
+    padding-right: 2px;
+  }
+  .inspector-log-list {
+    display: grid;
+    gap: 6px;
+  }
+  .log-latest-anchor {
+    justify-self: end;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    border: 1px solid var(--ink);
+    background: var(--gold);
+    color: var(--ink);
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
+  }
+  .log-empty-card {
+    margin-top: 4px;
+  }
+  .inspector-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: var(--sub);
+    border: 2px solid var(--border-soft);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.10);
+  }
+  .inspector-hero-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .dispatch-state-badge {
+    width: 92px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #FFF7E6;
+    color: var(--ink);
+    border: 2px solid var(--border-soft);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .dispatch-state-badge.running {
+    background: var(--gold);
+    border-color: var(--border);
+  }
+  .inspector-title {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+  .inspector-sub {
+    font-size: 14px;
+    color: var(--ink-3);
+    margin-top: 2px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .inspector-section {
+    margin-top: 14px;
+  }
+  .inspector-section:first-child {
+    margin-top: 0;
+  }
+  /* V14: 解雇 / 卖车 危险操作区 */
+  /* V14.92: 改用 details/summary 折叠,默认收起 */
+  details.inspector-danger-actions {
+    padding-top: 0;
+    border-top: 1px dashed var(--ink-1);
+  }
+  details.inspector-danger-actions[open] {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
+  }
+  details.inspector-danger-actions summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 10px 0 8px;
+    user-select: none;
+  }
+  details.inspector-danger-actions summary::-webkit-details-marker {
+    display: none;
+  }
+  details.inspector-danger-actions summary::after {
+    content: '▾';
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--warn);
+    display: inline-block;
+    transition: transform 0.15s ease;
+  }
+  details.inspector-danger-actions[open] summary::after {
+    transform: rotate(180deg);
+  }
+  .inspector-danger-actions .inspector-section-title {
+    color: var(--warn);
+  }
+  .btn.btn-danger {
+    color: var(--warn) !important;
+    border-color: var(--warn) !important;
+  }
+  .btn.btn-danger:hover {
+    background: var(--warn) !important;
+    color: #FFF8E7 !important;
+  }
+  /* V14.3: 车辆迷你卡组 — 替代 native select,符合游戏整体卡片风格 */
+  .vehicle-swap-grid {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--ink-1);
+  }
+  .vehicle-swap-hint {
+    font-size: 11px; color: var(--ink-3); font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .vehicle-swap-cards {
+    display: grid; gap: 6px;
+    /* V14.64: 给换车卡 hover 的 2px 硬阴影预留缓冲,避免被右侧滚动区裁掉 */
+    padding: 2px 4px 4px 3px;
+    /* gridTemplateColumns 由 JS 按车辆数动态注入 */
+  }
+  .vehicle-swap-card {
+    min-width: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 6px;
+    background: #FFF8E7;
+    border: 2px solid var(--ink-1);
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: transform 0.06s, background 0.12s;
+  }
+  .vehicle-swap-card:hover:not(:disabled) {
+    background: #FFF8E0;
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .vehicle-swap-card:active:not(:disabled) {
+    transform: translate(1px, 1px);
+    box-shadow: none;
+  }
+  .vehicle-swap-card.current {
+    background: var(--accent);
+    border-color: var(--ink);
+    cursor: default;
+  }
+  .vehicle-swap-card.current .vsc-name,
+  .vehicle-swap-card.current .vsc-status {
+    color: #FFF8E7;
+  }
+  .vehicle-swap-card.empty {
+    background: #F5F0E8;
+    border-style: dashed;
+  }
+  .vehicle-swap-card.occupied {
+    background: #FFF8E0;
+  }
+  .vehicle-manage-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--gold) 18%, var(--sub) 82%);
+    border: 2px solid var(--line-ui);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.16);
+  }
+  .vehicle-manage-title {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.2;
+  }
+  .vehicle-manage-sub {
+    margin-top: 2px;
+    color: var(--ink-3);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .crew-inspector .inspector-primary-actions {
+    margin-top: 10px;
+  }
+  .crew-inspector .inspector-section-title {
+    justify-content: flex-start;
+    color: var(--ink-2);
+  }
+  .crew-inspector .inspector-section-title::before {
+    content: "";
+    width: 4px;
+    height: 14px;
+    background: var(--accent);
+    border: 1px solid var(--ink);
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.16);
+    flex-shrink: 0;
+  }
+  .crew-inspector .inspector-danger-actions .inspector-section-title::before {
+    background: var(--warn);
+  }
+  .crew-inspector .inspector-danger-actions .inspector-section-title {
+    color: var(--warn);
+  }
+  .vehicle-swap-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .vsc-name {
+    font-size: 11px; font-weight: 700; color: var(--ink);
+  }
+  .vsc-status {
+    font-size: 11px; color: var(--ink-3);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 100%;
+  }
+  /* V14.2: 空车虚拟卡片(列表底部) */
+  .empty-vehicle-card {
+    background: #F5F0E8 !important;
+    border-style: dashed !important;
+    opacity: 0.85;
+  }
+  .empty-vehicle-card:hover { opacity: 1; }
+  .empty-vehicle-card.selected { opacity: 1; border-style: solid !important; }
+  .crew-empty-avatar {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ink-3); color: #FFF8E7;
+    border: 2px solid var(--ink-1);
+    font-size: 11px; font-weight: 700;
+  }
+  .crew-vehicle-card.empty {
+    border-style: dashed !important;
+    background: #F5F0E8;
+  }
+  .inspector-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ink-3);
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .inspector-card {
+    background: var(--sub);
+    border: 2px solid var(--border-soft);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.08);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }  .link-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .link-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    background: var(--sub);
+    border: 2px solid var(--border-soft);
+    padding: 8px;
+  }
+  .link-row.current {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .link-row.disabled {
+    opacity: 0.56;
+  }
+  .link-row-info {
+    min-width: 0;
+  }
+  .link-row .btn {
+    white-space: nowrap;
+  }
+  .link-row-name {
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .link-row-sub {
+    font-size: 14px;
+    color: var(--ink-3);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .inspector-empty {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+  }  .order-inspector {
+    background:
+      linear-gradient(180deg, rgba(255,140,66,0.13), transparent 130px),
+      var(--card);
+  }  .zone-summary {
+    padding: 2px 0 10px;
+    border-bottom: 1px solid rgba(42,35,32,0.14);
+  }
+  .zone-summary .inspector-title {
+    margin-bottom: 4px;
+  }
+  .zone-summary .inspector-sub {
+    line-height: 1.45;
+  }
+  .order-req-line {
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .zone-state-card {
+    background: rgba(255,248,231,0.72);
+    border-style: dashed;
+  }
+  .zone-offer-list {
+    display: grid;
+    gap: 6px;
+  }
+  .zone-offer-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    background: var(--sub);
+    border: 2px solid var(--border-soft);
+    padding: 7px 9px;
+  }
+  .zone-offer-title {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .zone-offer-sub {
+    margin-top: 2px;
+    color: var(--ink-3);
+    font-size: 14px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .zone-offer-price {
+    color: var(--accent-deep);
+    font-size: 14px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .zone-offer-weight {
+    display: inline-flex;
+    align-items: center;
+    min-width: 42px;
+    justify-content: center;
+    padding: 3px 5px;
+    background: rgba(255,255,255,0.58);
+    border: 1px solid rgba(42,35,32,0.16);
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* V10.16: 车组详情稳定布局,面板内部滚动,避免强行压缩后重叠 */
+  .driver-inspector .inspector-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* V14.64: 右栏按钮 hover 会长出 2-3px 硬阴影,这里统一预留裁切缓冲 */
+    padding: 1px 6px 6px 2px;
+  }
+  .driver-inspector-grid {
+    display: block;
+  }
+  .driver-inspector .inspector-hero {
+    margin-bottom: 0;
+    padding: 8px 10px;
+  }
+  .driver-inspector .inspector-section {
+    margin-top: 10px;
+    min-height: 0;
+  }
+  .driver-inspector .inspector-section-title {
+    margin-bottom: 5px;
+    line-height: 1.1;
+  }
+  .driver-inspector .stat-bars {
+    margin-bottom: 0;
+    gap: 2px;
+  }
+  .driver-inspector .stat-bar-row {
+    gap: 5px;
+  }
+  .driver-inspector .stat-bar-label {
+    width: 36px;
+  }
+  .driver-inspector .stat-bar-track {
+    height: 5px;
+  }
+  .driver-inspector .drawer-current-order {
+    padding: 8px 10px;
+  }  .crew-inspector .crew-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+  }
+  .crew-overview-stack {
+    gap: 8px;
+  }
+  .crew-overview-side {
+    display: grid;
+    justify-items: end;
+    min-width: 70px;
+  }  .loyalty-card.warn,
+  .loyalty-card.danger {
+    border-color: var(--warn);
+    background: #fff4ec;
+  }
+  .loyalty-card.good {
+    border-color: var(--green);
+  }  .loyalty-card.warn .loyalty-card-head em,
+  .loyalty-card.danger .loyalty-card-head em {
+    color: var(--warn);
+  }
+  .loyalty-card.good .loyalty-card-head em {
+    color: var(--green);
+  }  .loyalty-card.warn .loyalty-fill,
+  .loyalty-card.danger .loyalty-fill {
+    background: var(--warn);
+  }  .driver-attr-list {
+    display: grid;
+    gap: 6px;
+  }
+  .driver-attr-row {
+    --attr-color: var(--accent);
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto 34px;
+    grid-template-areas:
+      "label value meta action"
+      "meter meter meter action"
+      "hint hint hint hint";
+    align-items: center;
+    column-gap: 7px;
+    row-gap: 5px;
+    min-height: 72px;
+    padding: 7px 8px;
+    background: color-mix(in srgb, var(--sub) 72%, #FFF8E7 28%);
+    border: 1px solid var(--border-soft);
+  }
+  .driver-attr-label {
+    grid-area: label;
+    color: var(--attr-color);
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+    font-weight: 900;
+  }
+  .driver-attr-value {
+    grid-area: value;
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+    font-weight: 900;
+  }
+  .driver-attr-meta {
+    grid-area: meta;
+    justify-self: end;
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+    font-weight: 900;
+  }
+  .driver-attr-meta.poor,
+  .driver-attr-row.warn .driver-attr-meta,
+  .driver-attr-row.danger .driver-attr-meta {
+    color: var(--warn);
+  }
+  .driver-attr-row.good .driver-attr-meta {
+    color: var(--green);
+  }
+  .driver-attr-meter {
+    grid-area: meter;
+    height: 10px;
+    min-width: 0;
+    background: rgba(42,35,32,0.06);
+    border: 1px solid rgba(42,35,32,0.22);
+    position: relative;
+    overflow: hidden;
+  }
+  .driver-attr-fill {
+    height: 100%;
+    width: 100%;
+    transform-origin: left center;
+    background: var(--attr-color);
+    transition: transform 0.18s ease;
+  }
+  .driver-attr-row.warn .driver-attr-fill,
+  .driver-attr-row.danger .driver-attr-fill {
+    background: var(--warn);
+  }
+  .driver-attr-action,
+  .driver-attr-action-placeholder {
+    grid-area: action;
+    width: 30px;
+    height: 30px;
+    align-self: center;
+    justify-self: end;
+  }
+  .driver-attr-action {
+    border: 2px solid var(--ink);
+    background: var(--gold);
+    color: var(--ink);
+    box-shadow: 2px 2px 0 var(--ink);
+    font: inherit;
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 900;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .driver-attr-action:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .driver-attr-action:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 var(--ink);
+  }
+  .driver-attr-action:disabled {
+    cursor: not-allowed;
+    color: var(--ink-3);
+    background: #e8ddbd;
+    box-shadow: none;
+    border-color: var(--border-soft);
+  }
+  .driver-attr-action-placeholder {
+    display: block;
+  }
+  .driver-attr-hint {
+    grid-area: hint;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.32;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .crew-vehicle-card {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .crew-vehicle-line {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .crew-vehicle-line > div {
+    min-width: 0;
+  }
+  .crew-vehicle-line strong,
+  .crew-vehicle-line span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .crew-vehicle-line strong {
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  .crew-vehicle-line span {
+    margin-top: 2px;
+    color: var(--ink-3);
+    font-size: 14px;
+    line-height: 1.25;
+  }
+  .crew-order-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .crew-vehicle-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .crew-vehicle-meta span {
+    overflow: hidden;
+    padding: 5px 6px;
+    background: rgba(255,255,255,0.55);
+    border: 1px solid var(--hairline);
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .crew-vehicle-meta strong {
+    color: var(--ink);
+    font-size: 14px;
+  }  .stat-train-cost.poor {
+    color: var(--warn);
+  }  .driver-inspector .inspector-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .driver-inspector .inspector-metric {
+    padding: 6px 7px;
+  }
+  .driver-inspector .inspector-metric-label {
+    line-height: 1.1;
+  }
+  .driver-inspector .inspector-metric-value {
+    font-size: 14px;
+    line-height: 1.25;
+    margin-top: 2px;
+    min-height: 18px;
+  }  .event-mini-text.event { color: var(--accent-deep); font-weight: 600; }
+  .event-mini-text.success { color: var(--green); }
+  .event-mini-text.warn { color: var(--warn); }  /* 日志抽屉 */
+  .log-drawer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+

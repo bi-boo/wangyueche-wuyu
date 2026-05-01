@@ -1,0 +1,173 @@
+  /* ========= V10: 统一游戏反馈层 ========= */
+  .game-feedback-stack {
+    position: fixed;
+    top: 84px;
+    right: 20px;
+    z-index: 112;
+    width: min(380px, calc(100vw - 40px));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+  .game-feedback-stack .game-feedback-card {
+    pointer-events: auto;
+  }
+  .game-feedback-overlay {
+    background: rgba(40,25,15,0.34);
+  }
+  .game-feedback-card {
+    width: 100%;
+    background: #FFF8E7;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-left-width: 6px;
+    border-radius: 3px;
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.22);
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    animation: feedbackIn 0.22s ease-out;
+  }
+  .game-feedback-card.modal-card {
+    width: min(560px, calc(100vw - 40px));
+    grid-template-columns: 76px minmax(0, 1fr);
+    padding: 18px;
+    box-shadow: 6px 6px 0 rgba(42,35,32,0.24);
+  }
+  .game-feedback-card.tone-accent {
+    border-left-color: var(--accent);
+  }
+  .game-feedback-card.tone-gold {
+    border-left-color: var(--gold);
+    background: #FFFBEB;
+  }
+  .game-feedback-media {
+    min-width: 0;
+  }
+  .game-feedback-icon {
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--ink);
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.16);
+  }
+  .tone-gold .game-feedback-icon {
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .game-feedback-main {
+    min-width: 0;
+  }
+  .game-feedback-tag {
+    color: var(--accent-deep);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.15;
+  }
+  .tone-gold .game-feedback-tag {
+    color: #9A6B00;
+  }
+  .game-feedback-title {
+    margin-top: 3px;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.22;
+    overflow-wrap: anywhere;
+  }
+  .game-feedback-message {
+    margin-top: 5px;
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .game-feedback-reward {
+    margin-top: 8px;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1.15;
+  }
+  .tone-gold .game-feedback-reward {
+    color: #9A6B00;
+  }
+  .game-feedback-action {
+    margin-top: 12px;
+    padding: 9px 10px;
+  }
+  .mission-feedback {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .mission-feedback .game-feedback-media {
+    display: none;
+  }
+  .mission-feedback .game-feedback-main {
+    display: grid;
+    gap: 8px;
+  }
+  .mission-feedback .game-feedback-tag {
+    width: fit-content;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    color: var(--accent-deep);
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .mission-feedback .game-feedback-title {
+    margin-top: 0;
+    font-size: 24px;
+  }
+  .mission-feedback .game-feedback-message {
+    margin-top: 0;
+  }
+  .mission-feedback .game-feedback-reward {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    margin-top: 0;
+    padding: 8px 10px;
+    background: rgba(255,248,231,0.76);
+    border: 1px solid var(--line-ui);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1;
+  }
+  .game-feedback-reward-label {
+    color: var(--ink-3);
+    font-weight: 900;
+  }
+  .game-feedback-reward-value {
+    justify-self: end;
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 900;
+  }
+  .mission-feedback .game-feedback-action {
+    margin-top: 2px;
+  }
+  @keyframes feedbackIn {
+    from { transform: translateY(-8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }  /* 区块面板:更紧凑 */
+  .panel-tight {
+    padding: 12px;
+    flex: 1; /* V3 一屏化:左栏 panel 各占一半 */
+    min-height: 0;
+  }
+  .panel-tight .panel-header { margin-bottom: 8px; }
+

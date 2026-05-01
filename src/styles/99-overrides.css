@@ -1,0 +1,1037 @@
+  /* ========= V10.3: 像素硬边回调 + 线条分层 ========= */
+  :root {
+    --border-soft: rgba(42,35,32,0.18);
+    --hairline: rgba(42,35,32,0.09);
+    --line-strong: rgba(42,35,32,0.92);
+    --line-ui: rgba(42,35,32,0.34);
+    --line-soft: rgba(42,35,32,0.15);
+    --line-faint: rgba(42,35,32,0.06);
+    --shadow-sm: 2px 2px 0 rgba(42,35,32,0.16);
+    --shadow-md: 2px 2px 0 rgba(42,35,32,0.18), 0 8px 20px rgba(42,35,32,0.10);
+  }
+
+  body {
+    background-image: radial-gradient(rgba(42,35,32,0.035) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  /* V14.61: 复古滤镜亮度修正 — 保留线条和纹理,避免整体压暗 */
+  body.crt-on::before,
+  body.crt-on::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+  body.crt-on::before {
+    z-index: 9998;
+    background:
+      radial-gradient(ellipse at center, transparent 58%, rgba(42, 35, 32, 0.055) 100%),
+      radial-gradient(rgba(42, 35, 32, 0.055) 0.8px, transparent 1px);
+    background-size: auto, 4px 4px;
+    mix-blend-mode: normal;
+    opacity: 0.42;
+  }
+  body.crt-on::after {
+    z-index: 9999;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(42, 35, 32, 0.052) 0,
+        rgba(42, 35, 32, 0.052) 1px,
+        transparent 1px,
+        transparent 4px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(42, 35, 32, 0.032) 0,
+        rgba(42, 35, 32, 0.032) 1px,
+        transparent 1px,
+        transparent 6px
+      );
+    mix-blend-mode: normal;
+    opacity: 0.65;
+  }
+
+  .topbar {
+    border-bottom: 3px solid var(--line-strong);
+  }
+
+  .bottom-hud {
+    border-top: 3px solid var(--line-strong);
+    box-shadow: 0 -2px 0 rgba(42,35,32,0.10);
+  }
+
+  .panel,
+  .compact-kpi,
+  .event-mini,
+  .inspector-panel {
+    border: 2px solid var(--line-ui) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12) !important;
+  }
+
+  .panel-header {
+    border-bottom: 0 !important;
+  }
+
+  .city-wrap {
+    border-top: 2px solid var(--line-ui) !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    background:
+      linear-gradient(135deg, rgba(255,248,231,0.92), rgba(240,226,188,0.88)),
+      var(--bg) !important;
+  }
+
+  .city-map-svg .district polygon,
+  .city-map-svg .district circle {
+    stroke: rgba(42,35,32,0.60);
+    stroke-width: 0.58;
+  }
+
+  .city-map-svg .district.unlocked polygon {
+    filter: drop-shadow(0.8px 0.8px 0 rgba(42,35,32,0.15));
+  }
+
+  /* V14.7: 战争迷雾 — locked 默认无 stroke,纯靠 SVG filter blur 羽化边缘;
+     hover/selected 时仍会被下方规则覆盖加上选中描边 */
+  .city-map-svg .district.locked polygon {
+    stroke: none;
+  }
+
+  .city-map-svg .district circle {
+    stroke: rgba(255,248,231,0.78);
+    stroke-width: 0.8;
+  }
+
+  /* V14.7: 通用 hover/selected 描边只对 unlocked 区生效,避免破坏 locked 的战争迷雾 */
+  .city-map-svg .district:not(.locked):hover polygon,
+  .city-map-svg .district:not(.locked):focus-visible polygon,
+  .city-map-svg .district:not(.locked).selected polygon {
+    stroke: var(--line-strong);
+    stroke-width: 0.9;
+    filter: drop-shadow(1.2px 1.2px 0 rgba(42,35,32,0.28));
+  }
+
+  .city-map-svg .district:hover circle,
+  .city-map-svg .district:focus-visible circle,
+  .city-map-svg .district.selected circle {
+    stroke: var(--line-strong);
+    stroke-width: 1.05;
+  }
+
+  .city-map-svg .district.selected text:first-of-type {
+    fill: var(--accent-deep);
+  }
+
+  /* V14.7.1: locked hover/selected 反馈 — 加深暖深棕 fill + 略提高雾的厚度,
+     保持雾感不被硬边破坏 */
+  .city-map-svg .district.locked:hover polygon,
+  .city-map-svg .district.locked:focus-visible polygon,
+  .city-map-svg .district.locked.selected polygon {
+    fill: #1A1410;
+    opacity: 0.62;
+  }
+
+  .city-car rect {
+    stroke: rgba(42,35,32,0.72);
+  }
+
+  .fleet-summary-grid > div,
+  .topbar-stat,
+  .fleet-action-row,
+  .fleet-empty,
+  .fleet-focus-card,
+  .crew-card,
+  .crew-vehicle-card,
+  .hud-stat,
+  .inspector-hero,
+  .inspector-card,
+  .inspector-metric,
+  .drawer-current-order,
+  .driver-train-card,
+  .zone-offer-row,
+  .order-ticket-chip,
+  .order-ticket-meta span,
+  .event-effect-preview span {
+    border-width: 1px !important;
+    border-color: var(--line-soft) !important;
+    box-shadow: none !important;
+  }
+
+  .inspector-hero,
+  .fleet-focus-card,
+  .driver-vehicle-control {
+    border-width: 2px !important;
+    border-color: var(--line-ui) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12) !important;
+  }
+
+  .fleet-summary-grid > div,
+  .hud-stat,
+  .inspector-metric {
+    background: rgba(240,226,188,0.70);
+  }
+
+  /* V14.9: .fleet-tabs 系列已全部删除 */
+  .speed-btn.active,
+  .mobile-tabs button.active {
+    border-color: var(--line-strong) !important;
+  }
+
+  .compact-card {
+    border-width: 1px !important;
+    border-color: var(--line-soft) !important;
+    box-shadow: none !important;
+  }
+
+  .compact-card.selected,
+  .compact-card.linked,
+  .compact-card:hover {
+    border-color: var(--line-strong) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.20) !important;
+  }
+  .order-ticket.selected,
+  .order-ticket:hover {
+    border-width: 2px !important;
+  }  .mission-bar,
+  .hud-tag,
+  .mb-tag,
+  .ph-clock,
+  .btn-ghost,
+  .hud-log-btn,
+  .hud-log-btn::after,
+  .toggle-btn,
+  .order-ticket-action {
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.65);
+  }
+
+  .ph-clock {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ph-clock .clock-time {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .ph-clock .clock-label,
+  .ph-clock .clock-period {
+    display: none;
+  }
+
+  .hud-log-btn:hover,
+  .hud-log-btn:focus-visible,
+  .toggle-btn:hover {
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.65);
+  }
+
+  .topbar-stat,
+  .fleet-panel .mission-bar {
+    border-color: var(--line-soft) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12) !important;
+  }
+
+  .topbar-clock .ph-clock {
+    width: 78px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    row-gap: 1px;
+    justify-items: center;
+    padding: 4px 7px;
+  }
+  .topbar-clock .clock-time,
+  .topbar-clock .clock-period {
+    text-align: center;
+  }
+
+  .driver-inspector .inspector-section,
+  .crew-inspector .inspector-section {
+    margin-top: 8px;
+  }
+
+  .driver-inspector .inspector-hero,
+  .driver-inspector .driver-vehicle-control,
+  .driver-inspector .stat-train-row,
+  .crew-vehicle-card {
+    padding: 6px 8px;
+  }
+
+  .driver-inspector .stat-train-list,
+  .driver-inspector .inspector-grid {
+    gap: 5px;
+  }
+
+  .driver-inspector .inspector-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* V14: 清新地图素材底图 + 数据驱动覆盖层 */
+  .city-wrap {
+    background: #D7E7C2 !important;
+  }
+
+  .city-map-bg {
+    pointer-events: none;
+  }
+
+  .city-map-svg .district polygon,
+  .city-map-svg .district circle {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .city-map-svg .district.unlocked polygon {
+    stroke: rgba(255,255,255,0.86);
+    stroke-width: 0.46;
+    stroke-dasharray: none;
+    filter: none;
+  }
+
+  /* V14.7 战争迷雾覆盖:不再用虚线白边,改为无 stroke + SVG inline filter blur 羽化边缘 */
+  .city-map-svg .district.locked polygon {
+    stroke: none;
+    /* filter 保持 SVG inline attribute 设置(url(#zone-fog)),不要覆盖 */
+  }
+
+  /* V14.7: 通用 hover/selected 只对 unlocked 区生效,避免破坏 locked 战争迷雾 */
+  .city-map-svg .district:not(.locked):hover polygon,
+  .city-map-svg .district:not(.locked):focus-visible polygon,
+  .city-map-svg .district:not(.locked).selected polygon {
+    opacity: 0.24;
+    stroke: #FFFFFF;
+    stroke-width: 0.92;
+    filter: drop-shadow(0.8px 0.8px 0 rgba(42,35,32,0.24));
+  }
+
+  /* V14.7.1: locked hover/selected 反馈 — 暖深棕加深,无 stroke 保持雾感 */
+  .city-map-svg .district.locked:hover polygon,
+  .city-map-svg .district.locked:focus-visible polygon,
+  .city-map-svg .district.locked.selected polygon {
+    fill: #1A1410;
+    opacity: 0.62;
+    stroke: none;
+  }
+
+  .city-map-svg .district circle {
+    stroke: rgba(255,255,255,0.92);
+    stroke-width: 0.86;
+    filter: drop-shadow(0.5px 0.5px 0 rgba(42,35,32,0.28));
+  }
+
+  .city-map-svg .district-name,
+  .city-map-svg .district-lock-text {
+    fill: var(--ink);
+    stroke: rgba(255,248,231,0.95);
+    stroke-width: 0.42;
+    paint-order: stroke;
+  }
+
+  .city-map-svg .district-stat {
+    fill: #FFFFFF;
+    stroke: rgba(42,35,32,0.35);
+    stroke-width: 0.28;
+    paint-order: stroke;
+  }
+
+  .city-car {
+    filter: drop-shadow(0.7px 0.7px 0 rgba(42,35,32,0.34));
+  }
+
+  .city-car rect {
+    stroke: rgba(255,255,255,0.86);
+    stroke-width: 0.72;
+  }  /* V14.2: 左侧任务卡改为当前动作优先 */
+  /* V14.92: 紧凑化 — 减小 padding/gap/margin,让任务卡占据空间与信息密度匹配 */
+  .fleet-panel .mission-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 8px 10px 7px;
+    margin-bottom: 8px;
+    background: color-mix(in srgb, var(--gold) 18%, var(--card) 82%) !important;
+  }
+
+  .fleet-panel .mission-bar.finale {
+    background: color-mix(in srgb, var(--gold) 32%, var(--card) 68%) !important;
+  }
+
+  .mb-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .fleet-panel .mb-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 8px;
+    background: var(--ink);
+    color: var(--gold);
+    border-radius: 2px;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .fleet-panel .mb-content {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .fleet-panel .mb-title {
+    font-size: 18px !important;
+    line-height: 1.15;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .mb-action {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.18;
+    letter-spacing: 0;
+  }
+
+  .fleet-panel .mb-hint {
+    display: block;
+    margin: 0;
+    min-width: 0;
+    color: var(--ink-2) !important;
+    font-size: 14px !important;
+    font-weight: 700;
+    line-height: 1.35 !important;
+    -webkit-line-clamp: 2;
+  }
+
+  .fleet-panel .mb-hint span {
+    flex: 0 0 auto;
+    color: var(--accent-deep);
+    font-weight: 900;
+  }  .mission-stepbar span.done {
+    background: var(--accent);
+  }
+
+  .mb-roadmap-btn {
+    width: auto;
+    min-height: 28px;
+    margin-top: 0;
+    padding: 5px 8px;
+    gap: 7px;
+    background: rgba(255,255,255,0.64);
+    border: 1px solid rgba(42,35,32,0.18);
+    color: var(--accent-deep);
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* V14.26: 顶栏四项经营状态改成连续 HUD,减少胶囊碎片感 */
+  .topbar-kpis {
+    grid-template-columns: minmax(174px, 1.18fr) minmax(150px, 0.95fr) minmax(108px, 0.72fr) minmax(154px, 1fr) !important;
+    gap: 0 !important;
+    max-width: 790px !important;
+    padding: 3px;
+    background: var(--ink);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.18);
+  }
+
+  .topbar-stat {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: center !important;
+    row-gap: 2px !important;
+    min-height: 48px !important;
+    padding: 7px 10px 6px !important;
+    background: linear-gradient(180deg, #FFFBEF 0%, #F0E2BC 100%) !important;
+    border: 0 !important;
+    border-right: 1px solid rgba(42,35,32,0.22) !important;
+    box-shadow: none !important;
+    overflow: hidden;
+  }
+
+  .topbar-stat:last-child {
+    border-right: 0 !important;
+  }
+
+  /* V14.56: 顶部 HUD 去掉指标底部彩色条,减少多色横线噪音 */
+  .topbar-stat::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .topbar-stat .ts-label {
+    grid-column: 1 !important;
+    display: block;
+    min-width: 0;
+    color: var(--ink-3);
+    font-size: 11px !important;
+    font-weight: 900;
+    line-height: 1 !important;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-stat .ts-value {
+    grid-column: 1 !important;
+    display: block;
+    align-self: end;
+    min-width: 0;
+    color: var(--ink);
+    font-size: 18px !important;
+    font-weight: 950;
+    line-height: 1.05 !important;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .topbar-stat.time-stat .ts-value {
+    font-size: 18px !important;
+  }
+
+  /* V14.92: 核心 KPI 升 display 字号 — 资金/口碑视觉主次明确 */
+  .topbar-stat.funds-stat .ts-value {
+    color: var(--accent-deep) !important;
+    font-size: 24px !important;
+  }
+
+  .topbar-stat.rep-stat .ts-value {
+    color: var(--green) !important;
+    font-size: 24px !important;
+  }
+
+  .topbar-stat.has-help {
+    overflow: visible !important;
+    cursor: help;
+    z-index: 30;
+  }
+  .rep-help-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    width: min(430px, calc(100vw - 32px));
+    padding: 12px 14px;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.22);
+    color: var(--ink);
+    transform: translateX(-50%) translateY(-4px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
+    z-index: 260;
+  }
+  .rep-help-popover::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    background: var(--card);
+    border-left: 2px solid var(--ink);
+    border-top: 2px solid var(--ink);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .rep-stat:hover .rep-help-popover,
+  .rep-stat:focus .rep-help-popover,
+  .rep-stat:focus-within .rep-help-popover,
+  .topbar-stat.has-help:hover .rep-help-popover,
+  .topbar-stat.has-help:focus .rep-help-popover,
+  .topbar-stat.has-help:focus-within .rep-help-popover {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+  .rep-help-title {
+    margin-bottom: 8px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 950;
+    line-height: 1;
+  }
+  .rep-help-row {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 8px;
+    padding: 7px 0;
+    border-top: 1px dashed rgba(42,35,32,0.22);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.38;
+  }
+  .rep-help-row strong {
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .rep-help-row span {
+    color: var(--ink-2);
+  }
+  .rep-help-row .rep-help-next {
+    color: var(--accent-deep);
+    font-weight: 900;
+  }
+
+  .topbar-stat.supply-stat .ts-value {
+    font-size: 18px !important;
+  }
+
+  .topbar-stat .ts-sub {
+    grid-column: 1 !important;
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    max-width: 54%;
+    padding: 2px 5px;
+    background: rgba(255,255,255,0.66);
+    border: 1px solid rgba(42,35,32,0.12);
+    color: var(--ink-3);
+    font-size: 11px !important;
+    font-weight: 800;
+    line-height: 1 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-stat.time-stat .ts-sub {
+    max-width: 64px;
+  }
+
+  .topbar-stat.supply-stat .ts-sub {
+    top: auto;
+    right: 8px;
+    bottom: 6px;
+    max-width: calc(100% - 16px);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: var(--ink-3);
+  }
+
+  .topbar-stat .ts-rep-sub {
+    top: 6px !important;
+    right: 8px !important;
+    bottom: auto !important;
+    max-width: 86px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ts-supply-axis {
+    grid-column: 1 !important;
+    width: 100%;
+    min-width: 0 !important;
+    margin-top: 4px !important;
+  }
+
+  .ts-axis-bar {
+    height: 5px !important;
+    border-radius: 0 !important;
+    border-color: rgba(42,35,32,0.26) !important;
+  }
+
+  .ts-axis-pointer {
+    top: -3px !important;
+    width: 9px !important;
+    height: 9px !important;
+    border-width: 1px !important;
+  }
+
+  .ts-axis-labels {
+    display: none !important;
+  }
+
+  @media (max-width: 760px) {
+    .bottom-hud,
+    .mobile-tabs {
+      border-width: 2px;
+      box-shadow: 2px 2px 0 rgba(42,35,32,0.14);
+    }
+    .mobile-tabs button {
+      border-width: 1px;
+    }
+    .topbar {
+      border-bottom-width: 2px;
+    }
+    .topbar-clock .ph-clock {
+      width: 64px;
+      min-width: 64px;
+      height: 30px;
+      padding: 3px 5px;
+    }
+  }
+
+  /* V14.35: 统一基础设计语言 — 硬边框、低圆角、像素经营游戏式下压反馈 */
+  .btn,
+  .speed-btn,
+  .mb-roadmap-btn,
+  .event-mini-btn,
+  .coach-next,
+  .coach-skip,
+  .target-tabs,
+  .target-tab,
+  .modal-option,
+  .ticket-card,
+  .gacha-card,
+  .shop-item,
+  .inspector-tabs,
+  .inspector-tabs button,
+  .inspector-hero,
+  .inspector-card,
+  .inspector-metric,
+  .compact-card,
+  .fleet-action-row,
+  .fleet-summary-grid > div,
+  .roadmap-focus,
+  .roadmap-item,
+  .roadmap-tip,
+  .ending-roadmap-item,
+  .game-feedback-card,
+  .modal,
+  .story-modal,
+  .notification {
+    border-radius: var(--ui-radius) !important;
+  }
+
+  .btn {
+    min-height: 34px;
+    border: 2px solid var(--ink) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.28) !important;
+    font-weight: 800 !important;
+    transition: transform 0.1s, box-shadow 0.1s, background 0.1s, color 0.1s !important;
+  }
+  .btn:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--ink) !important;
+  }
+  .btn:active:not(:disabled) {
+    transform: translate(1px, 1px);
+    box-shadow: 0 0 0 var(--ink) !important;
+  }
+  .btn-primary {
+    background: var(--accent) !important;
+    color: #FFF8E7 !important;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-deep) !important;
+  }
+  .btn-ghost {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+  }
+  /* V14.89: ConfirmModal 危险确认按钮 — 红底白字,覆盖 .btn-primary 的橙色 !important */
+  .btn.ds-confirm-danger {
+    background: var(--warn) !important;
+    color: #FFF8E7 !important;
+    border-color: var(--warn) !important;
+  }
+  .btn.ds-confirm-danger:hover:not(:disabled) {
+    background: #c62828 !important;
+  }
+  .btn-xs {
+    min-height: 28px;
+    padding: 4px 8px;
+  }
+
+  button:focus-visible,
+  .btn:focus-visible,
+  .compact-card:focus-visible,
+  .ticket-card:focus-within,
+  .gacha-card:focus-within,
+  .order-ticket:focus-visible,
+  .vehicle-swap-card:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  .modal-overlay {
+    backdrop-filter: none !important;
+    background: rgba(40,25,15,0.50) !important;
+  }
+  .modal,
+  .story-modal,
+  .game-feedback-card {
+    background: var(--card) !important;
+    border: 3px solid var(--ink) !important;
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.42) !important;
+  }
+  .modal-option,
+  .ticket-card,
+  .gacha-card,
+  .shop-item,
+  .target-tabs,
+  .target-tab.active,
+  .inspector-card,
+  .inspector-hero,
+  .fleet-action-row,
+  .roadmap-focus,
+  .roadmap-item,
+  .ending-roadmap-item {
+    border: 2px solid var(--line-ui) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12) !important;
+  }
+  .modal-option:hover,
+  .ticket-card:hover,
+  .gacha-card:hover,
+  .shop-item:hover,
+  .target-tab:hover,
+  .fleet-action-row:hover,
+  .roadmap-item:hover,
+  .ending-roadmap-item.next:hover {
+    border-color: var(--ink) !important;
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.28) !important;
+  }
+
+  .modal-tag,
+  .story-tag,
+  .game-feedback-tag,
+  .coach-step-num,
+  .fleet-focus-tag,
+  .dispatch-state-badge,
+  .gacha-rarity,
+  .roadmap-focus-tag,
+  .roadmap-item-status,
+  .ending-roadmap-status,
+  .ending-roadmap-tier,
+  .order-ticket-kind,
+  .order-ticket-zone,
+  .cc-badge,
+  .ts-sub,
+  .topbar-stat .ts-rep-sub {
+    border-radius: 0 !important;
+    border: 1px solid var(--ink) !important;
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.18) !important;
+    font-weight: 900 !important;
+  }
+  .modal-tag,
+  .story-tag,
+  .game-feedback-tag,
+  .coach-step-num,
+  .roadmap-focus-tag {
+    background: var(--ink) !important;
+    color: var(--gold) !important;
+  }
+
+  /* V14.68: 普通任务完成反馈收据化,覆盖通用黑底标签规则 */
+  .mission-feedback {
+    border: 2px solid var(--ink) !important;
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.30) !important;
+  }
+  .mission-feedback .game-feedback-tag {
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: var(--accent-deep) !important;
+    padding: 0 !important;
+  }
+  .mission-feedback .game-feedback-reward {
+    border: 1px solid var(--line-ui) !important;
+    box-shadow: none !important;
+  }
+
+  .story-text,
+  .story-rewards,
+  .roadmap-tip {
+    border: 2px solid var(--line-ui) !important;
+    border-left-width: 2px !important;
+    background: var(--sub) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.10) !important;
+  }
+
+  .ticket-card.normal,
+  .ticket-card.vip,
+  .ticket-card.headhunter {
+    border-left-width: 2px !important;
+    background: var(--sub) !important;
+  }
+  .ticket-card.vip {
+    border-color: var(--purple) !important;
+  }
+  .ticket-card.headhunter {
+    border-color: var(--accent) !important;
+  }
+  .gacha-card.rarity-SSR {
+    box-shadow: 0 0 0 2px var(--gold), 3px 3px 0 var(--accent-deep) !important;
+  }
+
+  .topbar-stat,
+  .mission-bar,
+  .fleet-focus-card.driver,
+  .fleet-focus-card.vehicle {
+    background: var(--card) !important;
+  }
+
+  .inspector-tabs {
+    border-color: var(--line-ui) !important;
+    background: var(--sub) !important;
+  }
+  .inspector-tabs button.active {
+    border-color: var(--ink) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.24) !important;
+  }
+
+  /* V14.38: 标签体系极简化 — 颜色只表达主提示和异常风险 */
+  .topbar-settings .toggle-btn {
+    width: auto !important;
+    min-width: 48px !important;
+    height: 34px !important;
+    padding: 0 9px !important;
+    border: 2px solid var(--ink) !important;
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.28) !important;
+    white-space: nowrap;
+  }
+  .topbar-settings .toggle-btn.on {
+    background: var(--gold) !important;
+  }
+
+  .ts-sub,
+  .order-ticket-zone {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--ink-3) !important;
+  }
+
+  .cc-badge,
+  .dispatch-state-badge,
+  .order-ticket-kind,
+  .order-list-chip,
+  .shop-order-chip,
+  .roadmap-item-status,
+  .ending-roadmap-status,
+  .gacha-rarity {
+    min-height: 24px !important;
+    padding: 3px 8px !important;
+    border: 1px solid var(--ink) !important;
+    border-radius: 0 !important;
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.16) !important;
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap;
+  }
+
+  .modal-tag,
+  .story-tag,
+  .game-feedback-tag,
+  .coach-step-num,
+  .mb-tag,
+  .fleet-focus-tag,
+  .roadmap-focus-tag {
+    background: var(--ink) !important;
+    color: var(--gold) !important;
+  }
+
+  .topbar-stat .ts-rep-sub {
+    background: #FFE7E5 !important;
+    color: var(--warn) !important;
+    border-color: var(--warn) !important;
+  }
+
+  .dispatch-state-badge.running,
+  .roadmap-item.locked .roadmap-item-status,
+  .roadmap-item.unlocked .roadmap-item-status,
+  .ending-roadmap-item.locked .ending-roadmap-status,
+  .ending-roadmap-item.final .ending-roadmap-status {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border-color: var(--ink) !important;
+  }
+  .ending-roadmap-item.done,
+  .ending-roadmap-item.next {
+    border-color: var(--ink) !important;
+  }
+  .ending-roadmap-item.done .ending-roadmap-status {
+    background: var(--green, #2E7D6A) !important;
+    color: #FFF8E7 !important;
+    border-color: var(--green, #2E7D6A) !important;
+  }
+  .ending-roadmap-item.next .ending-roadmap-status {
+    background: var(--gold) !important;
+    color: var(--ink) !important;
+    border-color: var(--ink) !important;
+  }
+
+  /* V14.63: 订单目标列表 — 已解锁弱化,未解锁保留强提示 */
+  .roadmap-item.unlocked {
+    background: rgba(240,226,188,0.36) !important;
+    border-color: rgba(42,35,32,0.16) !important;
+    box-shadow: none !important;
+    color: var(--ink-3) !important;
+  }
+  .roadmap-item.unlocked .roadmap-item-name,
+  .roadmap-item.unlocked .roadmap-item-fare,
+  .roadmap-item.unlocked svg {
+    color: var(--ink-3) !important;
+  }
+  .roadmap-item.unlocked .roadmap-item-status {
+    min-height: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: var(--ink-3) !important;
+    font-weight: 800 !important;
+  }
+  .roadmap-item.locked {
+    background: var(--sub) !important;
+    border-color: var(--line-ui) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.14) !important;
+    color: var(--ink) !important;
+  }
+  .roadmap-item.locked .roadmap-item-name {
+    color: var(--ink) !important;
+  }
+  .roadmap-item.locked .roadmap-item-fare {
+    color: var(--accent-deep) !important;
+  }
+  .roadmap-item.locked .roadmap-item-status {
+    background: var(--ink) !important;
+    color: var(--gold) !important;
+    border-color: var(--ink) !important;
+  }
+
+  .gacha-card {
+    background: var(--sub) !important;
+    border-color: var(--line-ui) !important;
+  }
+  .gacha-card.rarity-SSR {
+    border-color: var(--ink) !important;
+    box-shadow: 0 0 0 2px var(--gold), 3px 3px 0 var(--ink) !important;
+  }
+  .gacha-card.rarity-SSR .gacha-rarity {
+    background: var(--ink) !important;
+    color: var(--gold) !important;
+    border-color: var(--ink) !important;
+  }
+
+  .order-list-chip svg,
+  .shop-order-chip svg,
+  .order-ticket-kind svg,
+  .order-ticket-zone svg {
+    color: currentColor !important;
+  }

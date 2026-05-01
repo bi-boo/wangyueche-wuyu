@@ -1,6 +1,10 @@
 # 网约车物语 — 游戏设计文档
 
-最后更新:V15.1(2026-05-02)
+最后更新:V14.93(2026-05-02)
+
+> V14.93 反向拆分 — 单文件 8455 行 → 薄壳 106 行 + src/ 模块化:
+>
+> 把 HTML 内嵌的 5365 行 CSS 和 3178 行 React 组件按章节/职责反向拆到 `src/styles/*.css`(11 文件)和 `src/app/*.jsx`(9 文件)。HTML 改为 106 行薄壳,只放 `<link>` 和 `<script>` 引用。**前提变化**:必须用 http:// 协议访问,不能再双击 file:// 直接打开(Babel fetch 跨域限制);本地用 `python3 -m http.server 8765` 跑测试。Babel 多 script 作用域 PoC 验证共享全局,无需 window.X 显式导出。删除 V9 时代过期的 `src/app.jsx`(2008 行)/`src/app/`/`src/styles/` 全部副本和 `scripts/build-html.mjs`(守护断言已永久阻止重建)。Playwright 视觉回归通过(零 console error,KPI/CTA/进度条/工具按钮 V14.92 改动全部保留)。
 
 > V15.1 月报与事件重合补弹:
 >
