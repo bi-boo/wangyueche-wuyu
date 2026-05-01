@@ -7,6 +7,7 @@
   let vehicleIdCounter = 100;
   let orderOfferIdCounter = 0;
   let logIdCounter = 0;
+  let actionHistoryIdCounter = 0;
 
   // 工具
   const rand = (min, max) => Math.random() * (max - min) + min;
@@ -456,6 +457,7 @@
     vehicleIdCounter = 100;
     orderOfferIdCounter = 0;
     logIdCounter = 0;
+    actionHistoryIdCounter = 0;
     const initialNames = new Set();
     const d1 = genUniqueDriver({ background: BACKGROUNDS[0] }, initialNames);
     const d2 = genUniqueDriver({ background: BACKGROUNDS[3] }, initialNames);
@@ -476,6 +478,7 @@
       log: [
         { id: ++logIdCounter, time: '6:00', text: `车队成立! 初始资金 ¥${(GAME.STARTING_FUNDS || 0).toLocaleString()}`, level: 'event' },
       ],
+      actionHistory: [],
       activeEvent: null,
       showTutorial: true,
       gameOver: null,
@@ -542,7 +545,12 @@
       seenStories: loadSeenStories(),
       lastStoryDay: -999,
     };
-    return initial;
+    return pushActionHistory(initial, {
+      category: 'system',
+      type: 'RUN_START',
+      label: `车队成立,初始资金 ¥${(GAME.STARTING_FUNDS || 0).toLocaleString()}`,
+      level: 'event',
+    });
   }
 
   // V7: 故事弹窗确认 — 发奖励 + 写 seenStories + 清状态
@@ -587,17 +595,89 @@
 
   function pushLog(state, text, level = 'info') {
     const time = `${state.day}日${state.hour}:00`;
+    const next = {
+      ...state,
+      log: [{ id: ++logIdCounter, time, text, level }, ...(state.log || [])].slice(0, 80),
+    };
+    return pushActionHistory(next, {
+      category: 'log',
+      type: 'GAME_LOG',
+      label: text,
+      level,
+    });
+  }
+
+  function snapshotActionMetrics(state) {
+    const vehicleIds = new Set((state.vehicles || []).map((v) => v.id));
+    return {
+      day: state.day,
+      hour: state.hour,
+      funds: state.funds,
+      reputation: state.reputation,
+      drivers: (state.drivers || []).length,
+      vehicles: (state.vehicles || []).length,
+      crews: (state.drivers || []).filter((d) => d.vehicleId && vehicleIds.has(d.vehicleId)).length,
+      totalCompleted: state.totalCompleted || 0,
+      totalEarned: state.totalEarned || 0,
+      todayCompleted: state.todayCompleted || 0,
+      todayEarned: state.todayEarned || 0,
+      todayLost: state.todayLost || 0,
+      todayRepLoss: state.todayRepLoss || 0,
+      currentMissionIdx: state.currentMissionIdx || 0,
+      unlockedEndingTier: state.unlockedEndingTier || 0,
+      monthlySalary: state.monthlySalary || 0,
+      monthlyEventImpact: state.monthlyEventImpact || 0,
+      debtAmount: state.debtAmount || 0,
+      debtDueDay: state.debtDueDay || 0,
+      negFundsDays: state.negFundsDays || 0,
+      paused: !!state.paused,
+      speed: state.speed || 1,
+    };
+  }
+
+  function diffActionMetrics(before, after) {
+    if (!before) return {};
+    const prev = snapshotActionMetrics(before);
+    const next = snapshotActionMetrics(after);
+    return Object.keys(next).reduce((acc, key) => {
+      if (prev[key] !== next[key]) {
+        acc[key] = { before: prev[key], after: next[key] };
+      }
+      return acc;
+    }, {});
+  }
+
+  function pushActionHistory(state, event) {
+    const entry = {
+      id: ++actionHistoryIdCounter,
+      time: `${state.day}日${state.hour}:00`,
+      day: state.day,
+      hour: state.hour,
+      category: event.category || 'system',
+      type: event.type || 'UNKNOWN',
+      label: event.label || '',
+      level: event.level || 'info',
+      details: event.details || {},
+      metrics: snapshotActionMetrics(state),
+      diff: diffActionMetrics(event.before, state),
+    };
     return {
       ...state,
-      log: [{ id: ++logIdCounter, time, text, level }, ...state.log].slice(0, 80),
+      actionHistory: [entry, ...(state.actionHistory || [])].slice(0, 600),
     };
   }
 
   function pushNotif(state, text, level = 'info') {
-    return {
+    const next = {
       ...state,
-      notifications: [...state.notifications, { id: Date.now() + Math.random(), text, level }],
+      notifications: [...(state.notifications || []), { id: Date.now() + Math.random(), text, level }],
     };
+    return pushActionHistory(next, {
+      category: 'notification',
+      type: 'NOTIFICATION',
+      label: text,
+      level,
+    });
   }
 
   // V6: 抽卡 actions
@@ -1123,13 +1203,15 @@
         }
         s.activeEvent = activeEv;
         s.paused = true;
+        s = pushLog(s, `事件出现: ${activeEv.title}`, 'event');
+        return s;
       }
     }
 
     // V14: 月度结算弹窗 — 每 30 天触发一次。
     // 决策 C: 进入第 31/61/91 天时触发,展示"过去 30 天总结"。
     // V14.41: 数据完整后一次性发放本月工资,再展示月报。
-    if (s.day > 1 && (s.day - 1) % 30 === 0 && !s.showMonthlyReport && !s.gameOver) {
+    if (s.day > 1 && (s.day - 1) % 30 === 0 && !s.showMonthlyReport && !s.activeEvent && !s.activeStory && !s.gameOver) {
       const salaryDue = s.monthlySalary || 0;
       if (salaryDue > 0) {
         s.funds -= salaryDue;
@@ -1434,6 +1516,7 @@
     }
     const fundsBefore = state.funds;
     let s = { ...state, activeEvent: null, paused: false };
+    let eventDetail = '';
     if (eff.funds !== undefined) s.funds += eff.funds;
     if (eff.reputation !== undefined) s.reputation = Math.max(0, s.reputation + eff.reputation);
     if (eff.commissionRate !== undefined) s.commissionRate = eff.commissionRate;
@@ -1465,9 +1548,11 @@
         if (risk.trustLoyalty !== undefined) {
           s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, risk.trustLoyalty, { trustBreakthrough: true }));
         }
-        s = pushLog(s, risk.log || '风险兑现: 车队发生事故损失', 'warn');
+        eventDetail = risk.log || '风险兑现: 车队发生事故损失';
+        s = pushLog(s, eventDetail, 'warn');
       } else {
-        s = pushLog(s, `风险未触发: ${Math.round((risk.chance || 0) * 100)}% 事故风险这次没有兑现`, 'info');
+        eventDetail = `风险未触发: ${Math.round((risk.chance || 0) * 100)}% 事故风险这次没有兑现`;
+        s = pushLog(s, eventDetail, 'info');
       }
     }
     if (eff.salaryRaise && eff.keepBest) {
@@ -1508,6 +1593,7 @@
     s = recordMonthlyEventImpact(s, s.funds - fundsBefore, {
       title: ev.title,
       label: opt.label,
+      detail: eventDetail || `事件已弹出并处理: ${opt.label}`,
     });
     return s;
   }
@@ -1638,11 +1724,55 @@
   function gameReducer(state, action) {
     switch (action.type) {
       case 'TICK': return tick(state);
-      case 'TOGGLE_PAUSE': return { ...state, paused: !state.paused };
-      case 'SET_SPEED': return { ...state, speed: action.speed, paused: false, hasStarted: true };
-      case 'CLOSE_TUTORIAL': return { ...state, showTutorial: false };
-      case 'OPEN_TUTORIAL': return { ...state, showTutorial: true };
-      case 'CLOSE_EVENT': return { ...state, activeEvent: null, paused: false };
+      case 'TOGGLE_PAUSE': {
+        const next = { ...state, paused: !state.paused };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'TOGGLE_PAUSE',
+          label: next.paused ? '玩家暂停运营' : `玩家继续运营(${next.speed || 1}倍速)`,
+          before: state,
+          details: { speed: next.speed || 1 },
+        });
+      }
+      case 'SET_SPEED': {
+        const speed = action.speed || 1;
+        const next = { ...state, speed, paused: false, hasStarted: true };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'SET_SPEED',
+          label: state.hasStarted ? `玩家切换到 ${speed} 倍速` : `玩家开始运营(${speed}倍速)`,
+          before: state,
+          details: { speed },
+        });
+      }
+      case 'CLOSE_TUTORIAL': {
+        const next = { ...state, showTutorial: false };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'CLOSE_TUTORIAL',
+          label: '玩家关闭新手引导',
+          before: state,
+        });
+      }
+      case 'OPEN_TUTORIAL': {
+        const next = { ...state, showTutorial: true };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'OPEN_TUTORIAL',
+          label: '玩家打开帮助引导',
+          before: state,
+        });
+      }
+      case 'CLOSE_EVENT': {
+        const next = { ...state, activeEvent: null, paused: false };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'CLOSE_EVENT',
+          label: `玩家关闭事件弹窗: ${state.activeEvent?.title || '未知事件'}`,
+          level: 'warn',
+          before: state,
+        });
+      }
       case 'TRAIN': return doTrain(state, action.driverId, action.trainingId);
       case 'RESOLVE_EVENT': return resolveEvent(state, action.optionIdx);
       case 'RESOLVE_INVESTOR': return resolveInvestorPressure(state, action.choices);
@@ -1659,7 +1789,7 @@
       // V14.67: 月结工资打负不再立即触发投资人事件,留 1 天缓冲让玩家先跑单挽救;
       //         若挽救失败,次日日结时(endOfDay 里的常规判定)才触发投资人压力。
       case 'CLOSE_MONTHLY_REPORT': {
-        return {
+        const next = {
           ...state,
           showMonthlyReport: null,
           paused: false,
@@ -1673,6 +1803,17 @@
           monthlyEventItems: [],
           monthlyDriverData: {},
         };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'CLOSE_MONTHLY_REPORT',
+          label: `玩家关闭第 ${state.showMonthlyReport?.monthCounter || state.monthCounter || 1} 月经营报告`,
+          before: state,
+          details: {
+            netProfit: state.showMonthlyReport?.netProfit ?? null,
+            funds: state.funds,
+            reputation: state.reputation,
+          },
+        });
       }
       // V7: 故事弹窗确认 — 发奖励 + 写 seenStories + 解除暂停
       case 'STORY_SHOWN': {
@@ -1690,12 +1831,25 @@
         }
         s.activeStory = null;
         s.paused = false;
-        return s;
+        return pushActionHistory(s, {
+          category: 'player',
+          type: 'STORY_SHOWN',
+          label: `玩家看完司机故事: ${story.driverName}「${story.title}」`,
+          before: state,
+          details: { driverId: story.driverId, milestone: story.milestone },
+        });
       }
       case 'CLAIM_ENDING': {
         const ending = ENDINGS.find((e) => e.tier === state.unlockedEndingTier);
         if (!ending) return state;
-        return { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+        const next = { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'CLAIM_ENDING',
+          label: `玩家领取结局: ${ending.name}`,
+          before: state,
+          details: { endingId: ending.id, tier: ending.tier },
+        });
       }
       // V6: 玩家主动"结束运营",拿当前最高已解锁结局
       case 'CONCEDE': {
@@ -1703,13 +1857,28 @@
           return pushNotif(state, '还未达成任何结局,继续运营吧', 'warn');
         }
         const ending = ENDINGS.find((e) => e.tier === state.unlockedEndingTier);
-        return { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+        const next = { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'CONCEDE',
+          label: `玩家主动结束运营: ${ending.name}`,
+          before: state,
+          details: { endingId: ending.id, tier: ending.tier },
+        });
       }
       // V6: 抽卡
       case 'GACHA_START': return startGacha(state, action.ticketId);
       case 'GACHA_REROLL': return rerollGacha(state);
       case 'GACHA_PICK': return pickGachaCard(state, action.cardId);
-      case 'GACHA_CANCEL': return cancelGacha(state);
+      case 'GACHA_CANCEL': {
+        const next = cancelGacha(state);
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'GACHA_CANCEL',
+          label: '玩家关闭招募抽卡弹窗',
+          before: state,
+        });
+      }
       default: return state;
     }
   }

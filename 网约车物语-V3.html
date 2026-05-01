@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>网约车物语 V14.87</title>
+  <title>网约车物语 V14.89</title>
 <style>
   /* ========= 字体系统:全部使用清晰系统中文黑体 ========= */
   :root {
@@ -3303,6 +3303,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .monthly-event-copy .monthly-event-detail {
+    white-space: normal;
+  }
   .monthly-event-item em {
     font-style: normal;
     font-weight: 800;
@@ -5384,7 +5387,7 @@ function MissionBar({ state, onOpenRoadmap }) {
 
 /* ============== V3: 顶栏 ============== */
 
-const APP_VERSION = 'V14.87';
+const APP_VERSION = 'V14.89';
 const RUN_HISTORY_KEY = 'wycwy-run-history-v1';
 const RUN_HISTORY_LIMIT = 20;
 
@@ -5441,6 +5444,7 @@ function buildGameDiagnosticsPayload(state, extra = {}) {
       report: state.showMonthlyReport || null,
     },
     diagnosticsLatest: state.diagnostics || [],  // 最近 720 tick = 30 游戏日
+    actionHistory: state.actionHistory || [],    // 结构化复盘日志:玩家操作 + 关键数值变化
     log: state.log || [],
     notifications: state.notifications || [],
   };
@@ -5476,6 +5480,7 @@ function buildRunRecord(state) {
     vehicles: payload.vehicles,
     monthly: payload.monthly,
     diagnosticsLatest: (payload.diagnosticsLatest || []).slice(-240),
+    actionHistory: (payload.actionHistory || []).slice(0, 300),
     log: (payload.log || []).slice(0, 120),
     notifications: payload.notifications || [],
   };
@@ -7067,7 +7072,8 @@ function MonthlyReportModal({ report, onClose }) {
                 <div key={`${item.day}-${item.title}-${idx}`} className={`monthly-event-item ${item.amount < 0 ? 'danger' : 'positive'}`}>
                   <div className="monthly-event-copy">
                     <strong>第 {item.day} 日 · {item.title}</strong>
-                    <span>{item.label || item.detail || '事件现金变动'}</span>
+                    <span>{item.label || '事件现金变动'}</span>
+                    {item.detail && <span className="monthly-event-detail">{item.detail}</span>}
                   </div>
                   <em>{sign(item.amount)}</em>
                 </div>
