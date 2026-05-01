@@ -37,13 +37,59 @@ function MissionBar({ state, onOpenRoadmap }) {
 
 /* ============== V3: 顶栏 ============== */
 
-const APP_VERSION = 'V14.89';
+const APP_VERSION = 'V15.2';
 const RUN_HISTORY_KEY = 'wycwy-run-history-v1';
 const RUN_HISTORY_LIMIT = 20;
 
-function buildGameDiagnosticsPayload(state, extra = {}) {
+function isoOrNull(ms) {
+  return ms ? new Date(ms).toISOString() : null;
+}
+
+function computeGameHoursElapsedForState(state) {
+  return Math.max(0, ((state.day || 1) - 1) * 24 + ((state.hour || 6) - 6));
+}
+
+function isRealTimeRunningForState(state) {
+  return !!state.hasStarted
+    && !state.paused
+    && !state.activeEvent
+    && !state.activeStory
+    && !state.showTutorial
+    && !state.showMonthlyReport
+    && !state.gameOver;
+}
+
+function buildRealTimePayload(state, exportedAtMs) {
+  const rt = state.realTime || {};
+  const startedAt = rt.startedAt || null;
+  const lastUpdatedAt = rt.lastUpdatedAt || exportedAtMs;
+  const liveDelta = startedAt ? Math.max(0, exportedAtMs - lastUpdatedAt) : 0;
+  const totalElapsedMs = (rt.totalElapsedMs || 0) + liveDelta;
+  const activeElapsedMs = (rt.activeElapsedMs || 0) + (isRealTimeRunningForState(state) ? liveDelta : 0);
+  const inactiveElapsedMs = Math.max(0, totalElapsedMs - activeElapsedMs);
+  const gameHoursElapsed = computeGameHoursElapsedForState(state);
+  const tickMs = GAME.TICK_MS || 2000;
   return {
-    exportedAt: new Date().toISOString(),
+    createdAt: isoOrNull(rt.createdAt),
+    startedAt: isoOrNull(startedAt),
+    lastUpdatedAt: isoOrNull(lastUpdatedAt),
+    exportedAt: isoOrNull(exportedAtMs),
+    totalElapsedMs: Math.round(totalElapsedMs),
+    activeElapsedMs: Math.round(activeElapsedMs),
+    inactiveElapsedMs: Math.round(inactiveElapsedMs),
+    gameHoursElapsed,
+    gameDaysElapsed: Number((gameHoursElapsed / 24).toFixed(2)),
+    averageEffectiveSpeed: activeElapsedMs > 0
+      ? Number(((gameHoursElapsed * tickMs) / activeElapsedMs).toFixed(2))
+      : 0,
+  };
+}
+
+function buildGameDiagnosticsPayload(state, extra = {}) {
+  const exportedAtMs = Date.now();
+  const realTime = buildRealTimePayload(state, exportedAtMs);
+  return {
+    exportedAt: new Date(exportedAtMs).toISOString(),
     version: APP_VERSION,
     ...extra,
     summary: {
@@ -69,7 +115,9 @@ function buildGameDiagnosticsPayload(state, extra = {}) {
       bankruptcyGraceBonus: state.bankruptcyGraceBonus,
       totalCompleted: state.totalCompleted,
       totalEarned: state.totalEarned,
+      realTime,
     },
+    realTime,
     drivers: state.drivers.map((d) => ({
       id: d.id, name: d.name, bg: d.bg, bgName: d.bgName, rarity: d.rarity,
       stats: d.stats, statCaps: d.statCaps, salary: d.salary,
@@ -129,6 +177,7 @@ function buildRunRecord(state) {
     drivers: payload.drivers,
     vehicles: payload.vehicles,
     monthly: payload.monthly,
+    realTime: payload.realTime,
     diagnosticsLatest: (payload.diagnosticsLatest || []).slice(-240),
     actionHistory: (payload.actionHistory || []).slice(0, 300),
     log: (payload.log || []).slice(0, 120),
@@ -535,4 +584,3 @@ function getVehicleOrderFullSummary(vd) {
   const names = getVehicleOrderNames(vd);
   return names.length > 0 ? names.join('、') : '暂无可接订单';
 }
-

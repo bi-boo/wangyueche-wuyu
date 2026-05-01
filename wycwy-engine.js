@@ -23,6 +23,50 @@
     SR: { id: 'SR', initialMin: 50, initialMax: 65, normalCap: 90, quitBelow: 35, moralePenalty: 6 },
     SSR: { id: 'SSR', initialMin: 40, initialMax: 55, normalCap: 85, quitBelow: 40, moralePenalty: 8 },
   };
+  const START_DAY = 1;
+  const START_HOUR = 6;
+
+  function isRealTimeRunning(state) {
+    return !!state.hasStarted
+      && !state.paused
+      && !state.activeEvent
+      && !state.activeStory
+      && !state.showTutorial
+      && !state.showMonthlyReport
+      && !state.gameOver;
+  }
+
+  function computeGameHoursElapsed(state) {
+    return Math.max(0, ((state.day || START_DAY) - START_DAY) * 24 + ((state.hour || START_HOUR) - START_HOUR));
+  }
+
+  function stampRealTime(state, actionType) {
+    if (!state) return state;
+    const now = Date.now();
+    const prev = state.realTime || {};
+    const alreadyStarted = !!prev.startedAt;
+    const shouldStart = alreadyStarted || state.hasStarted || actionType === 'SET_SPEED';
+    const startedAt = shouldStart ? (prev.startedAt || now) : null;
+    const lastUpdatedAt = prev.lastUpdatedAt || now;
+    const delta = alreadyStarted ? Math.max(0, now - lastUpdatedAt) : 0;
+    const wasRunning = alreadyStarted && isRealTimeRunning(state);
+    const totalElapsedMs = (prev.totalElapsedMs || 0) + delta;
+    const activeElapsedMs = (prev.activeElapsedMs || 0) + (wasRunning ? delta : 0);
+    return {
+      ...state,
+      realTime: {
+        ...prev,
+        createdAt: prev.createdAt || now,
+        startedAt,
+        lastUpdatedAt: now,
+        totalElapsedMs,
+        activeElapsedMs,
+        pausedElapsedMs: Math.max(0, totalElapsedMs - activeElapsedMs),
+        gameHoursElapsed: computeGameHoursElapsed(state),
+        updatedBy: actionType || 'UNKNOWN',
+      },
+    };
+  }
 
   // V14.67: 删除疲劳机制 — fatigue 字段、isDriverResting、FATIGUE_* 常量整套移除。
   //         玩家无感、阈值过高几乎不触发,且没区分长短途订单。
@@ -453,6 +497,7 @@
 
   // === reducer ===
   function makeInitialState() {
+    const now = Date.now();
     driverIdCounter = 100;
     vehicleIdCounter = 100;
     orderOfferIdCounter = 0;
@@ -473,6 +518,16 @@
       speed: 1,
       paused: true,
       hasStarted: false,
+      realTime: {
+        createdAt: now,
+        startedAt: null,
+        lastUpdatedAt: now,
+        totalElapsedMs: 0,
+        activeElapsedMs: 0,
+        pausedElapsedMs: 0,
+        gameHoursElapsed: 0,
+        updatedBy: 'INIT',
+      },
       drivers: [d1, d2],
       vehicles: [v1, v2],
       log: [
@@ -632,6 +687,10 @@
       negFundsDays: state.negFundsDays || 0,
       paused: !!state.paused,
       speed: state.speed || 1,
+      realTotalElapsedMs: state.realTime?.totalElapsedMs || 0,
+      realActiveElapsedMs: state.realTime?.activeElapsedMs || 0,
+      realPausedElapsedMs: state.realTime?.pausedElapsedMs || 0,
+      gameHoursElapsed: computeGameHoursElapsed(state),
     };
   }
 
@@ -658,6 +717,7 @@
       label: event.label || '',
       level: event.level || 'info',
       details: event.details || {},
+      realTimestamp: state.realTime?.lastUpdatedAt ? new Date(state.realTime.lastUpdatedAt).toISOString() : new Date().toISOString(),
       metrics: snapshotActionMetrics(state),
       diff: diffActionMetrics(event.before, state),
     };
@@ -1739,6 +1799,7 @@
   }
 
   function gameReducer(state, action) {
+    state = stampRealTime(state, action?.type);
     switch (action.type) {
       case 'TICK': return tick(state);
       case 'TOGGLE_PAUSE': {
