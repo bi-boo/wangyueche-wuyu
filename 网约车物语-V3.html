@@ -2538,7 +2538,7 @@
   }
   .target-tabs {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
     margin: 14px 0 12px;
     padding: 4px;
@@ -2809,7 +2809,182 @@
   .roadmap-item.locked .roadmap-item-status {
     background: rgba(0,0,0,0.05);
     color: var(--ink-3);
-  }  .ending-roadmap-list {
+  }
+  /* V14.90: 通关成就墙(跨局俯瞰) */
+  .ending-wall {
+    background: var(--sub);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .ending-wall-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .ending-wall-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .ending-wall-count {
+    font-size: 14px;
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .ending-wall-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .ending-wall-cell {
+    border: 2px solid var(--ink);
+    padding: 8px 4px;
+    text-align: center;
+    background: var(--card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-height: 88px;
+    justify-content: space-between;
+  }
+  .ending-wall-tier {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .ending-wall-icon {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .ending-wall-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+  .ending-wall-status {
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .ending-wall-cell.ending-wall-conquered {
+    background: var(--gold);
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .ending-wall-cell.ending-wall-conquered .ending-wall-tier,
+  .ending-wall-cell.ending-wall-conquered .ending-wall-name,
+  .ending-wall-cell.ending-wall-conquered .ending-wall-icon,
+  .ending-wall-cell.ending-wall-conquered .ending-wall-status {
+    color: var(--ink);
+    font-weight: 800;
+  }
+  .ending-wall-cell.ending-wall-reachable {
+    background: var(--accent);
+    box-shadow: 2px 2px 0 var(--accent-deep);
+  }
+  .ending-wall-cell.ending-wall-reachable .ending-wall-tier,
+  .ending-wall-cell.ending-wall-reachable .ending-wall-name,
+  .ending-wall-cell.ending-wall-reachable .ending-wall-icon,
+  .ending-wall-cell.ending-wall-reachable .ending-wall-status {
+    color: #FFF8E7;
+    font-weight: 800;
+  }
+  .ending-wall-cell.ending-wall-progressing {
+    border-style: dashed;
+  }
+  .ending-wall-cell.ending-wall-pending {
+    opacity: 0.62;
+  }
+  .ending-wall-cell.ending-wall-hidden {
+    background: var(--bg-deep);
+    opacity: 0.55;
+  }
+  .ending-wall-cell.ending-wall-hidden .ending-wall-name {
+    color: var(--ink-3);
+  }
+
+  /* V14.90: 运营记录 tab */
+  .run-history-empty {
+    padding: 20px 14px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 14px;
+    background: var(--sub);
+    border: 1px dashed var(--border-soft);
+  }
+  .run-history-list {
+    display: grid;
+    gap: 6px;
+  }
+  .run-history-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .run-history-card:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .run-history-card.outcome-win { border-color: var(--gold); }
+  .run-history-card.outcome-lose { border-color: var(--warn); }
+  .run-history-tag {
+    font-size: 11px;
+    font-weight: 800;
+    background: var(--ink);
+    color: var(--gold);
+    padding: 2px 8px;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .run-history-card.outcome-win .run-history-tag {
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .run-history-card.outcome-lose .run-history-tag {
+    background: var(--warn);
+    color: #FFF8E7;
+  }
+  .run-history-main {
+    min-width: 0;
+  }
+  .run-history-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .run-history-meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .run-history-arrow {
+    font-size: 18px;
+    color: var(--ink-3);
+    font-weight: 800;
+  }
+  .run-history-card:hover .run-history-arrow {
+    color: var(--ink);
+  }
+
+  .ending-roadmap-list {
     display: grid;
     gap: 6px;
   }
@@ -7524,11 +7699,157 @@ function getTargetEndingRows(state) {
   });
 }
 
+// V14.90: 跨局成就聚合 — 历史里达到过该 tier 即视为已征服
+function getEndingAchievements(state) {
+  const history = getSavedRunHistory();
+  const currentTier = state.unlockedEndingTier || 0;
+  return ENDINGS.map((ending) => {
+    const conqueredInHistory = history.some((h) => (h?.summary?.unlockedEndingTier || 0) >= ending.tier);
+    const meetsNow = (() => {
+      try { return ending.check(state); } catch (e) { return false; }
+    })();
+    // 已征服过的结局直接揭晓真名(成就感),否则按当前进度的 +1 揭晓规则
+    const revealed = conqueredInHistory || ending.tier <= currentTier + 1;
+    let badge;
+    if (conqueredInHistory) badge = { cls: 'conquered', icon: '✓', label: '已征服' };
+    else if (meetsNow) badge = { cls: 'reachable', icon: '✦', label: '可冲击' };
+    else if (ending.tier <= currentTier) badge = { cls: 'progressing', icon: '→', label: '进行中' };
+    else if (revealed) badge = { cls: 'pending', icon: '—', label: '未触及' };
+    else badge = { cls: 'hidden', icon: '?', label: '未揭晓' };
+    return { ending, badge, revealed };
+  });
+}
+
+function EndingAchievementWall({ achievements }) {
+  const total = achievements.length;
+  const conquered = achievements.filter((a) => a.badge.cls === 'conquered').length;
+  return (
+    <div className="ending-wall">
+      <div className="ending-wall-head">
+        <span className="ending-wall-title">通关成就</span>
+        <span className="ending-wall-count">{conquered} / {total} 征服</span>
+      </div>
+      <div className="ending-wall-grid">
+        {achievements.map(({ ending, badge, revealed }) => (
+          <div key={ending.id} className={`ending-wall-cell ending-wall-${badge.cls}`} title={revealed ? `${ending.name}：${badge.label}` : '未揭晓'}>
+            <div className="ending-wall-tier">T{ending.tier}</div>
+            <div className="ending-wall-icon">{badge.icon}</div>
+            <div className="ending-wall-name">{revealed ? ending.name : '????'}</div>
+            <div className="ending-wall-status">{badge.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// V14.90: 运营记录列表 + 详情查看
+function formatRunHistoryDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${m}/${day} ${hh}:${mm}`;
+  } catch (e) { return ''; }
+}
+
+function RunHistoryPanel({ onSelect }) {
+  const history = getSavedRunHistory();
+  if (!history.length) {
+    return (
+      <div className="run-history-empty">
+        还没有历史记录。每局结算后(通关或破产)会自动保存最近 20 局。
+      </div>
+    );
+  }
+  return (
+    <div className="run-history-list">
+      {history.map((rec, idx) => {
+        const summary = rec?.summary || {};
+        const gameOver = summary.gameOver || {};
+        const isWin = gameOver.type === 'win';
+        const isLose = gameOver.type === 'lose';
+        const cls = isWin ? 'outcome-win' : (isLose ? 'outcome-lose' : 'outcome-end');
+        const tagText = isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '结束');
+        const titleText = isWin
+          ? `《${gameOver.endingName || '已通关'}》`
+          : (gameOver.reason || '本局结束');
+        const meta = `第 ${summary.day || '?'} 天 · ¥${(summary.funds || 0).toLocaleString()} · 口碑 ${summary.reputation || 0} · ${formatRunHistoryDate(rec.exportedAt)}`;
+        return (
+          <button
+            key={`${rec.exportedAt || idx}-${idx}`}
+            className={`run-history-card ${cls}`}
+            onClick={() => onSelect(rec)}
+            type="button"
+          >
+            <span className="run-history-tag">{tagText}</span>
+            <div className="run-history-main">
+              <div className="run-history-title">{titleText}</div>
+              <div className="run-history-meta">{meta}</div>
+            </div>
+            <span className="run-history-arrow">›</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RunHistoryDetailModal({ record, onClose }) {
+  const summary = record?.summary || {};
+  const gameOver = summary.gameOver || {};
+  const isWin = gameOver.type === 'win';
+  const isLose = gameOver.type === 'lose';
+  const tag = isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '本局结束');
+  const headline = isWin
+    ? `《${gameOver.endingName || '已通关'}》`
+    : (gameOver.reason || '本局结束');
+  const story = isWin ? (gameOver.endingDesc || '') : '';
+  const monthly = record?.monthly || {};
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+        <span className="modal-tag">{tag}</span>
+        <h2 className="modal-title">{headline}</h2>
+        {story && (<p className="modal-desc" style={{ whiteSpace: 'pre-line' }}>{story}</p>)}
+        <div className="ending-stats" style={{ marginTop: 8 }}>
+          <div className="ending-stat"><div className="ending-stat-label">营运天数</div><div className="ending-stat-value">{summary.day || 0}</div></div>
+          <div className="ending-stat"><div className="ending-stat-label">总流水</div><div className="ending-stat-value">¥{(summary.totalEarned || 0).toLocaleString()}</div></div>
+          <div className="ending-stat"><div className="ending-stat-label">完成订单</div><div className="ending-stat-value">{summary.totalCompleted || 0}</div></div>
+          <div className="ending-stat"><div className="ending-stat-label">最终资金</div><div className="ending-stat-value">¥{(summary.funds || 0).toLocaleString()}</div></div>
+          <div className="ending-stat"><div className="ending-stat-label">城市口碑</div><div className="ending-stat-value">{summary.reputation || 0}</div></div>
+          <div className="ending-stat"><div className="ending-stat-label">车队规模</div><div className="ending-stat-value">{summary.crews || 0} 组</div></div>
+        </div>
+        <div style={{ marginTop: 12, display: 'grid', gap: 4, fontSize: 14, color: 'var(--ink-2)' }}>
+          {summary.completedMissionIds?.length > 0 && (
+            <div>已完成任务：{summary.completedMissionIds.length} 个</div>
+          )}
+          {summary.unlockedEndingTier > 0 && (
+            <div>本局最高解锁结局：T{summary.unlockedEndingTier}</div>
+          )}
+          {monthly?.monthCounter > 0 && (
+            <div>共结算 {monthly.monthCounter} 次月报</div>
+          )}
+          <div style={{ color: 'var(--ink-3)', marginTop: 4 }}>
+            记录时间：{formatRunHistoryDate(record?.exportedAt)}
+          </div>
+        </div>
+        <button className="btn btn-primary btn-block" onClick={onClose} style={{ padding: 12, marginTop: 14 }}>关闭</button>
+      </div>
+    </div>
+  );
+}
+
 function UnlockRoadmapModal({ state, onClose, onOpenShop }) {
   const [activeTab, setActiveTab] = useState('missions');
+  const [historyDetail, setHistoryDetail] = useState(null);
   const allStatus = ORDERS.map((o) => computeOrderUnlockStatus(o, state));
   const orderStatusById = Object.fromEntries(allStatus.map((s) => [s.order.id, s]));
   const endingRows = getTargetEndingRows(state);
+  const achievements = getEndingAchievements(state);
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: 640}}>
@@ -7552,17 +7873,27 @@ function UnlockRoadmapModal({ state, onClose, onOpenShop }) {
           >
             游戏目标
           </button>
+          <button
+            className={`target-tab ${activeTab === 'history' ? 'active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'history'}
+            onClick={() => setActiveTab('history')}
+          >
+            运营记录
+          </button>
         </div>
 
         <div className="target-panel">
-          {activeTab === 'missions' ? (
+          {activeTab === 'missions' && (
             <MissionRoutePanel
               state={state}
               orderStatusById={orderStatusById}
               onOpenShop={() => { onClose(); onOpenShop && onOpenShop(); }}
             />
-          ) : (
+          )}
+          {activeTab === 'endings' && (
             <>
+              <EndingAchievementWall achievements={achievements} />
               <div className="roadmap-section-title">主线结局</div>
               <div className="ending-roadmap-list">
                 {endingRows.map(({ ending, hidden, status }) => (
@@ -7580,10 +7911,16 @@ function UnlockRoadmapModal({ state, onClose, onOpenShop }) {
               </div>
             </>
           )}
+          {activeTab === 'history' && (
+            <RunHistoryPanel onSelect={(rec) => setHistoryDetail(rec)} />
+          )}
         </div>
 
         <button className="btn btn-primary btn-block" onClick={onClose} style={{padding: 12, marginTop: 4}}>了解</button>
       </div>
+      {historyDetail && (
+        <RunHistoryDetailModal record={historyDetail} onClose={() => setHistoryDetail(null)} />
+      )}
     </div>
   );
 }
