@@ -160,22 +160,19 @@ components:
 ## 3. Typography
 
 **Body Font:** PingFang SC（Hiragino Sans GB / Microsoft YaHei 兜底）—— 系统中文黑体
-**Display Font (理想):** Ark Pixel 16px 中文像素字体 —— **当前未启用**，是已知技术债
 
-**Character:** 当前是"系统中文黑体"，理想是"像素 + 系统中文混排"。两者氛围差异很大——这是文档与代码现状最大的偏差，必须在首次给同事/老板 demo 前修复，否则"复古像素"承诺与现实脱节。
+**Character:** 刻意选择系统中文黑体而非像素字体——中文像素字体（如 Ark Pixel 16px）在 14px 主力字号下会子像素插值糊化，且中文笔画密度比日文/英文高得多，可读性差。复古像素美学的视觉锚点放在暖黄底色、像素 PNG 素材（地图/头像/车辆）、硬阴影、厚边框，而不是字面像素化字体。项目根目录保留的 `ark-pixel-16px.woff2` / `zcool-qingke-huangyou.ttf` 仅作存档，**不再启用**。
 
 ### Hierarchy
 
-- **Display** (800, 24px, line-height 1)：modal 标题、关键弹窗主文字
-- **Headline** (700, 18px, line-height 1.3)：分组小标题、重要状态值
+- **Display** (800-950, 24px, line-height 1-1.2)：modal 标题、关键弹窗主文字、教练标题、feedback 标题
+- **Headline** (700, 18px, line-height 1.3)：分组小标题、重要状态值、KPI value
 - **Body** (400-700, 14px, line-height 1.4-1.6)：正文、按钮、绝大多数 UI 元素
-- **Label** (400, 11px)：ts-label、辅助文字、ts-sub
+- **Label** (400-700, 11px)：ts-label、辅助文字、ts-sub、徽章、副信息
 
 ### Named Rules
 
-**The 三档字号 Rule.** 字号必须收敛到 14 / 18 / 24 三档。当前代码存在 9/10/11/12/13/15/16/17/20/22 等漂移值（约 49 处违规）需逐步消除。新组件只能从三档里选，11px label 是仅存的合理例外。
-
-**The 像素字体待启用 Rule.** `ark-pixel-16px.woff2` 文件已存在但未 `@font-face` 加载。这是已知技术债——首次给同事/老板 demo 前必须启用，否则"复古像素"承诺与现实脱节。
+**The 四档字号 Rule.** 字号严格收敛到 24 / 18 / 14 / 11 四档。**新组件只能从这四档里选**——11px 是 label/badge/meta 例外档，14px 是 body 主力，18px 是 headline，24px 是 display。漂移值（9/10/12/13/15/16/17/20/22）已在 V14.88 polish 中全部收敛，禁止重新引入。
 
 ## 4. Elevation
 
@@ -189,9 +186,9 @@ components:
 
 ### Named Rules
 
-**The 无 Blur Rule.** 任何独立 box-shadow（不与硬偏移混用）都不允许出现 blur radius > 0。当前 `.btn-primary` 的 `0 2px 6px rgba(255,107,53,0.25)` 是已知违规，需改为硬偏移版（如 `2px 2px 0 var(--accent-deep)`）。
+**The 无 Blur Rule.** 任何独立 box-shadow（不与硬偏移混用）都不允许出现 blur radius > 0。`.btn-primary` 现已统一为硬阴影 `2px 2px 0 rgba(42,35,32,0.65)`（line 4674）+ `:active` 按下态归零，是单一权威定义（V14.88 polish 完成 4 套层叠定义合并）。
 
-**The 反 Glassmorphism Rule.** `backdrop-filter` 全局禁用。当前 `.modal-overlay` 的 `backdrop-filter: blur(2px)` 是已知违规——它直接踩中 PRODUCT.md 列出的"glassmorphism"反例，需移除。
+**The 反 Glassmorphism Rule.** `backdrop-filter` 全局禁用。原 `.modal-overlay` 的 `backdrop-filter: blur(2px)` 已删除，半透深棕罩透明度同步从 0.4 提到 0.55 补偿焦点感。
 
 ## 5. Components
 
@@ -238,21 +235,22 @@ components:
 - **Do** 用暖黄大地色 (`#F4E4BC`) 作为游戏主背景，让 UI 浸在像便利贴/账本/油渍菜单的暖底里。
 - **Do** 用深棕油墨色 (`#2A2320`) 作为唯一文字主色，不用纯黑。
 - **Do** 用硬阴影（`Npx Npx 0 半透深棕`）传达深度，不用 blur radius。
-- **Do** 严守 14/18/24 字号阶梯，新组件只能从这三档里选。
+- **Do** 严守 24/18/14/11 四档字号阶梯，新组件只能从这四档里选。
 - **Do** 把工坊橙 (`#FF8C42`) 当稀缺动作色用，单屏占用 ≤10%。
 - **Do** 把警告红 (`#E84545`) 留给真正严重的经营事件——投资人压力、破产、严重事故。
 - **Do** 圆角控制在 2-3px，保留像素方块感。
-- **Do** 启用 Ark Pixel 像素字体作为 display/headline 字体——`ark-pixel-16px.woff2` 已经在项目根目录，缺一个 `@font-face` 声明。
+- **Do** 复古像素美学锚定在暖黄底色 + 像素 PNG 素材（地图/头像/车辆）+ 硬阴影 + 厚边框——不依赖像素字体（中文像素可读性差）。
 
 ### Don't
-- **Don't** 用 `#fff` 或 `#000`——所有"白"必须是奶卡白 `#FFF8E7`，所有"黑"必须是油墨深棕 `#2A2320`。
-- **Don't** 用 `backdrop-filter: blur()`——这直接踩中 PRODUCT.md 列出的"glassmorphism"反例。当前 `.modal-overlay` 的 `blur(2px)` 是已知违规，需移除。
-- **Don't** 用带 blur radius 的 box-shadow 作为独立阴影（如 `0 2px 6px rgba(...)`），违反像素硬阴影系统。当前 `.btn-primary` 是已知违规。
-- **Don't** 引入字号 9/10/12/13/15/16/17/20/22——这些都是漂移值，违反三档阶梯。
+- **Don't** 用 `#fff` 或 `#000`——所有"白"必须是奶卡白 `#FFF8E7`，所有"黑"必须是油墨深棕 `#2A2320`。V14.88 已批量修复 38 处 `#fff` 违规，新代码不得回潮。
+- **Don't** 用 `backdrop-filter: blur()`——glassmorphism 直接踩中 PRODUCT.md 反例。
+- **Don't** 用带 blur radius 的 box-shadow 作为独立阴影（如 `0 2px 6px rgba(...)`），违反像素硬阴影系统。
+- **Don't** 引入字号 9/10/12/13/15/16/17/20/22——必须从 24/18/14/11 四档里选。V14.88 已收敛 64 处漂移，新代码不得回潮。
+- **Don't** 创建第二处 `.btn-primary` 定义——V14.88 已合并 4 套层叠定义到单一权威 (line ~4674)，新增样式只改这一处。
 - **Don't** 引入圆角 > 4px——会失去像素方块感。
+- **Don't** 启用像素字体——已经决策放弃 Ark Pixel，中文场景下像素字体辨识度差，得不偿失。
 - **Don't** 模仿滴滴官方 App 视觉语言（品牌蓝、Material/iOS 控件）——一旦像就丢失个人作品辨识度，被认成"内部产品 demo"。
 - **Don't** 引入 SaaS Dashboard 视觉模板（KPI 大数字卡 + 渐变图表 + Inter 字体）——AI slop 重灾区，传不开。
 - **Don't** 引入 Web3 / 赛博朋克 / 新拟态（neumorphism）——过度装饰且已过气。
 - **Don't** 引入糖果色卡通风（圆滚滚拟人 + 高饱和糖色）——软化"经营惨烈"的黑色幽默。
 - **Don't** 让 UI 看起来"像 PPT 一样规整"——刻意保留视觉棱角。
-- **Don't** 在文档里说一套（Ark Pixel 字体）、代码里做一套（PingFang SC）——这是当前最大偏差，需在下一次大版本时修复。

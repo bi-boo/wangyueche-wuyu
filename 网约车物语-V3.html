@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>网约车物语 V14.86</title>
+  <title>网约车物语 V14.87</title>
 <style>
   /* ========= 字体系统:全部使用清晰系统中文黑体 ========= */
   :root {
@@ -243,7 +243,7 @@
   /* ========= 顶栏 ========= */
   .topbar {
     height: 70px;
-    background: #fff;
+    background: #FFF8E7;
     border-bottom: 1px solid var(--border);
     display: grid;
     grid-template-columns: minmax(170px, 1fr) minmax(640px, 760px) minmax(150px, 1fr);
@@ -342,7 +342,7 @@
   .ts-value.time-value,
   .ts-value.supply-value {
     color: var(--ink);
-    font-size: 16px;
+    font-size: 18px;
   }
   .ts-value.supply-idle { color: var(--ink-3); }
   .ts-value.supply-balanced { color: var(--green); }
@@ -425,8 +425,8 @@
   .speed-btn.play-toggle.is-cta,
   .speed-btn.play-toggle.is-first-start {
     background: var(--accent);
-    color: #fff;
-    font-size: 16px;
+    color: #FFF8E7;
+    font-size: 18px;
     min-width: 156px;
     min-height: 42px;
     padding: 9px 18px;
@@ -449,7 +449,7 @@
     letter-spacing: 0;
   }
   .run-btn-main {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 900;
   }
   .run-btn-sub {
@@ -460,7 +460,7 @@
   .speed-btn.play-toggle.is-cta:hover,
   .speed-btn.play-toggle.is-first-start:hover {
     background: var(--accent);
-    color: #fff;
+    color: #FFF8E7;
     filter: brightness(1.06);
   }
   .speed-btn.is-dimmed {
@@ -685,20 +685,8 @@
     justify-content: center;
     gap: 4px;
   }
-  .btn-primary {
-    background: var(--accent);
-    color: #fff;
-    box-shadow: 2px 2px 0 var(--ink);
-  }
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-deep);
-  }
-  .btn-primary:active:not(:disabled) {
-    transform: translate(2px, 2px);
-    box-shadow: 0 0 0 var(--ink);
-  }
   .btn-ghost {
-    background: #fff;
+    background: #FFF8E7;
     color: var(--ink);
     border: 1px solid var(--border);
   }
@@ -720,7 +708,7 @@
     padding: 20px;
   }
   .modal {
-    background: #fff;
+    background: #FFF8E7;
     border-radius: 2px;
     padding: 24px;
     max-width: 520px;
@@ -791,7 +779,7 @@
   }
   .modal-option:hover {
     border-color: var(--accent);
-    background: #fff;
+    background: #FFF8E7;
     transform: translateY(-1px);
   }
   .modal-option-label {
@@ -871,7 +859,7 @@
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    background: #fff;
+    background: #FFF8E7;
   }
   .shop-item .btn-block {
     margin-top: auto;
@@ -933,14 +921,14 @@
     padding: 3px 7px;
     background: var(--ink);
     color: var(--gold);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 900;
     line-height: 1;
     letter-spacing: 0;
     margin-bottom: 9px;
   }
   .coach-title {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 950;
     color: var(--ink);
     line-height: 1.2;
@@ -980,7 +968,7 @@
     padding-top: 10px;
   }
   .coach-skip {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--ink-3);
     background: rgba(255,255,255,0.42);
     border: 1px solid rgba(42,35,32,0.16);
@@ -990,7 +978,7 @@
   .coach-skip:hover { color: var(--ink-2); }
   .coach-next {
     background: var(--accent);
-    color: #fff;
+    color: #FFF8E7;
     border: 2px solid var(--ink);
     border-radius: 0;
     padding: 8px 14px;
@@ -1048,7 +1036,7 @@
     position: fixed;
     top: 80px;
     right: 20px;
-    background: #fff;
+    background: #FFF8E7;
     border-radius: 3px;
     padding: 12px 16px;
     box-shadow: var(--shadow-md);
@@ -1086,7 +1074,7 @@
     flex-shrink: 0;
     font-size: 14px;
     background: var(--accent);
-    color: #fff;
+    color: #FFF8E7;
     padding: 4px 10px;
     border-radius: 2px;
     font-weight: 700;
@@ -1135,7 +1123,7 @@
   }
   .compact-card:hover {
     border-color: var(--accent-soft);
-    background: #fff;
+    background: #FFF8E7;
   }
   .compact-card.selected {
     border-color: var(--accent);
@@ -1167,7 +1155,7 @@
     padding: 3px 8px;
     border-radius: 2px;
     font-size: 14px;
-    background: #fff;
+    background: #FFF8E7;
     border: 1px solid;
     margin-right: 4px;
     margin-bottom: 4px;
@@ -1193,7 +1181,7 @@
   }
   .game-feedback-card {
     width: 100%;
-    background: #fff;
+    background: #FFF8E7;
     color: var(--ink);
     border: 2px solid var(--ink);
     border-left-width: 6px;
@@ -1304,7 +1292,7 @@
   }
   .mission-feedback .game-feedback-title {
     margin-top: 0;
-    font-size: 20px;
+    font-size: 24px;
   }
   .mission-feedback .game-feedback-message {
     margin-top: 0;
@@ -1415,7 +1403,7 @@
     background: var(--gold);
     color: var(--ink);
     padding: 3px 8px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 800;
     cursor: pointer;
     box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
@@ -1490,7 +1478,7 @@
   }
   .btn.btn-danger:hover {
     background: var(--warn) !important;
-    color: #fff !important;
+    color: #FFF8E7 !important;
   }
   /* V14.3: 车辆迷你卡组 — 替代 native select,符合游戏整体卡片风格 */
   .vehicle-swap-grid {
@@ -1499,7 +1487,7 @@
     border-top: 1px dashed var(--ink-1);
   }
   .vehicle-swap-hint {
-    font-size: 12px; color: var(--ink-3); font-weight: 700;
+    font-size: 11px; color: var(--ink-3); font-weight: 700;
     margin-bottom: 6px;
   }
   .vehicle-swap-cards {
@@ -1512,7 +1500,7 @@
     min-width: 0;
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     padding: 8px 6px;
-    background: #fff;
+    background: #FFF8E7;
     border: 2px solid var(--ink-1);
     cursor: pointer;
     font-family: var(--font-body);
@@ -1534,7 +1522,7 @@
   }
   .vehicle-swap-card.current .vsc-name,
   .vehicle-swap-card.current .vsc-status {
-    color: #fff;
+    color: #FFF8E7;
   }
   .vehicle-swap-card.empty {
     background: #F5F0E8;
@@ -1562,7 +1550,7 @@
   .vehicle-manage-sub {
     margin-top: 2px;
     color: var(--ink-3);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1.25;
   }
@@ -1595,7 +1583,7 @@
     margin-top: 14px;
   }
   .vsc-name {
-    font-size: 12px; font-weight: 700; color: var(--ink);
+    font-size: 11px; font-weight: 700; color: var(--ink);
   }
   .vsc-status {
     font-size: 11px; color: var(--ink-3);
@@ -1613,7 +1601,7 @@
   .crew-empty-avatar {
     width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
-    background: var(--ink-3); color: #fff;
+    background: var(--ink-3); color: #FFF8E7;
     border: 2px solid var(--ink-1);
     font-size: 11px; font-weight: 700;
   }
@@ -1843,7 +1831,7 @@
     row-gap: 5px;
     min-height: 72px;
     padding: 7px 8px;
-    background: color-mix(in srgb, var(--sub) 72%, #fff 28%);
+    background: color-mix(in srgb, var(--sub) 72%, #FFF8E7 28%);
     border: 1px solid var(--border-soft);
   }
   .driver-attr-label {
@@ -2071,19 +2059,6 @@
   .panel {
     border: 2px solid var(--border-soft);
     box-shadow: 2px 2px 0 var(--border-soft);
-  }  /* 主按钮硬阴影 */
-  .btn-primary {
-    border: 2px solid var(--ink);
-    box-shadow: 2px 2px 0 var(--ink);
-    transition: transform 0.08s, box-shadow 0.08s;
-  }
-  .btn-primary:hover:not(:disabled) {
-    transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0 var(--ink);
-  }
-  .btn-primary:active:not(:disabled) {
-    transform: translate(2px, 2px);
-    box-shadow: 0 0 0 var(--ink);
   }
   .btn-ghost {
     border: 2px solid var(--ink);
@@ -2278,7 +2253,7 @@
     bottom: -10px;
     padding: 2px 6px;
     border-radius: 2px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1.1;
     white-space: nowrap;
@@ -2286,7 +2261,7 @@
   }
   .ts-rep-sub.rep-sub-warn {
     background: rgba(228,62,53,0.95);
-    color: #fff;
+    color: #FFF8E7;
     border: 1px solid rgba(228,62,53,0.4);
   }
   /* V14.81: 供需风险轴 — 绿色安全 → 黄色临界 → 红色不足,不再使用三段色块。 */
@@ -2316,7 +2291,7 @@
     top: -4px;
     width: 12px; height: 12px;
     background: var(--ink);
-    border: 2px solid #fff;
+    border: 2px solid #FFF8E7;
     border-radius: 50%;
     transform: translateX(-50%);
     transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2325,7 +2300,7 @@
   }
   .ts-axis-labels {
     display: flex; justify-content: space-between;
-    font-size: 9px; color: var(--ink-3);
+    font-size: 11px; color: var(--ink-3);
     margin-top: 4px;
     line-height: 1;
   }
@@ -2341,14 +2316,14 @@
     border: 1px solid;
   }
   .ts-death-info {
-    background: rgba(228,62,53,0.85); color: #fff; border-color: rgba(228,62,53,0.4);
+    background: rgba(228,62,53,0.85); color: #FFF8E7; border-color: rgba(228,62,53,0.4);
   }
   .ts-death-warn {
-    background: rgba(228,62,53,0.95); color: #fff; border-color: rgba(228,62,53,0.6);
+    background: rgba(228,62,53,0.95); color: #FFF8E7; border-color: rgba(228,62,53,0.6);
     animation: pulse 1.4s infinite;
   }
   .ts-death-pulse {
-    background: #E84545; color: #fff; border-color: #fff;
+    background: #E84545; color: #FFF8E7; border-color: #FFF8E7;
     animation: pulse 0.6s infinite;
   }
   .ts-debt-countdown {
@@ -2410,7 +2385,7 @@
     max-width: 360px;
     height: 42px;
     flex: 0 0 360px;
-    background: #fff;
+    background: #FFF8E7;
     border: 2px solid var(--ink);
     box-shadow: 3px 3px 0 var(--ink);
     padding: 7px 34px 7px 10px;
@@ -2554,11 +2529,11 @@
   }
   .mb-roadmap-btn:hover {
     background: var(--accent);
-    color: #fff;
+    color: #FFF8E7;
     border-color: var(--accent);
   }
   .mb-roadmap-btn-arrow {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1;
   }
   .target-tabs {
@@ -2604,7 +2579,7 @@
     font-weight: 700;
   }
   .roadmap-focus-tag {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--accent);
     font-weight: 800;
     letter-spacing: 0.5px;
@@ -2694,7 +2669,7 @@
     border: 1px solid var(--border-soft);
     background: rgba(255,248,231,0.72);
     color: var(--ink-2);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 800;
   }
   .mission-route-row.current .mission-route-state {
@@ -2704,7 +2679,7 @@
   }
   .mission-route-desc {
     color: var(--ink-2);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.45;
     margin-top: 3px;
   }
@@ -2715,7 +2690,7 @@
     min-width: 0;
     margin-top: 8px;
     color: var(--ink);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 800;
   }
   .mission-order-link.strong {
@@ -2736,7 +2711,7 @@
     flex-shrink: 0;
     font-style: normal;
     color: var(--ink-3);
-    font-size: 12px;
+    font-size: 11px;
   }
   .mission-order-conditions {
     margin-top: 8px;
@@ -2758,9 +2733,9 @@
     border-radius: 50%;
     display: grid;
     place-items: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 800;
-    color: #fff;
+    color: #FFF8E7;
   }
   .roadmap-cond-icon.ok { background: var(--green, #2E7D6A); }
   .roadmap-cond-icon.miss { background: var(--ink-3); }
@@ -2775,7 +2750,7 @@
   .roadmap-cond-missing {
     color: var(--ink-3);
     margin-top: 2px;
-    font-size: 13px;
+    font-size: 14px;
   }
   .roadmap-cond-action {
     margin-left: 6px;
@@ -2819,10 +2794,10 @@
   .roadmap-item-fare {
     color: var(--accent-deep);
     font-weight: 800;
-    font-size: 13px;
+    font-size: 14px;
   }
   .roadmap-item-status {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 2px;
@@ -2846,7 +2821,7 @@
     padding: 9px 10px;
     background: var(--sub);
     border: 1px solid var(--border-soft);
-    font-size: 13px;
+    font-size: 14px;
   }
   .ending-roadmap-item.done,
   .ending-roadmap-item.next {
@@ -2899,14 +2874,14 @@
     border: 1px solid var(--ink);
     background: var(--card);
     color: var(--ink);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 900;
     line-height: 1;
     white-space: nowrap;
   }
   .ending-roadmap-item.done .ending-roadmap-status {
     background: var(--green, #2E7D6A);
-    color: #fff;
+    color: #FFF8E7;
     border-color: var(--green, #2E7D6A);
   }
   .ending-roadmap-item.next .ending-roadmap-status {
@@ -2959,7 +2934,7 @@
     padding-right: 6px;
   }  .fleet-action-row.warn .fleet-action-dot { background: var(--gold); }
   .fleet-action-row.danger .fleet-action-dot { background: var(--warn); }  .fleet-focus-card.vehicle {
-    background: linear-gradient(180deg, #fff, var(--green-soft));
+    background: linear-gradient(180deg, #FFF8E7, var(--green-soft));
   }  .crew-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -3040,7 +3015,7 @@
     max-width: none;
     overflow: visible;
     color: var(--ink-2);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 900;
     letter-spacing: 0;
     line-height: 1;
@@ -3200,14 +3175,14 @@
   }
   .event-resource-snapshot span {
     display: block;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--ink-3);
     white-space: nowrap;
   }
   .event-resource-snapshot strong {
     display: block;
     font-family: var(--font-body);
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1.1;
     white-space: nowrap;
   }
@@ -3230,7 +3205,7 @@
     position: absolute;
     right: 12px;
     top: 12px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 800;
     color: var(--accent-deep);
     background: var(--gold);
@@ -3240,7 +3215,7 @@
   }
   .event-modal .modal-option:hover,
   .event-modal .modal-option:focus-visible {
-    background: #fff !important;
+    background: #FFF8E7 !important;
     border-color: var(--accent-deep) !important;
     box-shadow: 4px 4px 0 rgba(42,35,32,0.36) !important;
     outline: none;
@@ -3254,7 +3229,7 @@
   }
   .monthly-day-tag {
     margin-left: 12px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--ink-3);
     font-weight: normal;
   }
@@ -3265,7 +3240,7 @@
     border: 2px solid var(--ink-1);
   }
   .monthly-section-title {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--ink-3);
     margin-bottom: 8px;
     font-weight: 700;
@@ -3277,7 +3252,7 @@
     padding: 4px 0;
     font-size: 14px;
   }
-  .monthly-row strong { font-size: 15px; }
+  .monthly-row strong { font-size: 14px; }
   .monthly-row.danger { color: var(--warn); }
   .monthly-row.positive { color: var(--green); }
   .monthly-row.monthly-subtotal {
@@ -3288,7 +3263,7 @@
   }
   .monthly-empty-row {
     color: var(--ink-3);
-    font-size: 13px;
+    font-size: 14px;
     padding: 4px 0;
   }
   .monthly-event-section {
@@ -3314,14 +3289,14 @@
   }
   .monthly-event-copy strong {
     display: block;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--ink);
     line-height: 1.25;
   }
   .monthly-event-copy span {
     display: block;
     margin-top: 2px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--ink-3);
     line-height: 1.3;
     overflow: hidden;
@@ -3343,17 +3318,17 @@
     background: var(--accent);
     border: 3px solid var(--ink);
     box-shadow: 3px 3px 0 var(--ink);
-    color: #fff;
-    font-size: 17px;
+    color: #FFF8E7;
+    font-size: 18px;
     font-weight: 700;
   }
   .monthly-net-profit.danger { background: var(--warn); }
-  .monthly-net-profit strong { font-size: 22px; }
+  .monthly-net-profit strong { font-size: 24px; }
   .monthly-driver-list { display: flex; flex-direction: column; gap: 6px; }
   .monthly-driver-row {
     display: flex; align-items: center; gap: 10px;
     padding: 8px 10px;
-    background: #fff;
+    background: #FFF8E7;
     border: 1px solid var(--ink-1);
   }
   .monthly-driver-row.negative { background: rgba(228,62,53,0.08); }
@@ -3362,18 +3337,18 @@
     width: 22px; height: 22px;
     display: flex; align-items: center; justify-content: center;
     background: var(--ink); color: var(--accent);
-    font-weight: 700; font-size: 12px;
+    font-weight: 700; font-size: 11px;
     border-radius: 50%;
     flex-shrink: 0;
   }
   .monthly-driver-body { flex: 1; min-width: 0; }
   .monthly-driver-name { font-weight: 700; font-size: 14px; }
-  .monthly-driver-name em { color: var(--ink-3); font-style: normal; font-size: 12px; margin-left: 4px; }
+  .monthly-driver-name em { color: var(--ink-3); font-style: normal; font-size: 11px; margin-left: 4px; }
   .monthly-left-tag {
     margin-left: 6px; font-size: 11px; padding: 1px 6px;
-    background: var(--ink-3); color: #fff; border-radius: 3px;
+    background: var(--ink-3); color: #FFF8E7; border-radius: 3px;
   }
-  .monthly-driver-stats { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .monthly-driver-stats { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
   .monthly-driver-contrib {
     font-size: 14px; font-weight: 700;
     text-align: right;
@@ -3382,7 +3357,7 @@
   .monthly-driver-contrib.danger { color: var(--warn); }
   .monthly-driver-contrib.positive { color: var(--green); }
   .monthly-warn-tag {
-    display: block; font-size: 10px; font-weight: normal;
+    display: block; font-size: 11px; font-weight: normal;
     margin-top: 2px;
   }
   .monthly-final-state .monthly-final-grid {
@@ -3390,10 +3365,10 @@
     text-align: center;
   }
   .monthly-final-grid > div { padding: 6px; }
-  .monthly-final-grid span { display: block; font-size: 12px; color: var(--ink-3); }
+  .monthly-final-grid span { display: block; font-size: 11px; color: var(--ink-3); }
   .monthly-final-grid strong { display: block; font-size: 18px; margin-top: 2px; }
   .monthly-continue {
-    width: 100%; margin-top: 14px; padding: 12px; font-size: 15px; font-weight: 700;
+    width: 100%; margin-top: 14px; padding: 12px; font-size: 14px; font-weight: 700;
   }
   /* V14: 投资人多选弹窗 */
   .investor-choices {
@@ -3403,24 +3378,24 @@
   .investor-choice {
     display: flex; align-items: flex-start; gap: 10px;
     padding: 12px; border: 2px solid var(--ink-1);
-    background: #fff; cursor: pointer; user-select: none;
+    background: #FFF8E7; cursor: pointer; user-select: none;
   }
   .investor-choice:hover { background: #FFF8E0; }
   .investor-choice input[type="checkbox"] { margin-top: 4px; transform: scale(1.3); }
   .investor-choice.disabled { opacity: 0.45; cursor: not-allowed; }
   .investor-choice-body { flex: 1; }
-  .investor-choice-label { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
-  .investor-choice-detail { font-size: 13px; color: var(--ink-3); }
+  .investor-choice-label { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .investor-choice-detail { font-size: 14px; color: var(--ink-3); }
   .investor-actions {
     display: flex; flex-direction: column; align-items: stretch; gap: 10px;
     margin-top: 8px;
   }
-  .investor-actions .btn { padding: 12px; font-size: 15px; }
+  .investor-actions .btn { padding: 12px; font-size: 14px; }
   .investor-hold-note {
     margin-top: -4px;
     padding: 0 4px;
     color: var(--ink-3);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.45;
     text-align: center;
   }
@@ -3428,7 +3403,7 @@
     color: var(--warn);
   }
   .investor-divider {
-    text-align: center; color: var(--ink-3); font-size: 12px;
+    text-align: center; color: var(--ink-3); font-size: 11px;
     position: relative; padding: 4px 0;
   }
   .investor-divider::before, .investor-divider::after {
@@ -3560,7 +3535,7 @@
     }
     .topbar-stat .ts-label,
     .topbar-stat .ts-sub {
-      font-size: 12px !important;
+      font-size: 11px !important;
       line-height: 1 !important;
     }
     .topbar-stat .ts-value {
@@ -3867,7 +3842,7 @@
     50% { box-shadow: 0 0 0 4px var(--gold), 4px 4px 0 var(--accent-deep); }
   }
   .gacha-rarity {
-    color: #fff;
+    color: #FFF8E7;
     font-weight: 700;
     font-size: 14px;
     padding: 3px 8px;
@@ -4170,7 +4145,6 @@
   .hud-tag,
   .mb-tag,
   .ph-clock,
-  .btn-primary,
   .btn-ghost,
   .hud-log-btn,
   .hud-log-btn::after,
@@ -4197,7 +4171,6 @@
 
   .hud-log-btn:hover,
   .hud-log-btn:focus-visible,
-  .btn-primary:hover:not(:disabled),
   .toggle-btn:hover {
     box-shadow: 2px 2px 0 rgba(42,35,32,0.65);
   }
@@ -4382,7 +4355,7 @@
     margin: 0;
     min-width: 0;
     color: var(--ink-2) !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     font-weight: 700;
     line-height: 1.35 !important;
     -webkit-line-clamp: 2;
@@ -4405,7 +4378,7 @@
     background: rgba(255,255,255,0.64);
     border: 1px solid rgba(42,35,32,0.18);
     color: var(--accent-deep);
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1;
     white-space: nowrap;
   }
@@ -4466,7 +4439,7 @@
     align-self: end;
     min-width: 0;
     color: var(--ink);
-    font-size: 20px !important;
+    font-size: 18px !important;
     font-weight: 950;
     line-height: 1.05 !important;
     letter-spacing: 0;
@@ -4545,7 +4518,7 @@
     gap: 8px;
     padding: 7px 0;
     border-top: 1px dashed rgba(42,35,32,0.22);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 800;
     line-height: 1.38;
   }
@@ -4562,7 +4535,7 @@
   }
 
   .topbar-stat.supply-stat .ts-value {
-    font-size: 17px !important;
+    font-size: 18px !important;
   }
 
   .topbar-stat .ts-sub {
@@ -4575,7 +4548,7 @@
     background: rgba(255,255,255,0.66);
     border: 1px solid rgba(42,35,32,0.12);
     color: var(--ink-3);
-    font-size: 10px !important;
+    font-size: 11px !important;
     font-weight: 800;
     line-height: 1 !important;
     white-space: nowrap;
@@ -4700,7 +4673,7 @@
   }
   .btn-primary {
     background: var(--accent) !important;
-    color: #fff !important;
+    color: #FFF8E7 !important;
   }
   .btn-primary:hover:not(:disabled) {
     background: var(--accent-deep) !important;
@@ -4927,7 +4900,7 @@
   }
   .ending-roadmap-item.done .ending-roadmap-status {
     background: var(--green, #2E7D6A) !important;
-    color: #fff !important;
+    color: #FFF8E7 !important;
     border-color: var(--green, #2E7D6A) !important;
   }
   .ending-roadmap-item.next .ending-roadmap-status {
@@ -5177,7 +5150,7 @@ function DriverAvatar({ avatar, size = 36, name = '?' }) {
   const src = `assets/pixel/avatars/${assetId}.png`;
   return (
     <div className="ph-avatar" data-asset={`avatar-${assetId}`}
-      style={{ width: size, height: size, background: bg, color: '#fff', fontSize: Math.round(size * 0.42) }}>
+      style={{ width: size, height: size, background: bg, color: '#FFF8E7', fontSize: Math.round(size * 0.42) }}>
       <img src={src} alt={name} draggable="false" />
     </div>
   );
@@ -5188,7 +5161,7 @@ function VehicleIcon({ template, size = 60 }) {
   const src = `assets/pixel/vehicles/${template.id}.png`;
   return (
     <div className={`ph-vehicle asset-vehicle vehicle-${template.id}`} data-asset={`vehicle-${template.id}`}
-      style={{ width: size * 2.15, height: size * 0.86, background: template.color, color: '#fff',
+      style={{ width: size * 2.15, height: size * 0.86, background: template.color, color: '#FFF8E7',
         fontSize: Math.max(10, Math.round(size * 0.20)) }}>
       <img src={src} alt={template.name} draggable="false" />
     </div>
@@ -5402,11 +5375,15 @@ function MissionBar({ state, onOpenRoadmap }) {
 
 /* ============== V3: 顶栏 ============== */
 
-// V12.2: 导出诊断数据 — 玩家卡住时点这个按钮下载 JSON,提交给开发者分析
-function exportGameDiagnostics(state) {
-  const payload = {
+const APP_VERSION = 'V14.87';
+const RUN_HISTORY_KEY = 'wycwy-run-history-v1';
+const RUN_HISTORY_LIMIT = 20;
+
+function buildGameDiagnosticsPayload(state, extra = {}) {
+  return {
     exportedAt: new Date().toISOString(),
-    version: 'V14.86',
+    version: APP_VERSION,
+    ...extra,
     summary: {
       day: state.day,
       hour: state.hour,
@@ -5420,8 +5397,16 @@ function exportGameDiagnostics(state) {
       todayLost: state.todayLost,
       todayRepLoss: state.todayRepLoss,
       currentMissionIdx: state.currentMissionIdx,
+      currentMission: MISSIONS[state.currentMissionIdx]?.title || null,
+      completedMissionIds: state.completedMissionIds || [],
       unlockedEndingTier: state.unlockedEndingTier,
       gameOver: state.gameOver,
+      debtAmount: state.debtAmount,
+      debtDueDay: state.debtDueDay,
+      negFundsDays: state.negFundsDays,
+      bankruptcyGraceBonus: state.bankruptcyGraceBonus,
+      totalCompleted: state.totalCompleted,
+      totalEarned: state.totalEarned,
     },
     drivers: state.drivers.map((d) => ({
       id: d.id, name: d.name, bg: d.bg, bgName: d.bgName, rarity: d.rarity,
@@ -5434,10 +5419,27 @@ function exportGameDiagnostics(state) {
     vehicles: state.vehicles.map((v) => ({
       id: v.id, templateId: v.templateId,
     })),
+    monthly: {
+      monthCounter: state.monthCounter,
+      earnedGross: state.monthlyEarnedGross || 0,
+      commission: state.monthlyCommission || 0,
+      salary: state.monthlySalary || 0,
+      debtPaid: state.monthlyDebtPaid || 0,
+      severance: state.monthlySeverance || 0,
+      eventImpact: state.monthlyEventImpact || 0,
+      eventItems: state.monthlyEventItems || [],
+      driverData: state.monthlyDriverData || {},
+      report: state.showMonthlyReport || null,
+    },
     diagnosticsLatest: state.diagnostics || [],  // 最近 720 tick = 30 游戏日
     log: state.log || [],
     notifications: state.notifications || [],
   };
+}
+
+// V12.2: 导出诊断数据 — 玩家卡住时点这个按钮下载 JSON,提交给开发者分析
+function exportGameDiagnostics(state) {
+  const payload = buildGameDiagnosticsPayload(state);
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -5449,6 +5451,49 @@ function exportGameDiagnostics(state) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function buildRunRecord(state) {
+  const payload = buildGameDiagnosticsPayload(state, { savedReason: 'game-over' });
+  return {
+    id: `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    savedAt: payload.exportedAt,
+    version: APP_VERSION,
+    result: state.gameOver?.type || 'unknown',
+    deathCause: state.gameOver?.deathCause || null,
+    reason: state.gameOver?.reason || state.gameOver?.endingName || '',
+    summary: payload.summary,
+    drivers: payload.drivers,
+    vehicles: payload.vehicles,
+    monthly: payload.monthly,
+    diagnosticsLatest: (payload.diagnosticsLatest || []).slice(-240),
+    log: (payload.log || []).slice(0, 120),
+    notifications: payload.notifications || [],
+  };
+}
+
+function getSavedRunHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RUN_HISTORY_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveRunRecord(state) {
+  if (!state?.gameOver) return null;
+  const record = buildRunRecord(state);
+  try {
+    const history = getSavedRunHistory();
+    const next = [record, ...history].slice(0, RUN_HISTORY_LIMIT);
+    localStorage.setItem(RUN_HISTORY_KEY, JSON.stringify(next));
+    window.__WYCWY_LAST_RUN_RECORD = record;
+    return record;
+  } catch (e) {
+    console.warn('[WYCWY] run history save failed', e);
+    return null;
+  }
 }
 
 function TopbarHelp({ id, title, children }) {
@@ -5541,7 +5586,7 @@ function TopBar({ state, fundsDisplay, repDisplay, muted, onToggleMute, crtOn, o
   return (
     <div className="topbar">
       <div className="topbar-left">
-        <h1>网约车物语 <span className="v">V14.86</span></h1>
+        <h1>网约车物语 <span className="v">{APP_VERSION}</span></h1>
       </div>
       <div className="topbar-stats">
         <div className="topbar-kpis" aria-label="经营状态">
@@ -7598,8 +7643,9 @@ function MissionToast({ mission, onClose }) {
 
 function App() {
   const [state, dispatch] = useReducer(E.gameReducer, null, E.makeInitialState);
+  const savedGameOverKeyRef = useRef(null);
   // V12.2: 暴露给测试脚本(Playwright)用,生产可见但只读取/写入,无 UI 影响
-  window.__WYCWY_TEST = { dispatch, state, exportGameDiagnostics };
+  window.__WYCWY_TEST = { dispatch, state, exportGameDiagnostics, getSavedRunHistory, saveRunRecord };
   const [selectedDriverId, setSelectedDriverId] = useState(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [selectedZoneId, setSelectedZoneId] = useState(null);
@@ -7635,6 +7681,21 @@ function App() {
     vehicles: state.vehicles.length,
     drivers: state.drivers.length,
   });
+
+  useEffect(() => {
+    if (!state.gameOver) return;
+    const key = [
+      state.gameOver.type,
+      state.gameOver.deathCause || state.gameOver.endingId || state.gameOver.endingName || 'unknown',
+      state.day,
+      state.hour,
+      state.funds,
+      state.totalCompleted,
+    ].join('|');
+    if (savedGameOverKeyRef.current === key) return;
+    savedGameOverKeyRef.current = key;
+    saveRunRecord(state);
+  }, [state.gameOver, state.day, state.hour, state.funds, state.totalCompleted]);
 
   useEffect(() => {
     if (state.paused || state.activeEvent || state.activeStory || state.showTutorial || state.gameOver) return;
