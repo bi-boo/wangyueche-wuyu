@@ -246,7 +246,7 @@
     background: #FFF8E7;
     border-bottom: 1px solid var(--border);
     display: grid;
-    grid-template-columns: minmax(170px, 1fr) minmax(640px, 760px) minmax(150px, 1fr);
+    grid-template-columns: minmax(170px, 1fr) minmax(640px, 1100px) minmax(160px, 1fr);
     align-items: center;
     padding: 0 16px;
     gap: 14px;
@@ -278,11 +278,11 @@
   }
   .topbar-kpis {
     display: grid;
-    grid-template-columns: minmax(150px, 1.15fr) repeat(3, minmax(118px, 1fr));
-    gap: 6px;
+    grid-template-columns: minmax(150px, 1.15fr) repeat(3, minmax(140px, 1fr));
+    gap: 10px;
     min-width: 0;
     width: 100%;
-    max-width: 760px;
+    max-width: 1100px;
     justify-content: center;
     justify-self: center;
     grid-column: 2;
@@ -290,7 +290,7 @@
   .topbar-settings {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     justify-self: end;
     grid-column: 3;
   }  .topbar-clock .ph-clock {
@@ -435,12 +435,14 @@
     box-shadow: 3px 3px 0 rgba(42,35,32,0.42);
     animation: cta-pulse 1.6s ease-in-out infinite;
   }
+  /* V14.92: 首次开局 CTA 加大,新手第一眼就能看到主按钮 */
   .speed-btn.play-toggle.is-first-start {
     flex-direction: column;
-    gap: 3px;
-    min-width: 176px;
-    min-height: 54px;
-    padding: 9px 22px 8px;
+    gap: 4px;
+    min-width: 220px;
+    min-height: 72px;
+    padding: 12px 28px 11px;
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.5);
   }
   .run-btn-main,
   .run-btn-sub {
@@ -449,7 +451,7 @@
     letter-spacing: 0;
   }
   .run-btn-main {
-    font-size: 18px;
+    font-size: 24px;
     font-weight: 900;
   }
   .run-btn-sub {
@@ -531,9 +533,10 @@
   .stat-bar-track {
     flex: 1;
     min-width: 32px;
-    height: 6px;
-    background: rgba(0,0,0,0.05);
-    border-radius: 3px;
+    height: 10px;
+    background: rgba(42,35,32,0.06);
+    border: 1px solid rgba(42,35,32,0.22);
+    border-radius: 2px;
     overflow: hidden;
   }
   .stat-bar-fill {
@@ -1467,10 +1470,36 @@
     margin-top: 0;
   }
   /* V14: 解雇 / 卖车 危险操作区 */
-  .inspector-danger-actions {
-    display: flex; flex-direction: column; gap: 8px;
-    padding-top: 12px;
+  /* V14.92: 改用 details/summary 折叠,默认收起 */
+  details.inspector-danger-actions {
+    padding-top: 0;
     border-top: 1px dashed var(--ink-1);
+  }
+  details.inspector-danger-actions[open] {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
+  }
+  details.inspector-danger-actions summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 10px 0 8px;
+    user-select: none;
+  }
+  details.inspector-danger-actions summary::-webkit-details-marker {
+    display: none;
+  }
+  details.inspector-danger-actions summary::after {
+    content: '▾';
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--warn);
+    display: inline-block;
+    transition: transform 0.15s ease;
+  }
+  details.inspector-danger-actions[open] summary::after {
+    transform: rotate(180deg);
   }
   .inspector-danger-actions .inspector-section-title {
     color: var(--warn);
@@ -1872,10 +1901,10 @@
   }
   .driver-attr-meter {
     grid-area: meter;
-    height: 8px;
+    height: 10px;
     min-width: 0;
-    background: rgba(42,35,32,0.08);
-    border: 1px solid rgba(42,35,32,0.12);
+    background: rgba(42,35,32,0.06);
+    border: 1px solid rgba(42,35,32,0.22);
     position: relative;
     overflow: hidden;
   }
@@ -2944,8 +2973,14 @@
     transform: translate(-1px, -1px);
     box-shadow: 3px 3px 0 var(--ink);
   }
-  .run-history-card.outcome-win { border-color: var(--gold); }
-  .run-history-card.outcome-lose { border-color: var(--warn); }
+  .run-history-card.outcome-win {
+    border-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 10%, var(--card) 90%);
+  }
+  .run-history-card.outcome-lose {
+    border-color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 6%, var(--card) 94%);
+  }
   .run-history-tag {
     font-size: 11px;
     font-weight: 800;
@@ -3937,8 +3972,10 @@
 
   /* ========= V4: 静音 / CRT toggle 按钮 ========= */
   .toggle-btn {
-    width: 30px;
-    height: 30px;
+    /* V14.92: 改为自适应宽度,容纳 2 字标签不挤 */
+    min-width: 44px;
+    height: 32px;
+    padding: 0 8px;
     border: 2px solid var(--ink);
     background: var(--card);
     color: var(--ink);
@@ -3948,12 +3985,12 @@
     font-size: 14px;
     line-height: 1;
     font-family: var(--font-body);
-    padding: 0;
-    margin-left: 4px;
+    margin-left: 0;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    white-space: nowrap;
   }
   .toggle-btn.on { background: var(--gold); }
   .toggle-btn:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--ink); }
@@ -3980,9 +4017,10 @@
     min-width: 0;
     min-height: 248px;
   }
-  .ticket-card.normal { border-left: 6px solid var(--ink-3); }
-  .ticket-card.vip { border-left: 6px solid var(--purple); background: linear-gradient(90deg, #EDE5F8, var(--sub)); }
-  .ticket-card.headhunter { border-left: 6px solid var(--accent); background: linear-gradient(90deg, var(--gold), var(--sub)); }
+  /* V14.92: 去 side-stripe + 去 linear-gradient,改全硬边框 + 实色（DESIGN.md 既反对 side-stripe 也反对糖色渐变）*/
+  .ticket-card.normal { border: 2px solid var(--ink-3); background: var(--card); }
+  .ticket-card.vip { border: 2px solid var(--purple); background: var(--card); }
+  .ticket-card.headhunter { border: 2px solid var(--accent); background: var(--card); }
   .ticket-head {
     display: flex;
     justify-content: space-between;
@@ -4473,12 +4511,13 @@
     stroke: rgba(255,255,255,0.86);
     stroke-width: 0.72;
   }  /* V14.2: 左侧任务卡改为当前动作优先 */
+  /* V14.92: 紧凑化 — 减小 padding/gap/margin,让任务卡占据空间与信息密度匹配 */
   .fleet-panel .mission-bar {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 10px 10px 9px;
-    margin-bottom: 10px;
+    gap: 4px;
+    padding: 8px 10px 7px;
+    margin-bottom: 8px;
     background: color-mix(in srgb, var(--gold) 18%, var(--card) 82%) !important;
   }
 
@@ -4636,12 +4675,15 @@
     font-size: 18px !important;
   }
 
+  /* V14.92: 核心 KPI 升 display 字号 — 资金/口碑视觉主次明确 */
   .topbar-stat.funds-stat .ts-value {
     color: var(--accent-deep) !important;
+    font-size: 24px !important;
   }
 
   .topbar-stat.rep-stat .ts-value {
     color: var(--green) !important;
+    font-size: 24px !important;
   }
 
   .topbar-stat.has-help {
@@ -6747,10 +6789,10 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
           </div>
         )}
 
-        {/* V14: 主动解雇 / 主动卖车入口 — 跑单中也能操作,订单中断 */}
+        {/* V14.92: 风险操作折叠 — 默认收起,避免新手误以为"解雇是日常操作" */}
         {(canFireDriver || canSellVehicle) && (
-          <div className="inspector-section inspector-danger-actions">
-            <div className="inspector-section-title">风险操作</div>
+          <details className="inspector-section inspector-danger-actions">
+            <summary className="inspector-section-title">风险操作</summary>
             {canFireDriver && (
               <button className="btn btn-ghost btn-danger"
                 onClick={() => {
@@ -6785,7 +6827,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                 </button>
               );
             })()}
-          </div>
+          </details>
         )}
       </div>
     </div>
