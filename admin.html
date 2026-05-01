@@ -1027,13 +1027,25 @@ function mergeConfigValue(orig, ov) {
   return deepClone(ov);
 }
 
+function normalizeOrderFares(data) {
+  const minFares = data?.GAME?.MIN_ORDER_FARES || {};
+  if (!Array.isArray(data?.ORDERS)) return data;
+  return {
+    ...data,
+    ORDERS: data.ORDERS.map((order) => {
+      const minFare = minFares[order.id];
+      return minFare ? { ...order, fare: Math.max(order.fare || 0, minFare) } : order;
+    }),
+  };
+}
+
 function mergeOverride(base, override) {
   const out = deepClone(base);
   Object.keys(override).forEach((key) => {
     if (out[key] === undefined) return;
     out[key] = mergeConfigValue(out[key], override[key]);
   });
-  return out;
+  return normalizeOrderFares(out);
 }
 
 /* ========= 主组件 ========= */
