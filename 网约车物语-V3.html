@@ -538,8 +538,10 @@
   }
   .stat-bar-fill {
     height: 100%;
+    width: 100%;
+    transform-origin: left center;
     border-radius: 3px;
-    transition: width 0.4s ease;
+    transition: transform 0.4s ease;
   }
   .stat-bar-num {
     width: 28px;
@@ -887,7 +889,8 @@
     box-shadow: 0 0 0 9999px rgba(23, 18, 14, 0.58), 4px 4px 0 rgba(42,35,32,0.34);
     border: 3px solid var(--gold);
     pointer-events: none;
-    transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease, bottom 0.25s ease, right 0.25s ease;
+    /* V14.91: width/height 移出 transition 列表 — 避免 layout property animation,只保留位置过渡 */
+    transition: top 0.25s ease, left 0.25s ease, bottom 0.25s ease, right 0.25s ease;
     animation: coach-glow 1.6s ease-in-out infinite;
   }
   .coach-mask-full {
@@ -1878,8 +1881,10 @@
   }
   .driver-attr-fill {
     height: 100%;
+    width: 100%;
+    transform-origin: left center;
     background: var(--attr-color);
-    transition: width 0.18s ease;
+    transition: transform 0.18s ease;
   }
   .driver-attr-row.warn .driver-attr-fill,
   .driver-attr-row.danger .driver-attr-fill {
@@ -5379,7 +5384,7 @@ function StatBars({ stats, compact, caps }) {
         <div key={it.key} className={`stat-bar-row ${caps ? 'with-cap' : ''}`}>
           <span className="stat-bar-label" style={{color: it.color}}>{compact ? it.short : it.label}</span>
           <div className="stat-bar-track">
-            <div className="stat-bar-fill" style={{width: `${Math.min(100, stats[it.key])}%`, background: it.color}} />
+            <div className="stat-bar-fill" style={{transform: `scaleX(${Math.min(100, stats[it.key]) / 100})`, background: it.color}} />
             {caps && <span className="stat-cap-marker" style={{left: `${Math.min(100, caps[it.key] || 99)}%`}} />}
           </div>
           <span className="stat-bar-num">{caps ? `${stats[it.key]}/${caps[it.key] || 99}` : stats[it.key]}</span>
@@ -6504,7 +6509,7 @@ function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, l
             <span className="driver-attr-value">{row.value}/{row.limit}</span>
             <span className={`driver-attr-meta ${row.enough === false && !row.maxed ? 'poor' : ''}`}>{row.meta}</span>
             <div className="driver-attr-meter" aria-label={`${row.label} ${row.value}/${row.limit}`}>
-              <div className="driver-attr-fill" style={{width: `${row.pct}%`}} />
+              <div className="driver-attr-fill" style={{transform: `scaleX(${row.pct / 100})`}} />
             </div>
             {t ? (
               <button
