@@ -1,0 +1,10 @@
+.DS_Store
+._*
+
+.env
+*.env
+*.pem
+
+node_modules/
+dist/
+build/

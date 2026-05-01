@@ -1,0 +1,1730 @@
+/* 网约车物语 V3 - 游戏引擎 (reducer + 工具 + 任务系统) */
+(function () {
+  const D = window.WYCWY_DATA;
+  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, INVESTOR_PRESSURE, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES } = D;
+
+  let driverIdCounter = 100;
+  let vehicleIdCounter = 100;
+  let orderOfferIdCounter = 0;
+  let logIdCounter = 0;
+
+  // 工具
+  const rand = (min, max) => Math.random() * (max - min) + min;
+  const randInt = (min, max) => Math.floor(rand(min, max + 1));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const cap = (v, min, max) => Math.max(min, Math.min(max, v));
+  // V14.11: 属性砍到 2(driving + service)。driving 决定高端订单准入和收益,service 决定好评率。
+  const sumStats = (s) => s.driving + s.service;
+  const STAT_KEYS = ['driving', 'service'];
+  const DEFAULT_LOYALTY_RULES = {
+    N: { id: 'N', initialMin: 75, initialMax: 85, normalCap: 100, quitBelow: 25, moralePenalty: 4 },
+    R: { id: 'R', initialMin: 60, initialMax: 75, normalCap: 95, quitBelow: 30, moralePenalty: 4 },
+    SR: { id: 'SR', initialMin: 50, initialMax: 65, normalCap: 90, quitBelow: 35, moralePenalty: 6 },
+    SSR: { id: 'SSR', initialMin: 40, initialMax: 55, normalCap: 85, quitBelow: 40, moralePenalty: 8 },
+  };
+
+  // V14.67: 删除疲劳机制 — fatigue 字段、isDriverResting、FATIGUE_* 常量整套移除。
+  //         玩家无感、阈值过高几乎不触发,且没区分长短途订单。
+
+  function computeStatCaps(bgOrDriver) {
+    const rarity = bgOrDriver?.rarity || 'N';
+    const base = RARITY_STAT_CAPS?.[rarity] || RARITY_STAT_CAPS?.N || {
+      driving: GAME.STAT_CAP, service: GAME.STAT_CAP,
+    };
+    const caps = { ...base };
+    const boosts = bgOrDriver?.boosts || null;
+    if (boosts) {
+      const sorted = STAT_KEYS
+        .map((key) => ({ key, val: boosts[key] || 0 }))
+        .sort((a, b) => b.val - a.val);
+      sorted.slice(0, 2).forEach(({ key }, idx) => {
+        caps[key] = Math.min(GAME.STAT_CAP, caps[key] + (idx === 0 ? 5 : 3));
+      });
+    }
+    return caps;
+  }
+
+  function getRarityLoyaltyRule(rarity = 'N') {
+    return (RARITY_LOYALTY_RULES || []).find((rule) => rule.id === rarity)
+      || DEFAULT_LOYALTY_RULES[rarity]
+      || DEFAULT_LOYALTY_RULES.N;
+  }
+
+  function getDriverLoyaltyCap(driver, trustBreakthrough = false) {
+    if (trustBreakthrough) return 100;
+    return getRarityLoyaltyRule(driver?.rarity || 'N').normalCap || 100;
+  }
+
+  function getDriverQuitLine(driver) {
+    return getRarityLoyaltyRule(driver?.rarity || 'N').quitBelow || 30;
+  }
+
+  function rollInitialLoyalty(bg) {
+    const rule = getRarityLoyaltyRule(bg?.rarity || 'N');
+    const min = rule.initialMin ?? 50;
+    const max = rule.initialMax ?? min;
+    const base = randInt(min, max);
+    const legacyBias = Math.round(((bg?.loyalty ?? 60) - 60) / 10);
+    return cap(base + legacyBias, min, max);
+  }
+
+  function applyDriverLoyaltyDelta(driver, delta, { trustBreakthrough = false } = {}) {
+    const current = driver?.loyalty ?? 50;
+    if (!delta) return { ...driver, loyalty: current };
+    if (delta > 0) {
+      const max = getDriverLoyaltyCap(driver, trustBreakthrough);
+      return { ...driver, loyalty: current >= max ? current : cap(current + delta, 0, max) };
+    }
+    // 负向变化只按当前忠诚扣减,突破过上限也不提供额外保护。
+    return { ...driver, loyalty: cap(current + delta, 0, 100) };
+  }
+
+  function recomputeReviewRating(goodReviews = 0, badReviews = 0) {
+    return Number(cap(4.5 + goodReviews * 0.03 - badReviews * 0.15, 3, 5).toFixed(1));
+  }
+
+  function isZoneUnlocked(state, zone) {
+    if (!zone || !zone.unlock) return true;
+    const u = zone.unlock;
+    if (u.reputation !== undefined && state.reputation < u.reputation) return false;
+    if (u.funds !== undefined && state.funds < u.funds) return false;
+    if (u.day !== undefined && state.day < u.day) return false;
+    return true;
+  }
+
+  function getZoneUnlockText(state, zone) {
+    if (!zone || !zone.unlock || isZoneUnlocked(state, zone)) return '已解锁';
+    const req = [];
+    const u = zone.unlock;
+    if (u.reputation !== undefined && state.reputation < u.reputation) req.push(`口碑 ${u.reputation}`);
+    if (u.funds !== undefined && state.funds < u.funds) req.push(`资金 ¥${u.funds}`);
+    if (u.day !== undefined && state.day < u.day) req.push(`第 ${u.day} 日`);
+    return req.length ? `解锁: ${req.join(' + ')}` : '未解锁';
+  }
+
+  function getZoneOrderWeight(zone, orderId) {
+    // V14.9: 删除 zone.hot 兼容分支 — 当前所有 ZONES 都用 orderMix,hot 是 V14.29 之前的旧数据格式
+    return zone?.orderMix?.[orderId] || 0;
+  }
+
+  // V14.49: 事件效果按经营规模动态结算。
+  // 目标:后期车队和现金变大后,事件仍有经营压力;同时所有展示数值保持整数和好理解的整百/整千。
+  function roundEventMoney(value) {
+    if (!value) return 0;
+    const sign = value < 0 ? -1 : 1;
+    const abs = Math.abs(value);
+    const step = abs < 3000 ? 500 : abs < 20000 ? 1000 : 5000;
+    return sign * Math.max(step, Math.round(abs / step) * step);
+  }
+
+  function getEventBusinessScale(state) {
+    const crews = (state?.drivers || []).filter((d) =>
+      d.vehicleId && (state?.vehicles || []).some((v) => v.id === d.vehicleId)
+    ).length;
+    const funds = Math.max(0, state?.funds || 0);
+    const reputation = Math.max(0, state?.reputation || 0);
+    const crewScale = Math.max(0, crews - 2) * 0.55;
+    const fundsScale = Math.max(0, funds - GAME.STARTING_FUNDS) / 30000;
+    const repScale = Math.max(0, reputation - GAME.STARTING_REPUTATION) / 120;
+    return Number(cap(1 + crewScale + fundsScale + repScale, 1, 15).toFixed(2));
+  }
+
+  function scaleEventMoneyDelta(amount, state) {
+    if (!amount) return amount;
+    const scale = getEventBusinessScale(state);
+    // 奖励也随规模走,但弱一些,避免后期事件变成主要赚钱方式。
+    const factor = amount > 0 ? 1 + (scale - 1) * 0.35 : scale;
+    return roundEventMoney(amount * factor);
+  }
+
+  function scaleEventReputationDelta(delta, state) {
+    if (!delta) return delta;
+    if (delta > 0) return Math.round(delta);
+    const rep = Math.max(0, state?.reputation || 0);
+    const factor = rep >= 800 ? 8 : rep >= 500 ? 5 : rep >= 300 ? 3.5 : rep >= 120 ? 2 : 1;
+    return -Math.min(80, Math.max(1, Math.round(Math.abs(delta) * factor)));
+  }
+
+  function scaleEventSalaryRaise(amount, state) {
+    if (!amount) return amount;
+    const scale = getEventBusinessScale(state);
+    return roundEventMoney(amount * (1 + (scale - 1) * 0.6));
+  }
+
+  function scaleEventEffect(rawEffect, state) {
+    const eff = { ...(rawEffect || {}) };
+    const scale = getEventBusinessScale(state);
+    let dynamic = false;
+    if (eff.funds !== undefined) {
+      const next = scaleEventMoneyDelta(eff.funds, state);
+      dynamic = dynamic || next !== eff.funds;
+      eff.funds = next;
+    }
+    if (eff.reputation !== undefined) {
+      const next = scaleEventReputationDelta(eff.reputation, state);
+      dynamic = dynamic || next !== eff.reputation;
+      eff.reputation = next;
+    }
+    if (eff.salaryRaise !== undefined) {
+      const next = scaleEventSalaryRaise(eff.salaryRaise, state);
+      dynamic = dynamic || next !== eff.salaryRaise;
+      eff.salaryRaise = next;
+    }
+    if (eff.accidentRisk) {
+      const risk = { ...eff.accidentRisk };
+      if (risk.funds !== undefined) {
+        const next = scaleEventMoneyDelta(risk.funds, state);
+        dynamic = dynamic || next !== risk.funds;
+        risk.funds = next;
+      }
+      if (risk.reputation !== undefined) {
+        const next = scaleEventReputationDelta(risk.reputation, state);
+        dynamic = dynamic || next !== risk.reputation;
+        risk.reputation = next;
+      }
+      eff.accidentRisk = risk;
+    }
+    if (dynamic) {
+      eff.eventScale = scale;
+    }
+    return eff;
+  }
+
+  // V14.9: isOrderZoneUnlocked 已删除 — 仅 dispatchOffers 内部用,跟着死代码一起清理
+
+  // V7: 司机故事线 — 跨周目伪随机持久化
+  const SEEN_STORIES_KEY = 'wycwy_seen_stories';
+  function loadSeenStories() {
+    try {
+      const raw = localStorage.getItem(SEEN_STORIES_KEY);
+      if (!raw) return {};
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
+      // codex review fix(Medium):规范化 schema —
+      // 只保留 { [bgId]: number[] } 形态的条目,丢弃任何非数组或含非数字元素的脏数据
+      // codex review #2 fix(Low):防 prototype pollution —
+      // 用 Object.create(null) 隔离原型链,并显式拒绝 __proto__/constructor/prototype 这类危险 key
+      const cleaned = Object.create(null);
+      const FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype'];
+      for (const k of Object.keys(obj)) {
+        if (FORBIDDEN_KEYS.includes(k)) continue;
+        const v = obj[k];
+        if (Array.isArray(v) && v.every((n) => typeof n === 'number' && Number.isFinite(n))) {
+          cleaned[k] = v.slice();
+        }
+      }
+      return cleaned;
+    } catch (e) {
+      return {};
+    }
+  }
+  function saveSeenStories(seen) {
+    try {
+      localStorage.setItem(SEEN_STORIES_KEY, JSON.stringify(seen || {}));
+    } catch (e) {}
+  }
+  // 伪随机:优先抽未看过的 slice,全看过后纯随机
+  function pickUnseenSliceIndex(bgId, slicesPool, seen) {
+    if (!slicesPool || slicesPool.length === 0) return -1;
+    const seenIdx = (seen && seen[bgId]) || [];
+    const allIdx = slicesPool.map((_, i) => i);
+    const unseen = allIdx.filter((i) => !seenIdx.includes(i));
+    if (unseen.length > 0) return unseen[Math.floor(Math.random() * unseen.length)];
+    // 全看过:从全部里纯随机
+    return allIdx[Math.floor(Math.random() * allIdx.length)];
+  }
+
+  const GIVEN_NAMES_SHORT = ['伟', '勇', '军', '强', '磊', '涛', '明', '辉', '兵', '波', '华', '刚', '鹏', '亮', '斌', '峰', '超', '龙'];
+  const GIVEN_NAMES_LONG = ['建国', '建军', '志强', '志刚', '海军', '小刚', '大伟', '永福', '国庆', '立民', '卫东', '建华', '振华', '德胜', '长春', '和平'];
+  const SR_NAME_PREFIXES = ['金牌', '王牌', '特级', '头牌', '首席', '明星', '老炮', '专车'];
+  const SSR_RACING_NAMES = ['舒马赫', '塞纳', '汉密尔顿', '维斯塔潘', '阿隆索', '莱科宁', '维特尔', '勒克莱尔', '巴顿', '哈基宁', '普罗斯特', '曼塞尔'];
+  const SSR_RACING_SUFFIXES = ['车神', '冠军', '传奇', '大师'];
+
+  function genName(rarity = 'N') {
+    if (rarity === 'SSR') return pick(SSR_RACING_NAMES) + pick(SSR_RACING_SUFFIXES);
+    if (rarity === 'SR') return pick(SR_NAME_PREFIXES) + pick(FIRST_NAMES) + pick(GIVEN_NAMES_LONG);
+    if (rarity === 'R') return pick(FIRST_NAMES) + pick(GIVEN_NAMES_LONG);
+    return pick(FIRST_NAMES) + pick(GIVEN_NAMES_SHORT);
+  }
+
+  function genDriver(opts = {}) {
+    const bg = opts.background || pick(BACKGROUNDS);
+    const rarity = bg.rarity || 'N';
+    const name = opts.name || genName(rarity);
+    const baseSpread = randInt(-3, 5);
+    const statCaps = computeStatCaps(bg);
+    return {
+      id: ++driverIdCounter,
+      name,
+      bg: bg.id,
+      bgName: bg.name,
+      rarity,  // V6: 稀有度
+      avatar: bg.avatar,
+      stats: {
+        driving: cap(bg.boosts.driving + baseSpread, 1, statCaps.driving),
+        service: cap(bg.boosts.service + baseSpread, 1, statCaps.service),
+      },
+      statCaps,
+      salary: bg.salary,
+      loyalty: opts.loyalty ?? rollInitialLoyalty(bg),
+      completedOrders: 0,
+      totalEarned: 0,
+      goodReviews: 0,
+      badReviews: 0,
+      rating: 4.5,
+      vehicleId: null,
+      status: 'idle',
+      currentOrder: null,
+      orderRateBonus: bg.orderRateBonus || 1.0,
+    };
+  }
+
+  function genUniqueDriver(opts = {}, usedNames = null) {
+    let driver = genDriver(opts);
+    if (!usedNames) return driver;
+    let retry = 0;
+    while (usedNames.has(driver.name) && retry < 12) {
+      driver = genDriver(opts);
+      retry += 1;
+    }
+    usedNames.add(driver.name);
+    return driver;
+  }
+
+  // V11: 抽卡 — 根据券类型按固定概率随机稀有度(不再走玩家阶段),再从该稀有度池子里抽一个。
+  function rollGacha(state, ticketId) {
+    const ticket = D.RECRUIT_TICKETS.find((t) => t.id === ticketId);
+    if (!ticket) return null;
+    const probs = ticket.probs;
+    const rarities = ['N', 'R', 'SR', 'SSR'];
+    const usedNames = new Set((state?.drivers || []).map((d) => d.name));
+    // 抽 3 张
+    const cards = [];
+    for (let i = 0; i < 3; i++) {
+      let r = Math.random();
+      let chosenRarity = 'N';
+      for (let j = 0; j < probs.length; j++) {
+        if (r < probs[j]) { chosenRarity = rarities[j]; break; }
+        r -= probs[j];
+      }
+      const pool = BACKGROUNDS.filter((b) => b.rarity === chosenRarity);
+      if (pool.length === 0) {
+        // fallback 到下一档
+        const fallback = BACKGROUNDS.filter((b) => b.rarity === 'N');
+        cards.push(genUniqueDriver({ background: pick(fallback) }, usedNames));
+      } else {
+        cards.push(genUniqueDriver({ background: pick(pool) }, usedNames));
+      }
+    }
+    return cards;
+  }
+
+  function genVehicle(template) {
+    return {
+      id: ++vehicleIdCounter,
+      templateId: template.id,
+      name: template.name,
+    };
+  }
+
+  function getVehicleData(v) {
+    return VEHICLES.find((t) => t.id === v.templateId);
+  }
+
+  function canTakeOrder(order, driver, vehicle) {
+    for (const k in order.req) if (driver.stats[k] < order.req[k]) return false;
+    const vd = getVehicleData(vehicle);
+    if (!vd.eligible.includes(order.id)) return false;
+    return true;
+  }
+
+  function fleetHasVehicleForOrder(vehicles, order) {
+    return vehicles.some((vehicle) => {
+      const vd = getVehicleData(vehicle);
+      return vd && vd.eligible.includes(order.id);
+    });
+  }
+
+  function inHourWindow(window, hour) {
+    if (!window) return true;
+    const [s, e] = window;
+    if (s < e) return hour >= s && hour < e;
+    return hour >= s || hour < e;
+  }
+
+  function computeFare(order, driver, vehicle) {
+    let fare = order.fare;
+    // V14.11: 高端订单不再只有"过线/不过线"。驾驶越高,专车/豪华车单价越稳。
+    const driving = driver.stats.driving || 0;
+    if (order.id === 'airport') {
+      fare *= 1 + cap((driving - 35) / 35 * 0.25, 0, 0.25);
+    } else if (order.id === 'luxury') {
+      fare *= 1 + cap((driving - 70) / 29 * 0.2, 0, 0.2);
+    }
+    fare *= rand(0.95, 1.1);
+    return Math.round(fare);
+  }
+
+  function rollGoodReview(driver, vehicle) {
+    // V12: 服务系数 0.005 → 0.008,让"练服务"对好评率有更明显感知
+    const base = 0.5 + driver.stats.service * 0.008;
+    return Math.random() < base;
+  }
+
+  // V12: 计算司机服务对应的好评率(用于 UI 展示和外部调用)
+  function getDriverGoodReviewRate(driver) {
+    return Math.min(1, 0.5 + (driver.stats.service || 0) * 0.008);
+  }
+
+  function getDriverLoyaltyMultiplier(driver) {
+    const loyalty = driver?.loyalty ?? 50;
+    // 50 忠诚为基准;低忠诚会少接单,高忠诚会更积极。
+    return Math.max(0.75, Math.min(1.25, 0.75 + loyalty / 200));
+  }
+
+  function getDriverQuitRisk(driver) {
+    const loyalty = driver?.loyalty ?? 50;
+    const quitLine = getDriverQuitLine(driver);
+    if (loyalty >= quitLine) return 0;
+    return Math.min(0.25, (quitLine - loyalty) * 0.01);
+  }
+
+  // V12: 半订单池 — 每 tick 按片区 density 刷出实物订单名额,司机抢,未抢完即流失。
+  // 时段倍率:早高峰(7-9)/晚高峰(17-19) ×1.3,深夜(22-5) ×0.7,其余 ×1.0。
+  function buildHourlySupply(state) {
+    const supply = [];
+    const hour = state.hour;
+    const isMorningRush = hour >= 7 && hour < 10;
+    const isEveningRush = hour >= 17 && hour < 20;
+    const isDeepNight = hour >= 22 || hour < 5;
+    const hourMul = (isMorningRush || isEveningRush) ? 1.3
+      : isDeepNight ? 0.7
+      : 1.0;
+
+    for (const zone of ZONES) {
+      if (!isZoneUnlocked(state, zone)) continue;
+      const baseDensity = zone.density || 1.0;
+      const expected = baseDensity * hourMul;
+      // 期望小数 → floor + 概率补偿,避免精度永远丢失
+      const intPart = Math.floor(expected);
+      const fracPart = expected - intPart;
+      const count = intPart + (Math.random() < fracPart ? 1 : 0);
+      if (count === 0) continue;
+
+      // V14.29: 每个片区都有全量订单池,orderMix 决定出现权重。
+      const candidates = ORDERS.filter((o) =>
+        getZoneOrderWeight(zone, o.id) > 0 && inHourWindow(o.hours_window, hour)
+      );
+      if (candidates.length === 0) continue;
+
+      for (let i = 0; i < count; i++) {
+        const weights = candidates.map((o) => getZoneOrderWeight(zone, o.id));
+        const total = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * total;
+        let chosen = candidates[0];
+        for (let j = 0; j < candidates.length; j++) {
+          r -= weights[j];
+          if (r <= 0) { chosen = candidates[j]; break; }
+        }
+        supply.push({
+          zoneId: zone.id,
+          orderId: chosen.id,
+          order: chosen,
+          taken: false,
+        });
+      }
+    }
+    return supply;
+  }
+
+  function hasEligibleDriverForOrder(state, drivers, vehicles, order) {
+    return drivers.some((d) => {
+      if (d.status !== 'idle') return false;
+      if (!d.vehicleId) return false;
+      const v = vehicles.find((x) => x.id === d.vehicleId);
+      return v && canTakeOrder(order, d, v);
+    });
+  }
+
+  // V14.9: buildDispatchOffers / refreshDispatchOffers 已删除 — 之前驱动 CityOrderLayer
+  // 渲染地图气泡,但 CityOrderLayer 早已 return null 是死组件。真正派单看 buildHourlySupply。
+
+
+  // === reducer ===
+  function makeInitialState() {
+    driverIdCounter = 100;
+    vehicleIdCounter = 100;
+    orderOfferIdCounter = 0;
+    logIdCounter = 0;
+    const initialNames = new Set();
+    const d1 = genUniqueDriver({ background: BACKGROUNDS[0] }, initialNames);
+    const d2 = genUniqueDriver({ background: BACKGROUNDS[3] }, initialNames);
+    const v1 = genVehicle(VEHICLES[0]);
+    const v2 = genVehicle(VEHICLES[0]);
+    d1.vehicleId = v1.id;
+    d2.vehicleId = v2.id;
+    const initial = {
+      funds: GAME.STARTING_FUNDS,
+      reputation: GAME.STARTING_REPUTATION,
+      day: 1,
+      hour: 6,
+      speed: 1,
+      paused: true,
+      hasStarted: false,
+      drivers: [d1, d2],
+      vehicles: [v1, v2],
+      log: [
+        { id: ++logIdCounter, time: '6:00', text: `车队成立! 初始资金 ¥${(GAME.STARTING_FUNDS || 0).toLocaleString()}`, level: 'event' },
+      ],
+      activeEvent: null,
+      showTutorial: true,
+      gameOver: null,
+      todayCompleted: 0,
+      todayEarned: 0,
+      todayGood: 0,
+      todayBad: 0,
+      reviewBank: 0,                // 每 3 个好评沉淀为 1 点城市口碑,避免开局口碑暴涨
+      todayLost: 0,                  // V12: 今日订单流失数(运力不足)
+      todayRepLoss: 0,               // V12: 今日因流失扣的口碑数
+      hourSupplyTotal: 0,            // V12: 上一小时刷出的订单总数(用于运力徽章)
+      hourSupplyTaken: 0,            // V12: 上一小时被司机抢走的订单数
+      hourIdleDrivers: 0,            // V12: 上一小时闲置司机数(用于供需轴左半轴)
+      hourActiveDrivers: 0,          // V12: 上一小时参与派单的司机总数(分母)
+      supplyHistory: [],             // V14.4: 近 6 小时 [{ lost, idle }] 滑动窗口,用于平滑供需状态判定
+      zoneLockSnapshot: {},          // V12: 上一 tick 各片区解锁状态,用于检测反锁/重解锁
+      diagnostics: [],               // V12.2: 诊断历史,每 tick 1 条,用于导出分析(只保留近 720 条 = 30 游戏日)
+      totalEarned: 0,
+      totalCompleted: 0,
+      commissionRate: GAME.COMMISSION,
+      // V14.9: 删除 triggeredEvents(V6 兼容字段)、lowLoyaltyDays/lowRepDays(累而不读的死字段)
+      // V14.67: 删除 yesterdayLost/Earned/Completed、kpiHistory、zoneHeat(累而不读)
+      eventCooldowns: {},   // V7: 事件冷却 — { [eventId]: dayUnlocked }(仅本局有效,RESET 时重置;seenStories 才跨周目)
+      eventChainCount: {},  // V7: 链式事件触发计数 — { [chainId]: count }(仅本局有效)
+      floatGains: [],
+      boostUntilDay: 0,
+      boostMul: 1,
+      notifications: [],
+      // V3: 任务系统
+      currentMissionIdx: 0,
+      completedMissionIds: [],
+      newMissionComplete: null,
+      // V14.10: 死亡条件计数器(连续天数)— 只剩资金破产
+      negFundsDays: 0,
+      // V5: 投资人压力事件队列
+      investorPressureFired: false,
+      // V5: 已解锁的最高结局 tier(从 0 开始,达成才更新)
+      unlockedEndingTier: 0,
+      newEndingUnlocked: null,
+      // V14: 高利贷一次性还款 — 借时立刻 +¥10000,debtDueDay 当日扣 debtAmount(默认 ¥12000)
+      debtAmount: 0,
+      debtDueDay: 0,
+      // V14: 投资人事件里勾选解雇,获得 +10 天破产宽容期(累加到 DEATH_FUNDS_DAYS 上)
+      bankruptcyGraceBonus: 0,
+      // V14: 月度结算(每 30 天聚合一次,弹窗暂停游戏)
+      monthCounter: 1,
+      monthlyEarnedGross: 0,        // 乘客支付总额(含抽成)
+      monthlyCommission: 0,         // 平台抽成
+      monthlySalary: 0,             // 本月累计应付工资(月结时一次性扣款)
+      monthlyDebtPaid: 0,           // 高利贷扣款
+      monthlySeverance: 0,          // 主动解雇补偿
+      monthlyEventImpact: 0,        // 事件资金影响合计(signed)
+      monthlyEventItems: [],         // 月报里的事件资金明细: [{ day, title, label, amount, detail }]
+      monthlyDriverData: {},        // { [driverId]: { name, bgName, salary, salaryPaid, completed, earnedNet, leftDay } }
+      showMonthlyReport: null,      // 月报弹窗 snapshot,关闭后清空
+      // V6: 抽卡状态
+      gachaCards: null,
+      gachaTicketId: null,
+      totalTrainings: 0,
+      trainingCounts: {},
+      orderCounts: {},
+      // V7: 故事线 — 当前展示的故事(暂停游戏)+ 已看过切片记忆(跨周目持久化)
+      activeStory: null,
+      seenStories: loadSeenStories(),
+      lastStoryDay: -999,
+    };
+    return initial;
+  }
+
+  // V7: 故事弹窗确认 — 发奖励 + 写 seenStories + 清状态
+  function applyStoryReward(state, story) {
+    let s = { ...state };
+    const r = story.reward || {};
+    if (r.funds) s.funds += r.funds;
+    if (r.reputation) s.reputation = Math.max(0, s.reputation + r.reputation);
+    if (r.loyalty) {
+      s.drivers = s.drivers.map((d) =>
+        d.id === story.driverId ? applyDriverLoyaltyDelta(d, r.loyalty, { trustBreakthrough: true }) : d
+      );
+    }
+    if (r.badge) {
+      // 给该司机加称号(永久挂在 driver.badges 数组)
+      s.drivers = s.drivers.map((d) =>
+        d.id === story.driverId ? { ...d, badges: [...(d.badges || []), r.badge] } : d
+      );
+    }
+    s = pushLog(s, `📖 ${story.driverName}「${story.title}」`, 'event');
+    return s;
+  }
+
+  function checkMission(state) {
+    let s = state;
+    if (s.currentMissionIdx >= MISSIONS.length) return s;
+    if (s.newMissionComplete) return s;
+    const mission = MISSIONS[s.currentMissionIdx];
+    if (!mission) return s;
+    if (mission.check(s)) {
+      const reward = mission.reward || {};
+      s = { ...s };
+      if (reward.funds) s.funds += reward.funds;
+      s.completedMissionIds = [...s.completedMissionIds, mission.id];
+      s.newMissionComplete = mission;
+      s.currentMissionIdx += 1;
+      const rewardText = reward.funds ? ` (+¥${reward.funds})` : '';
+      s = pushLog(s, `任务完成: ${mission.title}${rewardText} — ${reward.message || ''}`, 'event');
+    }
+    return s;
+  }
+
+  function pushLog(state, text, level = 'info') {
+    const time = `${state.day}日${state.hour}:00`;
+    return {
+      ...state,
+      log: [{ id: ++logIdCounter, time, text, level }, ...state.log].slice(0, 80),
+    };
+  }
+
+  function pushNotif(state, text, level = 'info') {
+    return {
+      ...state,
+      notifications: [...state.notifications, { id: Date.now() + Math.random(), text, level }],
+    };
+  }
+
+  // V6: 抽卡 actions
+  function startGacha(state, ticketId) {
+    const ticket = D.RECRUIT_TICKETS.find((t) => t.id === ticketId);
+    if (!ticket) return state;
+    if (state.funds < ticket.cost) return pushNotif(state, `资金不足!需要 ¥${ticket.cost}`, 'warn');
+    // V6 fix: 先用扣钱前 state 算 phase 再抽,避免临界值降档(codex review Medium)
+    const cards = rollGacha(state, ticketId);
+    let s = { ...state, funds: state.funds - ticket.cost };
+    s.gachaCards = cards;
+    s.gachaTicketId = ticketId;
+    s = pushLog(s, `使用 ${ticket.name} 抽卡 (-¥${ticket.cost})`, 'event');
+    return s;
+  }
+
+  function rerollGacha(state) {
+    if (!state.gachaTicketId) return state;
+    const ticket = D.RECRUIT_TICKETS.find((t) => t.id === state.gachaTicketId);
+    if (!ticket) return state;
+    if (state.funds < ticket.cost) return pushNotif(state, `资金不足!`, 'warn');
+    const cards = rollGacha(state, state.gachaTicketId);
+    let s = { ...state, funds: state.funds - ticket.cost };
+    s.gachaCards = cards;
+    s = pushLog(s, `重新抽 ${ticket.name} (-¥${ticket.cost})`, 'event');
+    return s;
+  }
+
+  function pickGachaCard(state, cardId) {
+    if (!state.gachaCards) return state;
+    const card = state.gachaCards.find((c) => c.id === cardId);
+    if (!card) return state;
+    let s = { ...state, gachaCards: null, gachaTicketId: null };
+    const emptyVehicle = findEmptyVehicle(s.drivers, s.vehicles);
+    const hiredDriver = emptyVehicle ? { ...card, vehicleId: emptyVehicle.id } : card;
+    s.drivers = [...s.drivers, hiredDriver];
+    s = pushLog(s, `招募 ${card.name} (${D.RARITY_META[card.rarity].name} ${card.bgName}) 入队`, 'event');
+    if (emptyVehicle) {
+      const vd = getVehicleData(emptyVehicle);
+      s = pushLog(s, `自动配车: ${card.name} 开上 ${vd.name}`, 'success');
+    }
+    s = checkMission(s);
+    return s;
+  }
+
+  function cancelGacha(state) {
+    return { ...state, gachaCards: null, gachaTicketId: null };
+  }
+
+  // V14.67: updateZoneHeat 整套删除(V14.6 已删 heat 圆圈渲染,字段累而不读)。
+
+  function tick(state) {
+    if (state.gameOver || state.activeEvent || state.showTutorial || state.activeStory) return state;
+    let s = { ...state };
+    let drivers = [...s.drivers];
+    let vehicles = [...s.vehicles];
+
+    s.hour += 1;
+    if (s.hour >= 24) {
+      s = endOfDay(s);
+      drivers = s.drivers;
+      vehicles = s.vehicles;
+      // V6 fix: 日结可能触发投资人事件或死亡,触发后立即返回不要继续派单(codex review High)
+      if (s.activeEvent || s.gameOver) return s;
+    }
+
+    // 跑单中的司机推进
+    drivers = drivers.map((d) => {
+      if (d.status !== 'driving' || !d.currentOrder) return d;
+      const newRemain = d.currentOrder.remainHours - 1;
+      if (newRemain > 0) {
+        return { ...d, currentOrder: { ...d.currentOrder, remainHours: newRemain } };
+      }
+      // 完单
+      const v = vehicles.find((x) => x.id === d.vehicleId);
+      const fare = d.currentOrder.fare;
+      const net = Math.round(fare * (1 - s.commissionRate));
+      s.funds += net;
+      s.totalEarned += net;
+      s.todayEarned += net;
+      s.todayCompleted += 1;
+      s.totalCompleted += 1;
+      // V14: 月度累计 — 乘客付的 / 抽成 / 该司机贡献
+      s.monthlyEarnedGross = (s.monthlyEarnedGross || 0) + fare;
+      s.monthlyCommission = (s.monthlyCommission || 0) + (fare - net);
+      const dmd = s.monthlyDriverData[d.id] || { name: d.name, bgName: d.bgName, salary: d.salary, salaryPaid: 0, completed: 0, earnedNet: 0, leftDay: null };
+      s.monthlyDriverData = { ...s.monthlyDriverData, [d.id]: {
+        ...dmd, salary: d.salary, completed: dmd.completed + 1, earnedNet: dmd.earnedNet + net,
+      }};
+      const goodReview = rollGoodReview(d, v);
+      const complaint = !goodReview && Math.random() < 0.1;
+      const nextGoodReviews = (d.goodReviews || 0) + (goodReview ? 1 : 0);
+      const nextBadReviews = (d.badReviews || 0) + (complaint ? 1 : 0);
+      const nextRating = recomputeReviewRating(nextGoodReviews, nextBadReviews);
+      let reviewText = null;
+      if (goodReview) {
+        const nextReviewBank = (s.reviewBank || 0) + 1;
+        if (nextReviewBank >= 3) {
+          s.reputation += 1;
+          s.reviewBank = nextReviewBank - 3;
+          reviewText = `城市口碑 +1`;
+        } else {
+          s.reviewBank = nextReviewBank;
+        }
+        s.todayGood += 1;
+      } else if (complaint) {
+        s.reputation = Math.max(0, s.reputation - 2);
+        s.reviewBank = 0;
+        reviewText = `城市口碑 -2`;
+        s.todayBad += 1;
+      }
+      s.floatGains = [...s.floatGains, {
+        id: Date.now() + Math.random(),
+        driverId: d.id,
+        driverName: d.name,
+        zoneId: d.currentOrder.zone,
+        orderName: d.currentOrder.orderName,
+        amount: net,
+      }];
+      const zoneName = ZONES.find((z) => z.id === d.currentOrder.zone)?.name || '';
+      const orderLabel = `${zoneName ? `${zoneName} · ` : ''}${d.currentOrder.orderName}`;
+      let resultText = '';
+      if (goodReview) resultText = reviewText ? ` · 好评 · ${reviewText}` : ' · 好评';
+      else if (complaint) resultText = reviewText ? ` · 投诉 · ${reviewText}` : ' · 投诉';
+      // V14.62: 接单与完单合并为一条结果日志,避免日志列表高速刷屏。
+      s = pushLog(
+        s,
+        `${d.name} 完成 ${orderLabel} · 收入 ¥${net}${resultText}`,
+        goodReview ? 'success' : complaint ? 'warn' : 'info'
+      );
+
+      const orderId = d.currentOrder.orderId;
+      // V3: 累计订单类型计数(用于任务系统)
+      s.orderCounts = { ...(s.orderCounts || {}), [orderId]: ((s.orderCounts && s.orderCounts[orderId]) || 0) + 1 };
+      return {
+        ...d,
+        status: 'idle',
+        currentOrder: null,
+        completedOrders: d.completedOrders + 1,
+        totalEarned: d.totalEarned + net,
+        goodReviews: nextGoodReviews,
+        badReviews: nextBadReviews,
+        rating: nextRating,
+      };
+    });
+
+    // V7: 故事线触发 — 司机完单数刚好达到里程碑且未展示过
+    // codex review fix(High):用 driver.shownStoryMilestones 去重,避免每 tick 重复触发
+    const canShowStory = !s.activeStory && s.speed < 4 && (s.day - (s.lastStoryDay || -999)) >= 3;
+    if (canShowStory) {
+      for (let i = 0; i < drivers.length; i++) {
+        const d = drivers[i];
+        const shown = d.shownStoryMilestones || [];
+        // V9: 支持 4× 快进后延迟补弹,避免因为跨过精确里程碑而永久错过故事。
+        const milestone = [100, 500, 1000].find((m) => d.completedOrders >= m && !shown.includes(m));
+        if (!milestone) continue;
+        const bg = BACKGROUNDS.find((b) => b.id === d.bg);
+        if (!bg || !bg.stories) continue;
+        let chosen = null;
+        let sliceIndex = -1;
+        if (milestone === 100) {
+          // 灵魂故事(固定)
+          chosen = bg.stories.soul;
+        } else {
+          // 切片伪随机
+          const pool = bg.stories.slices || [];
+          sliceIndex = pickUnseenSliceIndex(bg.id, pool, s.seenStories || {});
+          if (sliceIndex >= 0) chosen = pool[sliceIndex];
+        }
+        if (!chosen) continue;
+        // 标记该司机已展示该里程碑(防止重复触发)
+        drivers[i] = { ...d, shownStoryMilestones: [...shown, milestone] };
+        s.activeStory = {
+          driverId: d.id,
+          driverName: d.name,
+          bgId: bg.id,
+          milestone,
+          sliceIndex,
+          title: chosen.title,
+          text: chosen.text,
+          reward: chosen.reward || {},
+          ts: Date.now() + Math.random(),
+        };
+        s.lastStoryDay = s.day;
+        s.paused = true;  // 故事弹窗暂停游戏(像 event 一样)
+        // codex review fix(Medium):设置故事后写回 drivers/vehicles 立即 return,
+        // 避免同一 tick 继续跑派单。
+        s.drivers = drivers;
+        s.vehicles = vehicles;
+        s = checkMission(s);
+        return s;
+      }
+    }
+
+    // V12: 半订单池供需机制。先按片区 density 刷出本小时的订单名额。
+    // V14.36: 未拥有对应车型的订单只作为潜在需求,不进入供需/流失/口碑结算。
+    const supply = buildHourlySupply(s);
+    const countableSupply = supply.filter((it) => fleetHasVehicleForOrder(vehicles, it.order));
+    const ignoredSupply = supply.filter((it) => !fleetHasVehicleForOrder(vehicles, it.order));
+
+    // 统计参与派单的司机数(用于 HUD 供需轴左半轴 idle 比例)
+    let activeDriversCount = 0;
+    let idleDriversCount = 0;
+
+    // 司机随机化顺序,避免数组前后顺序的司机系统性占优
+    const driverOrder = drivers.map((_, i) => i).sort(() => Math.random() - 0.5);
+
+    for (const i of driverOrder) {
+      const d = drivers[i];
+      if (d.status !== 'idle') continue;
+      if (!d.vehicleId) continue;
+
+      const v = vehicles.find((x) => x.id === d.vehicleId);
+      if (!v) continue;
+
+      // V12: 这个司机参与本小时派单
+      activeDriversCount += 1;
+
+      // 从订单池中找司机能接的(片区已解锁 + 车队已拥有对应车型)
+      const myAvailable = countableSupply.filter((it) => !it.taken && canTakeOrder(it.order, d, v));
+      if (myAvailable.length === 0) {
+        // 池子里没有可接的 — 司机闲置(供给不足或类型不匹配)
+        idleDriversCount += 1;
+        continue;
+      }
+
+      // V12: 司机自身倾向(取消 reputation 100 封顶,基础抬升到 0.7)
+      // V14.38: 忠诚参与接单意愿,让事件里的忠诚奖惩产生可感知影响。
+      const repMul = 0.5 + s.reputation / 150;
+      const loyaltyMul = getDriverLoyaltyMultiplier(d);
+      const tryRate = Math.min(0.99, 0.7 * repMul * loyaltyMul * d.orderRateBonus);
+      if (Math.random() > tryRate) {
+        idleDriversCount += 1;
+        continue;
+      }
+
+      // 从可接的池里按 rate 加权选一个
+      const totalWeight = myAvailable.reduce((sum, it) => sum + it.order.rate, 0);
+      let r = Math.random() * totalWeight;
+      let chosenItem = myAvailable[0];
+      for (const it of myAvailable) {
+        r -= it.order.rate;
+        if (r <= 0) { chosenItem = it; break; }
+      }
+      chosenItem.taken = true;
+      const chosen = chosenItem.order;
+
+      const fare = computeFare(chosen, d, v);
+      const boostMul = s.day <= s.boostUntilDay ? s.boostMul : 1;
+      const finalFare = Math.round(fare * boostMul);
+
+      drivers[i] = {
+        ...d,
+        status: 'driving',
+        currentOrder: {
+          orderId: chosen.id,
+          orderName: chosen.name,
+          fare: finalFare,
+          distance: chosen.km,
+          totalHours: chosen.hours,
+          remainHours: chosen.hours,
+          startedAt: s.hour,
+          color: chosen.color,
+          zone: chosenItem.zoneId,
+        },
+      };
+    }
+
+    // V12: 统计本小时供需 + 处理流失订单
+    const supplyTotal = countableSupply.length;
+    const supplyTaken = countableSupply.filter((it) => it.taken).length;
+    const lostCount = supplyTotal - supplyTaken;
+    s.hourSupplyTotal = supplyTotal;
+    s.hourSupplyTaken = supplyTaken;
+    s.hourActiveDrivers = activeDriversCount;
+    s.hourIdleDrivers = idleDriversCount;
+    // V14.4: 把本小时供需写入 6 小时滑动窗口,UI 用累计值判定状态,防止单小时抖动
+    s.supplyHistory = [...(s.supplyHistory || []), { lost: lostCount, idle: idleDriversCount }].slice(-6);
+    if (lostCount > 0) {
+      const penalty = lostCount * GAME.LOSS_REPUTATION_PENALTY;
+      s.todayLost = (s.todayLost || 0) + lostCount;
+      s.reputation = Math.max(0, s.reputation - penalty);
+      s.todayRepLoss = (s.todayRepLoss || 0) + penalty;
+      if (lostCount >= 2) {
+        s = pushLog(s, `运力不足 · 流失 ${lostCount} 单 · 城市口碑 -${penalty}`, 'warn');
+      }
+    }
+
+    // V12.2: 诊断数据 — 每 tick 记录一条供分析,按订单类型 + 片区拆分流失明细
+    const supplyByZone = {};
+    const supplyByOrder = {};
+    const ignoredByOrder = {};
+    for (const it of countableSupply) {
+      const zk = it.zoneId;
+      const ok = it.orderId;
+      if (!supplyByZone[zk]) supplyByZone[zk] = { total: 0, taken: 0 };
+      if (!supplyByOrder[ok]) supplyByOrder[ok] = { total: 0, taken: 0 };
+      supplyByZone[zk].total += 1;
+      supplyByOrder[ok].total += 1;
+      if (it.taken) {
+        supplyByZone[zk].taken += 1;
+        supplyByOrder[ok].taken += 1;
+      }
+    }
+    for (const it of ignoredSupply) {
+      ignoredByOrder[it.orderId] = (ignoredByOrder[it.orderId] || 0) + 1;
+    }
+    const diagEntry = {
+      day: s.day,
+      hour: s.hour,
+      reputation: s.reputation,
+      funds: s.funds,
+      drivers: drivers.length,
+      vehicles: vehicles.length,
+      crews: drivers.filter((d) => d.vehicleId).length,
+      activeDrivers: activeDriversCount,
+      idleDrivers: idleDriversCount,
+      supplyTotal,
+      supplyTaken,
+      lostCount,
+      ignoredSupplyTotal: ignoredSupply.length,
+      todayLost: s.todayLost || 0,
+      todayRepLoss: s.todayRepLoss || 0,
+      unlockedZones: ZONES.filter((z) => isZoneUnlocked(s, z)).map((z) => z.id),
+      supplyByZone,
+      supplyByOrder,
+      ignoredByOrder,
+    };
+    s.diagnostics = [...(s.diagnostics || []), diagEntry].slice(-720);
+
+    // V12: 反锁 / 重解锁检测 — 口碑变化后立即生效,推通知给玩家
+    // V14.8: 反锁时强制中断该区跑单中的订单,避免"锁定区还有司机继续跑"的视觉/逻辑 bug
+    const prevSnapshot = s.zoneLockSnapshot || {};
+    const nextSnapshot = {};
+    for (const zone of ZONES) {
+      const unlocked = isZoneUnlocked(s, zone);
+      nextSnapshot[zone.id] = unlocked;
+      const prev = prevSnapshot[zone.id];
+      if (prev === true && !unlocked) {
+        // 之前解锁,现在锁了
+        s = pushNotif(s, `⚠ ${zone.name} 因口碑下降被反锁(口碑 ${s.reputation})`, 'warn');
+        s = pushLog(s, `⚠ ${zone.name} 反锁 · 口碑跌破门槛 ${zone.unlock?.reputation ?? 0}`, 'warn');
+        // V14.8: 中断该区跑单中的司机。注意写入局部 drivers 变量而不是 s.drivers,
+        // 因为 tick 末尾 (L963) 会执行 s.drivers = drivers 覆盖,如果只改 s.drivers 会被吃掉
+        let interrupted = 0;
+        drivers = drivers.map((d) => {
+          if (d.status === 'driving' && d.currentOrder && d.currentOrder.zone === zone.id) {
+            interrupted += 1;
+            return { ...d, status: 'idle', currentOrder: null };
+          }
+          return d;
+        });
+        if (interrupted > 0) {
+          s = pushLog(s, `${zone.name} 反锁中断 ${interrupted} 个司机正在跑的订单(无收入)`, 'warn');
+        }
+      } else if (prev === false && unlocked) {
+        // 重新解锁
+        s = pushNotif(s, `✨ ${zone.name} 口碑回升,自动重新解锁`, 'success');
+        s = pushLog(s, `✨ ${zone.name} 重新解锁 · 口碑回到 ${s.reputation}`, 'success');
+      }
+    }
+    s.zoneLockSnapshot = nextSnapshot;
+
+    // V14: 破产倒计时 = 基础 5 天 + 投资人事件里勾选「解雇」获得的宽容期(默认 0)。
+    // 玩家可以通过裁员让倒计时延长到 15 天,但只有"投资人事件里裁员"才能拿宽容,
+    // CrewInspector 主界面平时主动解雇不计入。
+    const deathThreshold = GAME.DEATH_FUNDS_DAYS + (s.bankruptcyGraceBonus || 0);
+    if (s.negFundsDays >= deathThreshold) {
+      s.gameOver = { type: 'lose', reason: `资金负数超过 ${deathThreshold} 天,投资人撤资,公司破产`, deathCause: 'bankruptcy', stats: snapshotStats(s) };
+    }
+
+    // V14: 借贷一次性还款 — 到期日(第 debtDueDay 天)直接扣 debtAmount;不够还直接破产。
+    if (s.debtDueDay && s.day >= s.debtDueDay && !s.gameOver) {
+      s.funds -= s.debtAmount;
+      s.monthlyDebtPaid = (s.monthlyDebtPaid || 0) + s.debtAmount;
+      s = pushLog(s, `高利贷到期,扣款 ¥${s.debtAmount}`, 'warn');
+      if (s.funds < 0) {
+        s.gameOver = { type: 'lose', reason: `高利贷到期还不上 ¥${s.debtAmount},直接破产`, deathCause: 'debt_default', stats: snapshotStats(s) };
+      } else {
+        s = pushNotif(s, `已还清高利贷 ¥${s.debtAmount}`, 'success');
+      }
+      s.debtDueDay = 0;
+      s.debtAmount = 0;
+    }
+
+    // V6: 结局检测 — 只解锁下一个 tier(防跳级,codex review Medium)
+    if (!s.gameOver) {
+      const nextEnding = ENDINGS.find((e) => e.tier === s.unlockedEndingTier + 1);
+      if (nextEnding && nextEnding.check(s)) {
+        s.unlockedEndingTier = nextEnding.tier;
+        s.newEndingUnlocked = nextEnding;
+        if (nextEnding.forceEnd) {
+          s.gameOver = { type: 'win', endingId: nextEnding.id, endingName: nextEnding.name, endingDesc: nextEnding.desc, stats: snapshotStats(s), forced: true };
+        }
+      }
+    }
+
+    s.drivers = drivers;
+    s.vehicles = vehicles;
+    // V14.67: 城市口碑加上限,避免后期数字越界顶栏布局(0~9999)
+    s.reputation = Math.max(0, Math.min(9999, s.reputation));
+    s = checkMission(s);
+    return s;
+  }
+
+  function endOfDay(state) {
+    let s = { ...state, hour: 0, day: state.day + 1 };
+    let dailyCost = 0;
+    let monthlyDriverData = { ...(s.monthlyDriverData || {}) };
+    s.drivers.forEach((d) => {
+      const dailySalary = Math.round(d.salary / 30);
+      dailyCost += dailySalary;
+      const dmd = monthlyDriverData[d.id] || { name: d.name, bgName: d.bgName, salary: d.salary, salaryPaid: 0, completed: 0, earnedNet: 0, leftDay: null };
+      monthlyDriverData[d.id] = {
+        ...dmd,
+        name: d.name,
+        bgName: d.bgName,
+        salary: d.salary,
+        salaryPaid: (dmd.salaryPaid || 0) + dailySalary,
+      };
+    });
+    // V14.41: 工资改为月结。日结只累计应付工资,不立即扣现金。
+    s.monthlySalary = (s.monthlySalary || 0) + dailyCost;
+    s.monthlyDriverData = monthlyDriverData;
+    s = pushLog(
+      s,
+      `第 ${state.day} 日结算: 流水 ¥${s.todayEarned}, 应付工资 ¥${dailyCost}, 完成 ${s.todayCompleted} 单`,
+      'event'
+    );
+    // 司机休息
+    s.drivers = s.drivers.map((d) => ({
+      ...d,
+      status: d.status === 'driving' ? d.status : 'idle',
+    }));
+    const quitting = [];
+    for (const d of s.drivers) {
+      const risk = getDriverQuitRisk(d);
+      if (risk <= 0) continue;
+      if (s.drivers.length - quitting.length <= 1) break;
+      if (Math.random() < risk) quitting.push(d);
+    }
+    if (quitting.length > 0) {
+      const quitterIds = new Set(quitting.map((d) => d.id));
+      s.drivers = s.drivers.filter((d) => !quitterIds.has(d.id));
+      quitting.forEach((d) => {
+        if (s.monthlyDriverData && s.monthlyDriverData[d.id]) {
+          s.monthlyDriverData = { ...s.monthlyDriverData, [d.id]: { ...s.monthlyDriverData[d.id], leftDay: s.day } };
+        }
+      });
+      const names = quitting.map((d) => d.name).join('、');
+      const moraleLoss = Math.min(10, quitting.reduce((sum, d) =>
+        sum + (getRarityLoyaltyRule(d.rarity).moralePenalty || 4), 0
+      ));
+      if (moraleLoss > 0 && s.drivers.length > 0) {
+        s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, -moraleLoss));
+      }
+      s = pushLog(s, `${names} 因忠诚过低离开车队,其他司机忠诚 -${moraleLoss}`, 'warn');
+      s = pushNotif(s, `${names} 离队,车队士气 -${moraleLoss}`, 'warn');
+    }
+    s.todayCompleted = 0;
+    s.todayEarned = 0;
+    s.todayGood = 0;
+    s.todayBad = 0;
+    s.todayLost = 0;
+    s.todayRepLoss = 0;
+
+    // V10.10: 只维护资金失败计数,减少玩家需要盯住的隐藏失败条件。
+    s.negFundsDays = s.funds < GAME.DEATH_FUNDS_THRESHOLD ? (s.negFundsDays || 0) + 1 : 0;
+
+    // V14: 借贷改为一次性还款,扣款逻辑挪到上面破产检查附近。这里不再有分期扣款。
+
+    // V5: 资金负 1 天就触发投资人压力事件(只触发一次,直到资金回正再重置)
+    if (s.funds < 0 && !s.investorPressureFired && !s.activeEvent) {
+      s.activeEvent = INVESTOR_PRESSURE;
+      s.investorPressureFired = true;
+      s.paused = true;
+      return s;
+    }
+    if (s.funds >= 0) s.investorPressureFired = false;
+
+    // V10.10: 事件降频。前 10 天只抽轻事件,链式复杂事件推迟到中后期。
+    // 使用 eventCooldowns: { [eventId]: dayUnlocked },事件触发后写入解锁日
+    const eventInterval = GAME.EVENT_INTERVAL_DAYS || 7;
+    if (s.day > 1 && s.day % eventInterval === 0 && !s.activeEvent) {
+      const cooldowns = s.eventCooldowns || {};
+      let available = EVENTS.filter((e) => {
+        const unlockDay = cooldowns[e.id];
+        return unlockDay === undefined || s.day >= unlockDay;
+      });
+      if (s.day <= (GAME.EARLY_EVENT_UNTIL_DAY || 10)) {
+        const earlyIds = GAME.EARLY_EVENT_IDS || [];
+        const early = available.filter((e) => earlyIds.includes(e.id));
+        if (early.length > 0) available = early;
+      } else if (s.day < (GAME.CHAIN_EVENT_START_DAY || 21)) {
+        const simple = available.filter((e) => !e.chain);
+        if (simple.length > 0) available = simple;
+      }
+      if (available.length > 0) {
+        const ev = pick(available);
+        const cooldownDays = ev.cooldown || randInt(25, 35);
+        s.eventCooldowns = { ...cooldowns, [ev.id]: s.day + cooldownDays };
+        // V7: 链式分支 — 如果事件有 chain + chainStages,按计数选 stage
+        let activeEv = ev;
+        if (ev.chain && ev.chainStages && ev.chainStages.length > 0) {
+          const chainCount = (s.eventChainCount && s.eventChainCount[ev.chain]) || 0;
+          const totalStages = ev.chainStages.length + 1;  // stage 0 = ev 本身
+          const cycleStep = chainCount % totalStages;
+          if (cycleStep > 0) {
+            const stage = ev.chainStages[cycleStep - 1];
+            activeEv = {
+              ...ev,
+              title: stage.title || ev.title,
+              desc: stage.desc || ev.desc,
+              options: stage.options || ev.options,
+            };
+          }
+        }
+        if (GAME.FOCUSED_EVENT_CHOICES !== false
+          && s.day < (GAME.CHAIN_EVENT_START_DAY || 21)
+          && activeEv.options
+          && activeEv.options.length > 2) {
+          activeEv = { ...activeEv, options: activeEv.options.slice(0, 2) };
+        }
+        s.activeEvent = activeEv;
+        s.paused = true;
+      }
+    }
+
+    // V14: 月度结算弹窗 — 每 30 天触发一次。
+    // 决策 C: 进入第 31/61/91 天时触发,展示"过去 30 天总结"。
+    // V14.41: 数据完整后一次性发放本月工资,再展示月报。
+    if (s.day > 1 && (s.day - 1) % 30 === 0 && !s.showMonthlyReport && !s.gameOver) {
+      const salaryDue = s.monthlySalary || 0;
+      if (salaryDue > 0) {
+        s.funds -= salaryDue;
+        s = pushLog(s, `月结发薪: 支付司机工资 ¥${salaryDue}`, 'event');
+        if (s.funds < GAME.DEATH_FUNDS_THRESHOLD) {
+          s.negFundsDays = Math.max(1, s.negFundsDays || 0);
+        }
+      }
+      s.showMonthlyReport = makeMonthlyReport(s);
+      s.paused = true;
+    }
+
+    return s;
+  }
+
+  // V14: 生成月报快照,供弹窗渲染。CLOSE_MONTHLY_REPORT 时清空累计字段。
+  function makeMonthlyReport(s) {
+    const earnedNet = (s.monthlyEarnedGross || 0) - (s.monthlyCommission || 0);
+    const netProfit = earnedNet - (s.monthlySalary || 0) - (s.monthlyDebtPaid || 0) - (s.monthlySeverance || 0) + (s.monthlyEventImpact || 0);
+    // V14.9: 取司机最新 salary(如果月内涨薪过用最新值,否则 fallback 到首次入档的快照)
+    const drivers = Object.keys(s.monthlyDriverData || {})
+      .map((id) => {
+        const d = s.monthlyDriverData[id];
+        const liveDriver = (s.drivers || []).find((x) => String(x.id) === String(id));
+        const salary = liveDriver?.salary ?? d.salary;
+        const salaryPaid = d.salaryPaid ?? salary;
+        return {
+          id,
+          name: d.name,
+          bgName: d.bgName,
+          salary,
+          salaryPaid,
+          completed: d.completed,
+          earnedNet: d.earnedNet,
+          // 净贡献 = 该司机本月净营收 - 本月实际应付工资
+          contribution: d.earnedNet - salaryPaid,
+          leftDay: d.leftDay,
+        };
+      })
+      .sort((a, b) => b.contribution - a.contribution);
+    const crews = (s.drivers || []).filter((d) => d.vehicleId).length;
+    return {
+      monthCounter: s.monthCounter || 1,
+      day: s.day,
+      earnedGross: s.monthlyEarnedGross || 0,
+      commission: s.monthlyCommission || 0,
+      earnedNet,
+      salary: s.monthlySalary || 0,
+      debtPaid: s.monthlyDebtPaid || 0,
+      severance: s.monthlySeverance || 0,
+      eventImpact: s.monthlyEventImpact || 0,
+      eventItems: s.monthlyEventItems || [],
+      netProfit,
+      drivers,
+      funds: s.funds,
+      reputation: s.reputation,
+      crews,
+    };
+  }
+
+  function recordMonthlyEventImpact(state, amount, item) {
+    if (!amount) return state;
+    return {
+      ...state,
+      monthlyEventImpact: (state.monthlyEventImpact || 0) + amount,
+      monthlyEventItems: [
+        ...(state.monthlyEventItems || []),
+        {
+          day: state.day,
+          title: item?.title || '经营事件',
+          label: item?.label || '',
+          detail: item?.detail || '',
+          amount,
+        },
+      ],
+    };
+  }
+
+  function snapshotStats(s) {
+    const vehicleIds = new Set((s.vehicles || []).map((v) => v.id));
+    return {
+      funds: s.funds,
+      reputation: s.reputation,
+      totalCompleted: s.totalCompleted,
+      totalEarned: s.totalEarned,
+      days: s.day - 1,
+      drivers: s.drivers.length,
+      vehicles: s.vehicles.length,
+      crews: (s.drivers || []).filter((d) => d.vehicleId && vehicleIds.has(d.vehicleId)).length,
+    };
+  }
+
+  function getTrainingCost(training, currentValue = 0) {
+    const tiers = Array.isArray(training?.costTiers) ? training.costTiers : [];
+    const tier = tiers.find((x) => currentValue <= x.max);
+    return tier ? tier.cost : (training?.cost || 0);
+  }
+
+  function doTrain(state, driverId, trainingId) {
+    const t = TRAININGS.find((x) => x.id === trainingId);
+    if (!t) return state;
+    const targetDriver = state.drivers.find((x) => x.id === driverId);
+    if (!targetDriver) return state;
+    const targetCaps = targetDriver.statCaps || computeStatCaps(targetDriver);
+    if (targetDriver.stats[t.stat] >= (targetCaps[t.stat] || GAME.STAT_CAP)) {
+      return pushNotif(state, `${targetDriver.name} 的${statName(t.stat)}已到上限`, 'warn');
+    }
+    const trainCost = getTrainingCost(t, targetDriver.stats[t.stat] || 0);
+    if (state.funds < trainCost) return pushNotif(state, `资金不足!需要 ¥${trainCost.toLocaleString()}`, 'warn');
+    let s = {
+      ...state,
+      funds: state.funds - trainCost,
+      totalTrainings: (state.totalTrainings || 0) + 1,
+      trainingCounts: {
+        ...(state.trainingCounts || {}),
+        [t.stat]: ((state.trainingCounts && state.trainingCounts[t.stat]) || 0) + 1,
+      },
+    };
+    // V7 fix: 先 map 计算新 drivers,再赋值给 s.drivers。
+    // 不要在 map callback 内重绑 s(否则 LHS base 是旧 s,被 pushLog 替换的 s 拿不到新 drivers,导致训练静默无效)
+    let pendingLog = null;
+    const nextDrivers = s.drivers.map((d) => {
+      if (d.id !== driverId) return d;
+      const gain = randInt(t.gainMin, t.gainMax);
+      const caps = d.statCaps || computeStatCaps(d);
+      const limit = caps[t.stat] || GAME.STAT_CAP;
+      const newVal = Math.min(limit, d.stats[t.stat] + gain);
+      const realGain = Math.max(0, newVal - d.stats[t.stat]);
+      pendingLog = realGain > 0
+        ? `${d.name} 完成 ${t.name},花费 ¥${trainCost.toLocaleString()},${statName(t.stat)} +${realGain} / 上限 ${limit}`
+        : `${d.name} 的${statName(t.stat)}已经达到${D.RARITY_META[d.rarity]?.name || ''}上限 ${limit}`;
+      return { ...d, stats: { ...d.stats, [t.stat]: newVal } };
+    });
+    s = { ...s, drivers: nextDrivers };
+    if (pendingLog) s = pushLog(s, pendingLog, 'success');
+    s = checkMission(s);
+    return s;
+  }
+
+  function statName(key) {
+    return { driving: '车技', service: '服务' }[key];
+  }
+
+  function roundInvestorMoney(raw) {
+    const value = Math.max(0, Math.ceil(raw || 0));
+    const step = value <= 20000 ? 1000 : value <= 100000 ? 5000 : 10000;
+    return Math.max(step, Math.ceil(value / step) * step);
+  }
+
+  function getInvestorPressurePlan(s) {
+    const drivers = [...(s.drivers || [])];
+    const vehicles = [...(s.vehicles || [])];
+    const crewCount = drivers.filter((d) => d.vehicleId).length;
+    const fleetScale = Math.max(crewCount, drivers.length, vehicles.length);
+    const deficit = Math.max(0, -(s.funds || 0));
+    const ratio = fleetScale <= 4 ? 0.25 : fleetScale <= 8 ? 0.30 : 0.35;
+    const fireCount = drivers.length > 1
+      ? Math.min(drivers.length - 1, Math.max(1, Math.round(drivers.length * ratio)))
+      : 0;
+    const sellCount = vehicles.length > 1
+      ? Math.min(vehicles.length - 1, Math.max(1, Math.round(vehicles.length * ratio)))
+      : 0;
+    const fireDrivers = drivers
+      .sort((a, b) => (b.salary || 0) - (a.salary || 0))
+      .slice(0, fireCount);
+    const sellVehicles = vehicles
+      .sort((a, b) => (getVehicleData(b)?.price || 0) - (getVehicleData(a)?.price || 0))
+      .slice(0, sellCount);
+    const monthlySavings = fireDrivers.reduce((sum, d) => sum + (d.salary || 0), 0);
+    const sellRefund = sellVehicles.reduce((sum, v) => sum + Math.round((getVehicleData(v)?.price || 0) * 0.6), 0);
+    const monthlyPayroll = drivers.reduce((sum, d) => sum + (d.salary || 0), 0);
+    const debtMultiplier = deficit >= 150000 ? 3 : fleetScale <= 4 ? 2.1 : fleetScale <= 8 ? 2.4 : 2.8;
+    const minDebt = fleetScale <= 4 ? 10000 : fleetScale <= 8 ? 30000 : 60000;
+    const debtPrincipal = roundInvestorMoney(Math.max(
+      minDebt,
+      deficit * debtMultiplier,
+      monthlyPayroll * 0.35
+    ));
+    const debtInterestRate = debtPrincipal <= 20000 ? 0.20
+      : debtPrincipal <= 50000 ? 0.35
+      : debtPrincipal <= 120000 ? 0.55
+      : 0.80;
+    const debtRepay = roundInvestorMoney(debtPrincipal * (1 + debtInterestRate));
+    const debtPeriodDays = debtPrincipal <= 50000 ? 30 : debtPrincipal <= 120000 ? 26 : 22;
+    return {
+      deficit,
+      fleetScale,
+      fireCount,
+      fireDrivers,
+      fireGraceDays: fireCount > 0 ? Math.min(45, 8 + fireCount * 4) : 0,
+      monthlySavings,
+      sellCount,
+      sellVehicles,
+      sellRefund,
+      debtPrincipal,
+      debtRepay,
+      debtInterestRate,
+      debtPeriodDays,
+    };
+  }
+
+  // V14.78: 投资人压力事件多选解决器。
+  // choices = { fire: bool, sell: bool, debt: bool, holdOn: bool }
+  // - fire/sell: 按当前车队规模生成一揽子瘦身方案
+  // - debt: 按当前负债缺口生成本金,本金约为缺口的 2-3 倍,金额越大利息越高
+  // - holdOn: 互斥兜底,什么都不做
+  function resolveInvestorPressure(state, choices) {
+    if (!state.activeEvent || state.activeEvent.id !== 'investor_pressure') return state;
+    const fundsBefore = state.funds;
+    let s = { ...state, activeEvent: null, paused: false };
+    const c = choices || {};
+    const took = [];
+    const plan = getInvestorPressurePlan(s);
+
+    if (c.holdOn) {
+      s = pushLog(s, '投资人压力: 不采取措施,赌接下来靠订单流水回正', 'warn');
+      // V14.67: 显示与 InvestorPressureModal 一致,把 bankruptcyGraceBonus 算进破产倒计时。
+      const daysLeft = Math.max(0, GAME.DEATH_FUNDS_DAYS + (s.bankruptcyGraceBonus || 0) - (s.negFundsDays || 0));
+      s = pushNotif(s, `${daysLeft} 天内资金未回正就会破产`, 'warn');
+      return s;
+    }
+
+    if (c.fire) {
+      if (plan.fireDrivers.length) {
+        const fireIds = new Set(plan.fireDrivers.map((d) => d.id));
+        plan.fireDrivers.forEach((target) => {
+          const live = s.drivers.find((d) => d.id === target.id);
+          if (live?.status === 'driving' && live.currentOrder) {
+            s = pushLog(s, `${live.name} 跑单中途被裁,订单 ${live.currentOrder.orderName} 中断`, 'warn');
+          }
+          if (s.monthlyDriverData && s.monthlyDriverData[target.id]) {
+            s.monthlyDriverData = { ...s.monthlyDriverData, [target.id]: { ...s.monthlyDriverData[target.id], leftDay: s.day } };
+          }
+        });
+        s.drivers = s.drivers.filter((d) => !fireIds.has(d.id));
+        s.bankruptcyGraceBonus = (s.bankruptcyGraceBonus || 0) + plan.fireGraceDays;
+        took.push(`裁员 ${plan.fireDrivers.length} 人(月省 ¥${plan.monthlySavings.toLocaleString()})`);
+        s = pushLog(s, `裁员止血: ${plan.fireDrivers.map((d) => d.name).join('、')} 离开车队,投资人宽容期 +${plan.fireGraceDays} 天`, 'warn');
+      } else {
+        s = pushLog(s, '只剩 1 名司机,无法裁员', 'warn');
+      }
+    }
+
+    if (c.sell) {
+      if (plan.sellVehicles.length) {
+        const sellIds = new Set(plan.sellVehicles.map((v) => v.id));
+        const soldNames = plan.sellVehicles.map((v) => getVehicleData(v)?.name || v.name).join('、');
+        s.vehicles = s.vehicles.filter((v) => !sellIds.has(v.id));
+        s.drivers = s.drivers.map((d) => {
+          if (!sellIds.has(d.vehicleId)) return d;
+          if (d.status === 'driving' && d.currentOrder) {
+            s = pushLog(s, `${d.name} 跑单中途车被卖出,订单 ${d.currentOrder.orderName} 中断`, 'warn');
+            return { ...d, vehicleId: null, status: 'idle', currentOrder: null };
+          }
+          return { ...d, vehicleId: null };
+        });
+        s.funds += plan.sellRefund;
+        took.push(`卖车 ${plan.sellVehicles.length} 辆(回血 ¥${plan.sellRefund.toLocaleString()})`);
+        s = pushLog(s, `资产止血: 卖出 ${soldNames},回收 ¥${plan.sellRefund.toLocaleString()}`, 'warn');
+      } else {
+        s = pushLog(s, '只剩 1 辆车,无法卖', 'warn');
+      }
+    }
+
+    if (c.debt) {
+      const dueDay = s.day + plan.debtPeriodDays;
+      s.funds += plan.debtPrincipal;
+      s.debtAmount = (s.debtAmount || 0) + plan.debtRepay;
+      s.debtDueDay = s.debtDueDay && s.debtDueDay > s.day
+        ? Math.max(s.debtDueDay, dueDay)
+        : dueDay;
+      took.push(`借高利贷 ¥${plan.debtPrincipal.toLocaleString()}`);
+      s = pushLog(s, `借入高利贷 +¥${plan.debtPrincipal.toLocaleString()},${plan.debtPeriodDays} 天后需还 ¥${plan.debtRepay.toLocaleString()}(利息约 ${Math.round(plan.debtInterestRate * 100)}%)`, 'warn');
+    }
+
+    if (took.length === 0) {
+      s = pushLog(s, '投资人压力: 未选择任何方案,等同硬扛', 'warn');
+    } else {
+      s = pushNotif(s, `已提交方案: ${took.join(' + ')}`, 'success');
+    }
+    // V14.75: 月报保留事件来源,避免月底只看到一个无法解释的合计金额。
+    s = recordMonthlyEventImpact(s, s.funds - fundsBefore, {
+      title: '投资人压力',
+      label: took.length ? took.join(' + ') : '硬扛',
+      detail: '卖车回血 / 借款等现金变动',
+    });
+    return s;
+  }
+
+  function resolveEvent(state, optionIdx) {
+    const ev = state.activeEvent;
+    if (!ev) return state;
+    const opt = ev.options[optionIdx];
+    let eff = {};
+    try {
+      eff = scaleEventEffect(opt.apply(state) || {}, state);
+    } catch (err) {
+      let failed = { ...state, activeEvent: null, paused: false };
+      failed = pushLog(failed, `事件「${ev.title}」选项异常: ${opt?.label || '未知选项'}`, 'warn');
+      failed = pushNotif(failed, '事件结算异常,已跳过该选项', 'warn');
+      return failed;
+    }
+    const fundsBefore = state.funds;
+    let s = { ...state, activeEvent: null, paused: false };
+    if (eff.funds !== undefined) s.funds += eff.funds;
+    if (eff.reputation !== undefined) s.reputation = Math.max(0, s.reputation + eff.reputation);
+    if (eff.commissionRate !== undefined) s.commissionRate = eff.commissionRate;
+    if (eff.allLoyalty !== undefined) {
+      s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, eff.allLoyalty));
+    }
+    if (eff.trustLoyalty !== undefined) {
+      s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, eff.trustLoyalty, { trustBreakthrough: true }));
+    }
+    if (eff.orderBoost && eff.boostDuration) {
+      s.boostUntilDay = s.day + eff.boostDuration;
+      s.boostMul = eff.orderBoost;
+    } else if (eff.orderBoost) {
+      s.boostUntilDay = s.day + 1;
+      s.boostMul = eff.orderBoost;
+    }
+    if (eff.certifyFleet) {
+      s.vehicles = s.vehicles.map((v) => ({ ...v, policyCertified: true }));
+      s = pushLog(s, `合规更新: ${s.vehicles.length} 辆车完成新政备案`, 'success');
+    }
+    if (eff.accidentRisk) {
+      const risk = eff.accidentRisk;
+      if (Math.random() < risk.chance) {
+        if (risk.funds !== undefined) s.funds += risk.funds;
+        if (risk.reputation !== undefined) s.reputation = Math.max(0, s.reputation + risk.reputation);
+        if (risk.allLoyalty !== undefined) {
+          s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, risk.allLoyalty));
+        }
+        if (risk.trustLoyalty !== undefined) {
+          s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, risk.trustLoyalty, { trustBreakthrough: true }));
+        }
+        s = pushLog(s, risk.log || '风险兑现: 车队发生事故损失', 'warn');
+      } else {
+        s = pushLog(s, `风险未触发: ${Math.round((risk.chance || 0) * 100)}% 事故风险这次没有兑现`, 'info');
+      }
+    }
+    if (eff.salaryRaise && eff.keepBest) {
+      const best = [...s.drivers].sort((a, b) => sumStats(b.stats) - sumStats(a.stats))[0];
+      if (best) {
+        const nextSalary = best.salary + eff.salaryRaise;
+        s.drivers = s.drivers.map((d) =>
+          d.id === best.id
+            ? { ...applyDriverLoyaltyDelta(d, 30), salary: nextSalary }
+            : d
+        );
+        s = pushLog(s, `加薪挽留: ${best.name} 月薪 ¥${best.salary} → ¥${nextSalary},忠诚 +30`, 'success');
+        s = pushNotif(s, `${best.name} 留队,月薪 +¥${eff.salaryRaise}`, 'success');
+      }
+    }
+    if (eff.loseBest) {
+      const best = [...s.drivers].sort((a, b) => sumStats(b.stats) - sumStats(a.stats))[0];
+      if (best && s.drivers.length > 1) {
+        s.drivers = s.drivers.filter((d) => d.id !== best.id);
+        s = pushLog(s, `${best.name} 被竞品挖走了!`, 'warn');
+      }
+    }
+    // V14.67: 删除 promoteBest / fireMostExpensive / sellMostExpensive 三个 effect 处理分支。
+    //         投资人压力的裁员/卖车走 resolveInvestorPressure,events 数据已无任何选项使用这些字段。
+    // V14: 高利贷一次性还款 — 立刻 +funds,debtDueDay 当天扣 debtAmount。
+    if (eff.debtAmount && eff.debtPeriodDays) {
+      s.debtAmount = eff.debtAmount;
+      s.debtDueDay = s.day + eff.debtPeriodDays;
+      s = pushLog(s, `借入高利贷,${eff.debtPeriodDays} 天后(第 ${s.debtDueDay} 日)需还 ¥${eff.debtAmount}`, 'warn');
+    }
+    s = pushLog(s, `事件「${ev.title}」: ${opt.label}`, 'event');
+    // V7: 链式事件触发计数累加 — 让下次触发同一 chain 时进入下一 stage
+    if (ev.chain) {
+      const prev = (s.eventChainCount && s.eventChainCount[ev.chain]) || 0;
+      s.eventChainCount = { ...(s.eventChainCount || {}), [ev.chain]: prev + 1 };
+    }
+    // V14.75: 累加事件资金影响并记录来源,月报展示可追溯明细。
+    s = recordMonthlyEventImpact(s, s.funds - fundsBefore, {
+      title: ev.title,
+      label: opt.label,
+    });
+    return s;
+  }
+
+  function buyVehicle(state, templateId) {
+    const t = VEHICLES.find((x) => x.id === templateId);
+    if (state.funds < t.price) return pushNotif(state, `资金不足!`, 'warn');
+    if (state.reputation < t.unlock) return pushNotif(state, `口碑不足 ${t.unlock}`, 'warn');
+    let s = { ...state, funds: state.funds - t.price };
+    const newVehicle = genVehicle(t);
+    const unassignedDriver = s.drivers.find((d) => !d.vehicleId);
+    s.vehicles = [...s.vehicles, newVehicle];
+    if (unassignedDriver) {
+      s.drivers = s.drivers.map((d) => d.id === unassignedDriver.id ? { ...d, vehicleId: newVehicle.id } : d);
+    }
+    s = pushLog(s, `购入 ${t.name},花费 ¥${t.price}`, 'event');
+    if (unassignedDriver) {
+      s = pushLog(s, `自动配车: ${unassignedDriver.name} 开上 ${t.name}`, 'success');
+    }
+    s = checkMission(s);
+    return s;
+  }
+
+  function findEmptyVehicle(drivers, vehicles) {
+    const usedVehicleIds = new Set(drivers.map((d) => d.vehicleId).filter(Boolean));
+    return vehicles.find((v) => !usedVehicleIds.has(v.id));
+  }
+
+  // V14.3: 换车改为"交换"语义 — 点别人正在开的车,两人的车互换;
+  // 跑单中也能换,订单中断(和解雇/卖车保持一致的"任何时候都能操作"原则)。
+  function assignVehicle(state, driverId, vehicleId) {
+    const driver = state.drivers.find((d) => d.id === driverId);
+    const vehicle = state.vehicles.find((v) => v.id === vehicleId);
+    if (!driver || !vehicle) return state;
+    if (driver.vehicleId === vehicleId) return state;  // 已经是这辆车,无操作
+
+    const vd = getVehicleData(vehicle);
+    const occupied = state.drivers.find((d) => d.vehicleId === vehicleId && d.id !== driverId);
+    const prevDriverVehicleId = driver.vehicleId;
+
+    let s = { ...state };
+
+    s.drivers = s.drivers.map((d) => {
+      if (d.id === driverId) {
+        const reset = d.status === 'driving' && d.currentOrder ? { status: 'idle', currentOrder: null } : {};
+        return { ...d, vehicleId, ...reset };
+      }
+      if (occupied && d.id === occupied.id) {
+        // 占了目标车的人 → 拿到当前司机原来的车(可能是 null = 一起没车)
+        const reset = d.status === 'driving' && d.currentOrder ? { status: 'idle', currentOrder: null } : {};
+        return { ...d, vehicleId: prevDriverVehicleId, ...reset };
+      }
+      return d;
+    });
+
+    // 跑单中断日志
+    if (driver.status === 'driving' && driver.currentOrder) {
+      s = pushLog(s, `${driver.name} 跑单中途换车,订单 ${driver.currentOrder.orderName} 中断`, 'warn');
+    }
+    if (occupied && occupied.status === 'driving' && occupied.currentOrder) {
+      s = pushLog(s, `${occupied.name} 跑单中途被换车,订单 ${occupied.currentOrder.orderName} 中断`, 'warn');
+    }
+
+    if (occupied) {
+      const occupiedNewVdName = prevDriverVehicleId
+        ? getVehicleData(state.vehicles.find((v) => v.id === prevDriverVehicleId))?.name || '另一辆车'
+        : '无车';
+      s = pushLog(s, `${driver.name} 与 ${occupied.name} 交换车辆: ${vd.name} ↔ ${occupiedNewVdName}`, 'event');
+      s = pushNotif(s, `${driver.name} ↔ ${occupied.name} 互换车辆`, 'success');
+    } else {
+      s = pushLog(s, `${driver.name} 换上 ${vd.name}`, 'event');
+      s = pushNotif(s, `${driver.name} 已换上 ${vd.name}`, 'success');
+    }
+    return s;
+  }
+
+  // V14.67: hireDriver 删除 — V11 起被 GACHA_PICK 全面替代,无 dispatch 入口。
+
+  function fireDriver(state, driverId) {
+    let s = { ...state };
+    const d = s.drivers.find((x) => x.id === driverId);
+    if (!d) return s;
+    const severance = d.salary * 2;
+    if (s.funds < severance) {
+      return pushNotif(s, `解雇 ${d.name} 需要补偿 ¥${severance.toLocaleString()}`, 'warn');
+    }
+    s.funds -= severance;
+    s.monthlySeverance = (s.monthlySeverance || 0) + severance;
+    // V14: 跑单中也允许解雇,订单中断,车空下来等待新司机配车
+    if (d.status === 'driving' && d.currentOrder) {
+      s = pushLog(s, `${d.name} 跑单中途被解雇,订单 ${d.currentOrder.orderName} 中断`, 'warn');
+    }
+    s.drivers = s.drivers.filter((x) => x.id !== driverId);
+    // V14: 标记本月离队日,月报里灰显该司机
+    if (s.monthlyDriverData && s.monthlyDriverData[driverId]) {
+      s.monthlyDriverData = { ...s.monthlyDriverData, [driverId]: { ...s.monthlyDriverData[driverId], leftDay: s.day } };
+    }
+    s = pushLog(s, `解雇 ${d.name},支付 2 个月补偿 ¥${severance}`, 'warn');
+    return s;
+  }
+
+  // V14: 玩家主动卖车 — 残值 60%,跑单中也能卖,订单中断,司机空下来
+  function sellVehicle(state, vehicleId) {
+    let s = { ...state };
+    const v = s.vehicles.find((x) => x.id === vehicleId);
+    if (!v) return s;
+    if (s.vehicles.length <= 1) {
+      return pushNotif(state, '只剩 1 辆车,无法卖!', 'warn');
+    }
+    const td = getVehicleData(v);
+    const refund = Math.round(td.price * 0.6);
+    s.vehicles = s.vehicles.filter((x) => x.id !== vehicleId);
+    // 解绑驾驶员 + 清当前订单
+    s.drivers = s.drivers.map((d) => {
+      if (d.vehicleId !== vehicleId) return d;
+      if (d.status === 'driving' && d.currentOrder) {
+        s = pushLog(s, `${d.name} 跑单中途车被卖出,订单 ${d.currentOrder.orderName} 中断`, 'warn');
+        return { ...d, vehicleId: null, status: 'idle', currentOrder: null };
+      }
+      return { ...d, vehicleId: null };
+    });
+    s.funds += refund;
+    s = pushLog(s, `卖出 ${td.name},回收 ¥${refund}`, 'warn');
+    s = pushNotif(s, `已卖出 ${td.name},回血 ¥${refund}`, 'success');
+    return s;
+  }
+
+  function gameReducer(state, action) {
+    switch (action.type) {
+      case 'TICK': return tick(state);
+      case 'TOGGLE_PAUSE': return { ...state, paused: !state.paused };
+      case 'SET_SPEED': return { ...state, speed: action.speed, paused: false, hasStarted: true };
+      case 'CLOSE_TUTORIAL': return { ...state, showTutorial: false };
+      case 'OPEN_TUTORIAL': return { ...state, showTutorial: true };
+      case 'CLOSE_EVENT': return { ...state, activeEvent: null, paused: false };
+      case 'TRAIN': return doTrain(state, action.driverId, action.trainingId);
+      case 'RESOLVE_EVENT': return resolveEvent(state, action.optionIdx);
+      case 'RESOLVE_INVESTOR': return resolveInvestorPressure(state, action.choices);
+      case 'BUY_VEHICLE': return buyVehicle(state, action.templateId);
+      case 'ASSIGN_VEHICLE': return assignVehicle(state, action.driverId, action.vehicleId);
+      case 'FIRE_DRIVER': return fireDriver(state, action.driverId);
+      case 'SELL_VEHICLE': return sellVehicle(state, action.vehicleId);
+      case 'RESET': return makeInitialState();
+      case 'CLEAR_FLOAT_GAIN': return { ...state, floatGains: state.floatGains.filter((g) => g.id !== action.id) };
+      case 'CLEAR_NOTIF': return { ...state, notifications: state.notifications.filter((n) => n.id !== action.id) };
+      case 'CLEAR_MISSION_COMPLETE': return { ...state, newMissionComplete: null };
+      case 'CLEAR_NEW_ENDING': return { ...state, newEndingUnlocked: null };
+      // V14: 关闭月报弹窗 → 清零月度累计 + 月份计数 +1。
+      // V14.67: 月结工资打负不再立即触发投资人事件,留 1 天缓冲让玩家先跑单挽救;
+      //         若挽救失败,次日日结时(endOfDay 里的常规判定)才触发投资人压力。
+      case 'CLOSE_MONTHLY_REPORT': {
+        return {
+          ...state,
+          showMonthlyReport: null,
+          paused: false,
+          monthCounter: (state.monthCounter || 1) + 1,
+          monthlyEarnedGross: 0,
+          monthlyCommission: 0,
+          monthlySalary: 0,
+          monthlyDebtPaid: 0,
+          monthlySeverance: 0,
+          monthlyEventImpact: 0,
+          monthlyEventItems: [],
+          monthlyDriverData: {},
+        };
+      }
+      // V7: 故事弹窗确认 — 发奖励 + 写 seenStories + 解除暂停
+      case 'STORY_SHOWN': {
+        if (!state.activeStory) return state;
+        const story = state.activeStory;
+        let s = applyStoryReward(state, story);
+        // 切片故事才记忆;灵魂故事每周目都触发,不写记忆
+        if (story.sliceIndex >= 0) {
+          const seen = { ...(s.seenStories || {}) };
+          const arr = seen[story.bgId] ? [...seen[story.bgId]] : [];
+          if (!arr.includes(story.sliceIndex)) arr.push(story.sliceIndex);
+          seen[story.bgId] = arr;
+          s.seenStories = seen;
+          saveSeenStories(seen);
+        }
+        s.activeStory = null;
+        s.paused = false;
+        return s;
+      }
+      case 'CLAIM_ENDING': {
+        const ending = ENDINGS.find((e) => e.tier === state.unlockedEndingTier);
+        if (!ending) return state;
+        return { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+      }
+      // V6: 玩家主动"结束运营",拿当前最高已解锁结局
+      case 'CONCEDE': {
+        if (state.unlockedEndingTier === 0) {
+          return pushNotif(state, '还未达成任何结局,继续运营吧', 'warn');
+        }
+        const ending = ENDINGS.find((e) => e.tier === state.unlockedEndingTier);
+        return { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+      }
+      // V6: 抽卡
+      case 'GACHA_START': return startGacha(state, action.ticketId);
+      case 'GACHA_REROLL': return rerollGacha(state);
+      case 'GACHA_PICK': return pickGachaCard(state, action.cardId);
+      case 'GACHA_CANCEL': return cancelGacha(state);
+      default: return state;
+    }
+  }
+
+  window.WYCWY_ENGINE = {
+    rand, randInt, pick, cap, sumStats, statName,
+    genName, genDriver, genVehicle,
+    getVehicleData, computeStatCaps, canTakeOrder, inHourWindow,
+    isZoneUnlocked, getZoneUnlockText,
+    getRarityLoyaltyRule, getDriverLoyaltyCap, getDriverQuitLine,
+    getInvestorPressurePlan,
+    getEventBusinessScale, scaleEventEffect,
+    computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,
+    getTrainingCost,
+    buildHourlySupply,
+    gameReducer, makeInitialState,
+  };
+})();

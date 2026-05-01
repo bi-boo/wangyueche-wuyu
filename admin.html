@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>网约车物语 — 数值调参后台</title>
+<style>
+  :root {
+    --bg: #F5F1EA;
+    --card: #FFFFFF;
+    --sub: #F4EFE5;
+    --ink: #2A2320;
+    --ink-2: #6D635A;
+    --ink-3: #9A8C7E;
+    --accent: #FF8C42;
+    --accent-deep: #D4621F;
+    --green: #5FAD41;
+    --gold: #FFD93D;
+    --border: rgba(42,35,32,0.12);
+    --hairline: rgba(42,35,32,0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: "PingFang SC", -apple-system, "Helvetica Neue", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 6px;
+    outline: none;
+    width: 100%;
+  }
+  input:focus, textarea:focus { background: #fff; box-shadow: 0 0 0 2px rgba(255,140,66,0.2); }
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+  }
+
+  .topbar {
+    height: 56px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .topbar h1 {
+    margin: 0;
+    font-size: 18px;
+  }
+  .topbar .v {
+    font-size: 14px;
+    color: var(--ink-3);
+    margin-left: 6px;
+  }
+  .sync-badge {
+    background: var(--green);
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .sync-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-2);
+    cursor: pointer;
+    user-select: none;
+  }
+  .sync-toggle input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+  }
+  .topbar-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: transform 0.08s, box-shadow 0.08s;
+  }
+  .btn:hover { transform: translate(-1px, -1px); box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04); }
+  .btn:active { box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.gold { background: var(--gold); }
+
+  .layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: 0;
+    overflow: hidden;
+  }
+  aside {
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    padding: 14px 0;
+    overflow-y: auto;
+  }
+  .nav-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 18px;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    font-size: 14px;
+    border-left: 4px solid transparent;
+  }
+  .nav-item:hover { background: var(--sub); }
+  .nav-item.active {
+    background: var(--gold);
+    border-left-color: var(--accent);
+    font-weight: 700;
+  }
+  .nav-divider {
+    border-top: 1px dashed var(--hairline);
+    margin: 8px 0;
+  }
+  .nav-label {
+    padding: 6px 18px 4px;
+    font-size: 14px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+
+  main {
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .panel-h {
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .panel-h h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+  }
+  .panel-h p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+  }
+  th {
+    background: var(--ink);
+    color: var(--gold);
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: top;
+    font-size: 14px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) { background: var(--sub); }
+  .obj-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 10px 16px;
+    align-items: center;
+  }
+  .obj-grid .label {
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+  .col-narrow { width: 90px; }
+  .col-medium { width: 140px; }
+  .col-wide { width: 200px; }
+  .ro {
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 14px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--gold);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    margin-left: 6px;
+  }
+  .section-note {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .note-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 3px 8px;
+    border: 1px solid var(--hairline);
+    background: var(--sub);
+    color: var(--ink-2);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .overview-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    border-radius: 6px;
+    padding: 12px;
+    min-width: 0;
+  }
+  .overview-card h3 {
+    margin: 0 0 8px;
+    font-size: 15px;
+  }
+  .metric-row {
+    display: grid;
+    grid-template-columns: minmax(64px, 1fr) repeat(4, minmax(44px, 58px));
+    gap: 6px;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 12px;
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-row .head {
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .metric-row strong { font-size: 13px; }
+  .mini-action {
+    margin-top: 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    background: var(--sub);
+    color: var(--ink);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  @media (max-width: 760px) {
+    .topbar {
+      height: auto;
+      min-height: 56px;
+      flex-wrap: wrap;
+      padding: 8px 10px;
+      gap: 8px;
+    }
+    .topbar h1 { font-size: 15px; }
+    .topbar-actions {
+      margin-left: 0;
+      width: 100%;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .btn {
+      padding: 7px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .layout {
+      grid-template-columns: 150px minmax(0, 1fr);
+    }
+    .nav-item {
+      padding: 9px 10px;
+      font-size: 13px;
+    }
+    .nav-label {
+      padding-left: 10px;
+      padding-right: 10px;
+      font-size: 12px;
+    }
+    main { padding: 10px; }
+    .panel-h { padding: 12px; }
+    .overview-grid { grid-template-columns: minmax(210px, 1fr); }
+  }
+  .toast {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    background: var(--green);
+    color: #fff;
+    padding: 12px 18px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+    z-index: 100;
+    animation: in 0.2s ease-out, out 0.3s ease-in 2s forwards;
+  }
+  @keyframes in { from { transform: translateX(110%); } to { transform: translateX(0); } }
+  @keyframes out { to { transform: translateX(110%); opacity: 0; } }
+
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(42,35,32,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+  }
+  .modal-c {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    padding: 20px;
+    max-width: 600px;
+    width: calc(100vw - 40px);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-c textarea {
+    flex: 1;
+    min-height: 300px;
+    font-family: monospace;
+    font-size: 14px;
+    background: #fff;
+    color: var(--ink);
+    border: 1px solid var(--border);
+    padding: 10px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+</style>
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="./wycwy-data.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+const D = window.WYCWY_DATA;
+
+/* ========= 配置:每个分类的字段定义和说明 ========= */
+
+const SECTIONS = [
+  {
+    id: 'BALANCE_OVERVIEW',
+    label: '联动看板',
+    group: '基础节奏',
+    type: 'overview',
+    desc: '把招募概率、司机上限、订单门槛和训练替代成本放在一起看,用于判断高阶司机牵引是否足够。',
+  },
+  {
+    id: 'GAME',
+    label: '经营节奏',
+    group: '基础节奏',
+    type: 'object',
+    desc: '游戏起始资金、时间推进、事件频率和破产压力。这里决定一局游戏的整体节奏。',
+    fields: {
+      STARTING_FUNDS: { label: '起始资金', type: 'number' },
+      STARTING_REPUTATION: { label: '起始口碑', type: 'number' },
+      TICK_MS: { label: '每 tick 毫秒数', type: 'number', hint: '2000 = 1× 时 2 秒推进 1 游戏小时' },
+      HOURS_PER_DAY: { label: '每天小时数', type: 'number' },
+      COMMISSION: { label: '平台抽成', type: 'number', step: 0.01, hint: '0.20 = 抽 20%' },
+      STAT_CAP: { label: '属性上限', type: 'number' },
+      EVENT_INTERVAL_DAYS: { label: '事件间隔天数', type: 'number' },
+      EARLY_EVENT_UNTIL_DAY: { label: '轻事件保护到第几天', type: 'number' },
+      CHAIN_EVENT_START_DAY: { label: '链式事件开始日', type: 'number' },
+      LOSS_REPUTATION_PENALTY: { label: '流失单扣口碑', type: 'number' },
+      DEATH_FUNDS_THRESHOLD: { label: '破产资金线', type: 'number' },
+      DEATH_FUNDS_DAYS: { label: '资金负多少天破产', type: 'number' },
+      FOCUSED_EVENT_CHOICES: { label: '事件二选一', type: 'boolean' },
+    },
+  },
+  {
+    id: 'RECRUIT_TICKETS',
+    label: '招募券概率',
+    group: '招募强度',
+    type: 'array',
+    desc: '3 档招募券的价格、说明和 [N/R/SR/SSR] 概率。调这里决定玩家是否有动力从普通券升级到 VIP / 猎头。',
+    notes: ['三选一抽卡:单张概率会被放大成候选池体感', '猎头券要和豪华单门槛、稀有度上限一起看'],
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 90 },
+      { key: 'name', label: '券名', width: 120 },
+      { key: 'cost', label: '价格', type: 'number', width: 90 },
+      { key: 'probs.0', label: 'N 概率', type: 'number', step: 0.01, width: 80 },
+      { key: 'probs.1', label: 'R 概率', type: 'number', step: 0.01, width: 80 },
+      { key: 'probs.2', label: 'SR 概率', type: 'number', step: 0.01, width: 80 },
+      { key: 'probs.3', label: 'SSR 概率', type: 'number', step: 0.01, width: 80 },
+      { key: 'desc', label: '描述', width: 280 },
+    ],
+  },
+  {
+    id: 'BACKGROUNDS',
+    label: '司机背景',
+    group: '招募强度',
+    type: 'array',
+    desc: '10 种司机背景 + 4 档稀有度(N/R/SR/SSR)。改 boosts 影响新招募司机的初始能力。SSR 是满级司机。',
+    notes: ['初始车技决定能否立刻接专车 / 豪华车', '月薪和忠诚规则会影响高阶司机持有成本'],
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 90 },
+      { key: 'name', label: '名字' },
+      { key: 'rarity', label: '稀有度', width: 70 },
+      { key: 'desc', label: '描述', width: 200 },
+      // V14: 属性砍到 driving + service 两项,删除 road / mind
+      { key: 'boosts.driving', label: '驾驶+', type: 'number', width: 70 },
+      { key: 'boosts.service', label: '服务+', type: 'number', width: 70 },
+      { key: 'salary', label: '月薪', type: 'number', width: 90 },
+      { key: 'loyalty', label: '忠诚倾向', type: 'number', width: 90 },
+      { key: 'orderRateBonus', label: '接单率倍率', type: 'number', step: 0.1, width: 100 },
+      { key: 'stories.soul.title', label: 'V7 灵魂故事', readonly: true, width: 180 },
+    ],
+  },
+  {
+    id: 'RARITY_STAT_CAPS',
+    label: '稀有度上限',
+    group: '招募强度',
+    type: 'object',
+    desc: '每档稀有度的可训练上限。这里决定普通司机能不能通过训练替代高阶司机。',
+    notes: ['如果豪华车车技门槛高于 R 上限,R 级就不能替代 SR/SSR', '上限要和订单门槛、训练价格一起调'],
+    fields: {
+      'N.driving': { label: 'N 车技上限', type: 'number' },
+      'N.service': { label: 'N 服务上限', type: 'number' },
+      'R.driving': { label: 'R 车技上限', type: 'number' },
+      'R.service': { label: 'R 服务上限', type: 'number' },
+      'SR.driving': { label: 'SR 车技上限', type: 'number' },
+      'SR.service': { label: 'SR 服务上限', type: 'number' },
+      'SSR.driving': { label: 'SSR 车技上限', type: 'number' },
+      'SSR.service': { label: 'SSR 服务上限', type: 'number' },
+    },
+  },
+  {
+    id: 'RARITY_LOYALTY_RULES',
+    label: '忠诚规则',
+    group: '招募强度',
+    type: 'array',
+    desc: 'V14.80: 稀有度决定初始忠诚区间、普通忠诚上限、离职风险线和低忠诚离队后的士气惩罚。只有少数强关系事件和个人故事可越过普通上限到 100,下降时仍按当前忠诚正常扣减。',
+    cols: [
+      { key: 'id', label: '稀有度', readonly: true, width: 80 },
+      { key: 'initialMin', label: '初始下限', type: 'number', width: 90 },
+      { key: 'initialMax', label: '初始上限', type: 'number', width: 90 },
+      { key: 'normalCap', label: '普通上限', type: 'number', width: 90 },
+      { key: 'quitBelow', label: '离职线', type: 'number', width: 90 },
+      { key: 'moralePenalty', label: '离队士气损失', type: 'number', width: 120 },
+    ],
+  },
+  {
+    id: 'ORDERS',
+    label: '订单门槛',
+    group: '订单牵引',
+    type: 'array',
+    desc: '订单价格、时长、派单权重和属性门槛。高端订单门槛是拉动高阶司机最直接的数值。',
+    notes: ['豪华车门槛要高于 R 级车技上限,才会形成 SR/SSR 牵引', '服务门槛为空表示不校验服务'],
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 80 },
+      { key: 'name', label: '名字' },
+      { key: 'fare', label: '单价', type: 'number', width: 80 },
+      { key: 'km', label: '距离 km', type: 'number', width: 80 },
+      { key: 'hours', label: '时长 h', type: 'number', width: 80 },
+      { key: 'rate', label: '权重', type: 'number', step: 0.05, width: 70 },
+      // V14: 属性 4→2,只剩 driving / service 两项门槛
+      { key: 'req.driving', label: '驾驶门槛', type: 'number', width: 80 },
+      { key: 'req.service', label: '服务门槛', type: 'number', width: 80 },
+    ],
+  },
+  {
+    id: 'VEHICLES',
+    label: '车型准入',
+    group: '订单牵引',
+    type: 'array',
+    desc: '车型价格和可接订单。车辆决定订单资格,司机属性决定能不能真正接下来。',
+    notes: ['凯美瑞起可接专车,奔驰 E 可接豪华车', '如果开放车型 eligible,也要同步检查订单门槛'],
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 90 },
+      { key: 'name', label: '名字' },
+      { key: 'price', label: '售价', type: 'number', width: 100 },
+      { key: 'eligible', label: '可接订单', type: 'array', width: 240 },
+      { key: 'color', label: '颜色', width: 100 },
+      { key: 'shape', label: '车身形态', width: 100 },
+    ],
+  },
+  {
+    id: 'ZONES',
+    label: '片区供需',
+    group: '订单牵引',
+    type: 'array',
+    desc: 'V14.67 新增:5 个北京片区(海淀/西城/丰台/大兴/朝阳)。改 unlock.reputation 调整解锁口碑门槛;改 density 调每小时刷出订单数;改 orderMix 调订单类型权重(short/business/airport/luxury 数字越大越多)。',
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 100 },
+      { key: 'name', label: '片区名', width: 100 },
+      { key: 'unlock.reputation', label: '解锁口碑', type: 'number', width: 100 },
+      { key: 'density', label: '订单密度/h', type: 'number', width: 110 },
+      { key: 'orderMix.short', label: '特惠权重', type: 'number', width: 90 },
+      { key: 'orderMix.business', label: '快车权重', type: 'number', width: 90 },
+      { key: 'orderMix.airport', label: '专车权重', type: 'number', width: 90 },
+      { key: 'orderMix.luxury', label: '豪华权重', type: 'number', width: 90 },
+    ],
+  },
+  {
+    id: 'TRAININGS',
+    label: '训练成本',
+    group: '成长成本',
+    type: 'array',
+    desc: '训练收益和分段价格。这里决定“用低阶司机训练上去”是否比“招募高阶司机”更划算。',
+    notes: ['70 以后训练越贵,高阶司机越有价值', 'gainMin / gainMax 决定每次训练推进速度'],
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 80 },
+      { key: 'name', label: '名字' },
+      { key: 'stat', label: '属性' },
+      { key: 'cost', label: '基准价', type: 'number', width: 90 },
+      { key: 'gainMin', label: '最小增益', type: 'number', width: 90 },
+      { key: 'gainMax', label: '最大增益', type: 'number', width: 90 },
+      { key: 'costTiers.0.max', label: '0段上限', type: 'number', width: 90 },
+      { key: 'costTiers.0.cost', label: '0-19价', type: 'number', width: 90 },
+      { key: 'costTiers.1.max', label: '1段上限', type: 'number', width: 90 },
+      { key: 'costTiers.1.cost', label: '20-34价', type: 'number', width: 90 },
+      { key: 'costTiers.2.max', label: '2段上限', type: 'number', width: 90 },
+      { key: 'costTiers.2.cost', label: '35-49价', type: 'number', width: 90 },
+      { key: 'costTiers.3.max', label: '3段上限', type: 'number', width: 90 },
+      { key: 'costTiers.3.cost', label: '50-69价', type: 'number', width: 90 },
+      { key: 'costTiers.4.max', label: '4段上限', type: 'number', width: 90 },
+      { key: 'costTiers.4.cost', label: '70-84价', type: 'number', width: 90 },
+      { key: 'costTiers.5.max', label: '5段上限', type: 'number', width: 90 },
+      { key: 'costTiers.5.cost', label: '85+价', type: 'number', width: 90 },
+    ],
+  },
+  // V11/V14: 职业等级 RANKS + 里程碑 ACHIEVEMENTS 都已彻底删除,后台不再注册。
+  {
+    id: 'MISSIONS',
+    label: '任务奖励',
+    group: '事件终局',
+    type: 'array',
+    desc: '16 条主线任务,引导玩家学完车组、培训、口碑、车型和订单解锁。check 函数代码不可在此编辑。',
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 200 },
+      { key: 'title', label: '标题' },
+      { key: 'desc', label: '描述', width: 220 },
+      { key: 'hint', label: '提示', width: 240 },
+      { key: 'reward.funds', label: '奖励金额', type: 'number', width: 90 },
+      { key: 'reward.message', label: '奖励说明', width: 260 },
+    ],
+  },
+  {
+    id: 'EVENTS',
+    label: '事件频率',
+    group: '事件终局',
+    type: 'array',
+    desc: '随机事件的触发冷却和基础信息。选项内部的资金 / 忠诚 / 口碑效果仍在事件函数里,不在表格里直接编辑。',
+    notes: ['全局事件间隔在“经营节奏”里调', '这里调单个事件冷却,能控制某类事件出现频率'],
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 160 },
+      { key: 'title', label: '标题' },
+      { key: 'tag', label: '标签', width: 80 },
+      { key: 'desc', label: '描述', width: 280 },
+      { key: 'cooldown', label: '冷却天数', type: 'number', width: 90 },
+      { key: 'chain', label: 'Chain ID', width: 120 },
+    ],
+  },
+  {
+    id: 'INVESTOR_PRESSURE',
+    label: '投资人压力',
+    group: '事件终局',
+    type: 'object',
+    desc: '资金跌破 0 后触发的救场事件文案和标签。实际裁员 / 卖车 / 借贷金额由引擎按规模动态计算。',
+    fields: {
+      title: { label: '标题' },
+      tag: { label: '标签' },
+      desc: { label: '说明文案' },
+      multiChoice: { label: '多选方案', type: 'boolean' },
+    },
+  },
+  {
+    id: 'ENDINGS',
+    label: '结局目标',
+    group: '事件终局',
+    type: 'array',
+    desc: '5 种结局阶段的目标数值和展示文案。check 函数会读取 targets,改这里就能调整通关目标。',
+    notes: ['资金 / 口碑 / 车组数是核心目标', '高阶订单要求会影响司机和车型的后期牵引'],
+    cols: [
+      { key: 'id', label: 'ID', readonly: true, width: 140 },
+      { key: 'name', label: '名字' },
+      { key: 'tier', label: '阶段', type: 'number', width: 70 },
+      { key: 'targets.funds', label: '资金目标', type: 'number', width: 100 },
+      { key: 'targets.reputation', label: '口碑目标', type: 'number', width: 100 },
+      { key: 'targets.crews', label: '车组目标', type: 'number', width: 90 },
+      { key: 'targets.requireOrderReady', label: '订单能力要求', width: 120 },
+      { key: 'targets.requireOrderReadyCount', label: '能力车组数', type: 'number', width: 100 },
+      { key: 'desc', label: '故事', width: 240 },
+      { key: 'detail', label: '触发条件文字', width: 280 },
+    ],
+  },
+];
+
+/* ========= 工具函数 ========= */
+
+function deepClone(obj) {
+  // 普通对象/数组深拷贝,函数保持引用
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(deepClone);
+  const out = {};
+  for (const k of Object.keys(obj)) out[k] = deepClone(obj[k]);
+  return out;
+}
+
+function getNested(obj, path) {
+  const parts = path.split('.');
+  let cur = obj;
+  for (const p of parts) {
+    if (cur == null) return undefined;
+    cur = cur[p];
+  }
+  return cur;
+}
+
+function setNested(obj, path, value) {
+  const parts = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (cur[parts[i]] == null) cur[parts[i]] = {};
+    cur = cur[parts[i]];
+  }
+  const leaf = parts[parts.length - 1];
+  if (value === undefined && !Array.isArray(cur)) {
+    delete cur[leaf];
+  } else {
+    cur[leaf] = value;
+  }
+}
+
+/* ========= 自定义序列化(保留函数) ========= */
+
+function jsLiteral(value, indent = 0) {
+  const pad = '  '.repeat(indent);
+  const pad2 = '  '.repeat(indent + 1);
+  if (typeof value === 'function') {
+    return value.toString();
+  }
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    const items = value.map((v) => pad2 + jsLiteral(v, indent + 1));
+    return '[\n' + items.join(',\n') + '\n' + pad + ']';
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length === 0) return '{}';
+    const items = keys.map((k) => {
+      const safeKey = /^[a-zA-Z_$][\w$]*$/.test(k) ? k : JSON.stringify(k);
+      return pad2 + safeKey + ': ' + jsLiteral(value[k], indent + 1);
+    });
+    return '{\n' + items.join(',\n') + '\n' + pad + '}';
+  }
+  return 'undefined';
+}
+
+function exportDataJs(data) {
+  // 生成 wycwy-data.js 全文
+  // V14.9: 删除 RANKS / ACHIEVEMENTS(都已从 wycwy-data.js 移除)
+  // V14.67: 删除 LAST_NAMES_M(从未被 engine 引用) + computePlayerPhase(V11 已删除函数)
+  const exports = [
+    'GAME', 'BACKGROUNDS', 'VEHICLES', 'ORDERS', 'ZONES',
+    'TRAININGS', 'EVENTS', 'INVESTOR_PRESSURE',
+    'FIRST_NAMES', 'MISSIONS', 'ENDINGS',
+    'RECRUIT_TICKETS', 'RARITY_META', 'RARITY_STAT_CAPS', 'RARITY_LOYALTY_RULES',
+  ];
+  let out = '/* 网约车物语 — 配置数据 (admin 后台导出) */\n';
+  out += '(function () {\n';
+  for (const name of exports) {
+    if (data[name] === undefined) continue;
+    out += `  const ${name} = ${jsLiteral(data[name], 1)};\n\n`;
+  }
+  out += '  window.WYCWY_DATA = {\n';
+  out += '    ' + exports.filter((n) => data[n] !== undefined).join(', ') + '\n';
+  out += '  };\n';
+  out += '})();\n';
+  return out;
+}
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'application/javascript' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ========= 通用编辑组件 ========= */
+
+function CellEditor({ value, type, step, onChange, readonly }) {
+  if (readonly) {
+    return <span className="ro">{Array.isArray(value) ? value.join(',') : (value ?? '—')}</span>;
+  }
+  if (type === 'boolean') {
+    return (
+      <input
+        type="checkbox"
+        checked={!!value}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    );
+  }
+  if (type === 'number') {
+    return (
+      <input
+        type="number"
+        step={step || 1}
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+      />
+    );
+  }
+  if (type === 'array') {
+    return (
+      <input
+        value={Array.isArray(value) ? value.join(',') : ''}
+        onChange={(e) => onChange(e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+        placeholder="逗号分隔"
+      />
+    );
+  }
+  return (
+    <input
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
+function ObjectEditor({ section, data, onChange }) {
+  return (
+    <div className="obj-grid">
+      {Object.entries(section.fields).map(([key, def]) => (
+        <React.Fragment key={key}>
+          <span className="label">
+            {def.label}
+            <span className="ro" style={{marginLeft: 6, fontSize: 14}}>{key}</span>
+          </span>
+          <div>
+            <CellEditor
+              value={getNested(data, key)}
+              type={def.type}
+              step={def.step}
+              onChange={(v) => {
+                const newData = deepClone(data);
+                setNested(newData, key, v);
+                onChange(newData);
+              }}
+            />
+            {def.hint && <div className="ro" style={{fontSize: 14, marginTop: 2}}>{def.hint}</div>}
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function ArrayTableEditor({ section, data, onChange }) {
+  return (
+    <div style={{overflow: 'auto'}}>
+      <table>
+        <thead>
+          <tr>
+            {section.cols.map((c) => (
+              <th key={c.key} style={{width: c.width, minWidth: c.width}}>{c.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr key={i}>
+              {section.cols.map((c) => (
+                <td key={c.key} style={{width: c.width, minWidth: c.width}}>
+                  <CellEditor
+                    value={getNested(row, c.key)}
+                    type={c.type}
+                    step={c.step}
+                    readonly={c.readonly}
+                    onChange={(v) => {
+                      const newRow = deepClone(row);
+                      setNested(newRow, c.key, v);
+                      const newData = [...data];
+                      newData[i] = newRow;
+                      onChange(newData);
+                    }}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function avg(list, getter) {
+  if (!list.length) return 0;
+  return list.reduce((sum, item) => sum + getter(item), 0) / list.length;
+}
+
+function pct(value) {
+  return `${Math.round((value || 0) * 100)}%`;
+}
+
+function ticketAtLeast(prob, draws = 3) {
+  return 1 - Math.pow(1 - (prob || 0), draws);
+}
+
+function estimateTrainingCost(data, from, to, stat = 'driving') {
+  const training = (data.TRAININGS || []).find((item) => item.stat === stat);
+  if (!training || from >= to) return 0;
+  const gain = Math.max(1, Math.round(((training.gainMin || 0) + (training.gainMax || 0)) / 2) || 10);
+  let current = from;
+  let cost = 0;
+  let guard = 0;
+  while (current < to && guard < 30) {
+    const tier = (training.costTiers || []).find((item) => current <= item.max)
+      || (training.costTiers || [])[training.costTiers.length - 1];
+    cost += tier?.cost || training.cost || 0;
+    current += gain;
+    guard += 1;
+  }
+  return cost;
+}
+
+function money(value) {
+  return `¥${Math.round(value || 0).toLocaleString()}`;
+}
+
+function BalanceOverview({ data, onJump }) {
+  const rarities = ['N', 'R', 'SR', 'SSR'];
+  const backgrounds = data.BACKGROUNDS || [];
+  const caps = data.RARITY_STAT_CAPS || {};
+  const luxuryReq = (data.ORDERS || []).find((item) => item.id === 'luxury')?.req || {};
+  const airportReq = (data.ORDERS || []).find((item) => item.id === 'airport')?.req || {};
+  const rarityRows = rarities.map((rarity) => {
+    const list = backgrounds.filter((item) => item.rarity === rarity);
+    const avgDriving = Math.round(avg(list, (item) => item.boosts?.driving || 0));
+    const avgService = Math.round(avg(list, (item) => item.boosts?.service || 0));
+    return {
+      rarity,
+      avgDriving,
+      avgService,
+      capDriving: caps[rarity]?.driving || 0,
+      capService: caps[rarity]?.service || 0,
+      toLuxury: estimateTrainingCost(data, avgDriving, luxuryReq.driving || 0, 'driving'),
+    };
+  });
+  return (
+    <div className="overview-grid">
+      <div className="overview-card">
+        <h3>招募券体感</h3>
+        <div className="metric-row">
+          <span className="head">券</span><span className="head">价格</span><span className="head">SR+</span><span className="head">SSR</span><span className="head">R+</span>
+        </div>
+        {(data.RECRUIT_TICKETS || []).map((ticket) => {
+          const probs = ticket.probs || [];
+          return (
+            <div className="metric-row" key={ticket.id}>
+              <strong>{ticket.name}</strong>
+              <span>{money(ticket.cost)}</span>
+              <span>{pct(ticketAtLeast((probs[2] || 0) + (probs[3] || 0)))}</span>
+              <span>{pct(ticketAtLeast(probs[3] || 0))}</span>
+              <span>{pct(ticketAtLeast((probs[1] || 0) + (probs[2] || 0) + (probs[3] || 0)))}</span>
+            </div>
+          );
+        })}
+        <button className="mini-action" onClick={() => onJump('RECRUIT_TICKETS')}>调整招募券概率</button>
+      </div>
+
+      <div className="overview-card">
+        <h3>司机强度与替代成本</h3>
+        <div className="metric-row">
+          <span className="head">级别</span><span className="head">均车技</span><span className="head">车技上限</span><span className="head">均服务</span><span className="head">到豪华</span>
+        </div>
+        {rarityRows.map((row) => (
+          <div className="metric-row" key={row.rarity}>
+            <strong>{row.rarity}</strong>
+            <span>{row.avgDriving}</span>
+            <span>{row.capDriving}</span>
+            <span>{row.avgService}</span>
+            <span>{row.toLuxury ? money(row.toLuxury) : '已达'}</span>
+          </div>
+        ))}
+        <button className="mini-action" onClick={() => onJump('RARITY_STAT_CAPS')}>调整稀有度上限</button>
+      </div>
+
+      <div className="overview-card">
+        <h3>订单门槛</h3>
+        <div className="metric-row">
+          <span className="head">订单</span><span className="head">单价/h</span><span className="head">车技</span><span className="head">服务</span><span className="head">权重</span>
+        </div>
+        {(data.ORDERS || []).map((order) => (
+          <div className="metric-row" key={order.id}>
+            <strong>{order.name}</strong>
+            <span>{money((order.fare || 0) / (order.hours || 1))}</span>
+            <span>{order.req?.driving ?? '-'}</span>
+            <span>{order.req?.service ?? '-'}</span>
+            <span>{order.rate ?? '-'}</span>
+          </div>
+        ))}
+        <button className="mini-action" onClick={() => onJump('ORDERS')}>调整订单门槛</button>
+      </div>
+
+      <div className="overview-card">
+        <h3>片区高端供给</h3>
+        <div className="metric-row">
+          <span className="head">片区</span><span className="head">解锁</span><span className="head">密度</span><span className="head">专车</span><span className="head">豪华</span>
+        </div>
+        {(data.ZONES || []).map((zone) => (
+          <div className="metric-row" key={zone.id}>
+            <strong>{zone.name}</strong>
+            <span>{zone.unlock?.reputation || 0}</span>
+            <span>{zone.density}</span>
+            <span>{zone.orderMix?.airport || 0}</span>
+            <span>{zone.orderMix?.luxury || 0}</span>
+          </div>
+        ))}
+        <button className="mini-action" onClick={() => onJump('ZONES')}>调整片区供需</button>
+      </div>
+    </div>
+  );
+}
+
+/* ========= 实时同步 ========= */
+
+const SYNC_STORAGE_KEY = 'wycwy-config-override';
+const SYNC_CHANNEL = 'wycwy-config';
+
+// 把 data 中的函数字段去掉(localStorage 不能存函数)
+function stripFunctions(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'function') return undefined;
+  if (Array.isArray(obj)) return obj.map(stripFunctions).filter((x) => x !== undefined);
+  if (typeof obj === 'object') {
+    const out = {};
+    for (const k of Object.keys(obj)) {
+      const v = stripFunctions(obj[k]);
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  return obj;
+}
+
+// 把 localStorage 里的 override 合并到原始 D 之上(保留函数字段不被覆盖)
+function hasFunctionDeep(value) {
+  if (typeof value === 'function') return true;
+  if (!value || typeof value !== 'object') return false;
+  if (Array.isArray(value)) return value.some(hasFunctionDeep);
+  return Object.keys(value).some((key) => hasFunctionDeep(value[key]));
+}
+
+function mergeConfigValue(orig, ov) {
+  if (ov === undefined) return deepClone(orig);
+  if (typeof orig === 'function') return orig;
+  if (Array.isArray(orig) && Array.isArray(ov)) {
+    const hasIdItems = ov.some((item) => item && typeof item === 'object' && item.id !== undefined);
+    const origHasIdItems = orig.some((item) => item && typeof item === 'object' && item.id !== undefined);
+    if (hasIdItems && origHasIdItems) {
+      const next = orig.map(deepClone);
+      ov.forEach((newItem) => {
+        if (!newItem || typeof newItem !== 'object' || newItem.id === undefined) return;
+        const idx = next.findIndex((x) => x && x.id === newItem.id);
+        if (idx >= 0) next[idx] = mergeConfigValue(next[idx], newItem);
+      });
+      return next;
+    }
+    if (hasFunctionDeep(orig)) {
+      return orig.map((item, idx) => mergeConfigValue(item, ov[idx]));
+    }
+    return deepClone(ov);
+  }
+  if (orig && ov && typeof orig === 'object' && typeof ov === 'object') {
+    const next = deepClone(orig);
+    Object.keys(ov).forEach((key) => {
+      next[key] = mergeConfigValue(orig[key], ov[key]);
+    });
+    return next;
+  }
+  return deepClone(ov);
+}
+
+function mergeOverride(base, override) {
+  const out = deepClone(base);
+  Object.keys(override).forEach((key) => {
+    if (out[key] === undefined) return;
+    out[key] = mergeConfigValue(out[key], override[key]);
+  });
+  return out;
+}
+
+/* ========= 主组件 ========= */
+
+function App() {
+  // 启动时合并 localStorage 覆盖
+  const [data, setData] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SYNC_STORAGE_KEY) || 'null');
+      return saved ? mergeOverride(D, saved) : deepClone(D);
+    } catch (e) {
+      return deepClone(D);
+    }
+  });
+  const [sectionId, setSectionId] = useState('BALANCE_OVERVIEW');
+  const [toast, setToast] = useState(null);
+  const [showExport, setShowExport] = useState(false);
+  const [syncEnabled, setSyncEnabled] = useState(true);
+  const [hasOverride, setHasOverride] = useState(() => !!localStorage.getItem(SYNC_STORAGE_KEY));
+
+  const channelRef = React.useRef(null);
+  if (!channelRef.current) channelRef.current = new BroadcastChannel(SYNC_CHANNEL);
+
+  const section = SECTIONS.find((s) => s.id === sectionId);
+
+  const groups = useMemo(() => {
+    const g = {};
+    for (const s of SECTIONS) {
+      if (!g[s.group]) g[s.group] = [];
+      g[s.group].push(s);
+    }
+    return g;
+  }, []);
+
+  const updateSection = (newVal) => {
+    const newData = { ...data, [sectionId]: newVal };
+    setData(newData);
+    // 实时同步:写 localStorage + 广播
+    if (syncEnabled) {
+      try {
+        const safe = stripFunctions(newData);
+        localStorage.setItem(SYNC_STORAGE_KEY, JSON.stringify(safe));
+        setHasOverride(true);
+        channelRef.current.postMessage({ type: 'config-update', timestamp: Date.now() });
+      } catch (e) { console.error('sync failed', e); }
+    }
+  };
+
+  const handleExport = () => {
+    const text = exportDataJs(data);
+    downloadFile('wycwy-data.js', text);
+    showToast('wycwy-data.js 已下载,可作永久保存');
+  };
+
+  const handleCopy = () => {
+    const text = exportDataJs(data);
+    setShowExport(true);
+    setTimeout(() => navigator.clipboard?.writeText(text), 100);
+  };
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2300);
+  };
+
+  const handleReset = () => {
+    if (confirm('丢弃当前所有改动,重置为 wycwy-data.js 当前值?')) {
+      setData(deepClone(D));
+      localStorage.removeItem(SYNC_STORAGE_KEY);
+      setHasOverride(false);
+      channelRef.current.postMessage({ type: 'config-update', timestamp: Date.now() });
+      showToast('已清除覆盖,游戏会同步收到通知');
+    }
+  };
+
+  return (
+    <>
+      <div className="topbar">
+        <h1>网约车物语 <span className="v">数值后台</span></h1>
+        {hasOverride && <span className="sync-badge">已生效覆盖</span>}
+        <label className="sync-toggle">
+          <input type="checkbox" checked={syncEnabled} onChange={(e) => setSyncEnabled(e.target.checked)} />
+          实时同步到游戏
+        </label>
+        <div className="topbar-actions">
+          <button className="btn" onClick={handleReset}>清除覆盖</button>
+          <button className="btn" onClick={handleCopy}>复制为文本</button>
+          <button className="btn primary" onClick={handleExport}>导出 wycwy-data.js</button>
+        </div>
+      </div>
+
+      <div className="layout">
+        <aside>
+          {Object.entries(groups).map(([groupName, sections]) => (
+            <React.Fragment key={groupName}>
+              <div className="nav-label">{groupName}</div>
+              {sections.map((s) => (
+                <button
+                  key={s.id}
+                  className={`nav-item ${s.id === sectionId ? 'active' : ''}`}
+                  onClick={() => setSectionId(s.id)}
+                >
+                  {s.label}
+                  {Array.isArray(data[s.id]) && <span className="badge">{data[s.id].length}</span>}
+                </button>
+              ))}
+            </React.Fragment>
+          ))}
+        </aside>
+
+        <main>
+          <div className="panel-h">
+            <h2>{section.label}</h2>
+            <p>{section.desc}</p>
+            {section.notes && (
+              <div className="section-note">
+                {section.notes.map((note) => <span key={note} className="note-chip">{note}</span>)}
+              </div>
+            )}
+          </div>
+          {section.type === 'overview' ? (
+            <BalanceOverview data={data} onJump={setSectionId} />
+          ) : section.type === 'object' ? (
+            <ObjectEditor section={section} data={data[section.id]} onChange={updateSection} />
+          ) : (
+            <ArrayTableEditor section={section} data={data[section.id]} onChange={updateSection} />
+          )}
+        </main>
+      </div>
+
+      {toast && <div className="toast">{toast}</div>}
+
+      {showExport && (
+        <div className="modal-bg" onClick={() => setShowExport(false)}>
+          <div className="modal-c" onClick={(e) => e.stopPropagation()}>
+            <h2 style={{marginTop: 0}}>导出文本(已复制到剪贴板)</h2>
+            <p style={{color: 'var(--ink-2)', fontSize: 14}}>
+              贴到 <code>wycwy-data.js</code> 完全覆盖,然后刷新游戏。
+            </p>
+            <textarea readOnly value={exportDataJs(data)} />
+            <div style={{marginTop: 12, textAlign: 'right'}}>
+              <button className="btn" onClick={() => setShowExport(false)}>关闭</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

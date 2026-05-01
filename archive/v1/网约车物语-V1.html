@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>网约车物语 V1</title>
+<style>
+  :root {
+    --bg: #F5F1EA;
+    --card: #FFFFFF;
+    --sub: #FAF7F3;
+    --ink: #2A2320;
+    --ink-2: #6D635A;
+    --ink-3: #9A8C7E;
+    --accent: #FF6B35;
+    --accent-soft: #FFEBDD;
+    --accent-deep: #C14A1D;
+    --green: #2E7D6A;
+    --green-soft: #DDEBE5;
+    --warn: #B8501F;
+    --border: rgba(0,0,0,0.08);
+    --hairline: rgba(0,0,0,0.04);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(40,25,15,0.08), 0 16px 32px rgba(40,25,15,0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", -apple-system, "Helvetica Neue", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 13px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: inherit;
+    color: inherit;
+  }
+  button:disabled { cursor: not-allowed; opacity: 0.4; }
+  /* 顶栏 */
+  .topbar {
+    height: 56px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+  .topbar h1 .v {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 500;
+    margin-left: 6px;
+  }
+  .topbar-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-left: auto;
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.1;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .stat-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 2px;
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.green { color: var(--green); }
+  .speed-controls {
+    display: flex;
+    background: var(--sub);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .speed-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    transition: all 0.15s;
+  }
+  .speed-btn.active {
+    background: #fff;
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .speed-btn:hover:not(.active):not(:disabled) {
+    color: var(--ink);
+  }
+  /* 主体三栏 */
+  .main {
+    display: grid;
+    grid-template-columns: 320px 1fr 340px;
+    gap: 16px;
+    padding: 16px;
+    min-height: calc(100vh - 56px - 140px);
+  }
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .panel {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .panel-count {
+    font-size: 11px;
+    color: var(--ink-3);
+    background: var(--sub);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  /* 司机卡片 */
+  .driver-card {
+    background: var(--sub);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+  }
+  .driver-card:hover { border-color: var(--accent-soft); }
+  .driver-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+  .driver-card.busy { opacity: 0.95; }
+  .driver-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .driver-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FFCFA0, #FF8E5C);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .driver-name {
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .driver-bg {
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-top: 1px;
+  }
+  .driver-rank {
+    margin-left: auto;
+    font-size: 10px;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .driver-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .stat-mini {
+    text-align: center;
+    background: #fff;
+    padding: 4px 2px;
+    border-radius: 6px;
+  }
+  .stat-mini-label {
+    font-size: 9px;
+    color: var(--ink-3);
+  }
+  .stat-mini-value {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-top: 4px;
+  }
+  .progress-row .label { width: 30px; }
+  .progress-bar {
+    flex: 1;
+    height: 5px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  .progress-fill.fatigue { background: var(--accent); }
+  .progress-fill.fatigue.high { background: var(--warn); }
+  .progress-fill.exp { background: #6F8FFF; }
+  /* 中间运营区 */
+  .center-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .stage-board {
+    background: linear-gradient(135deg, #FAF7F3 0%, #F0E9DE 100%);
+    border-radius: 14px;
+    padding: 16px;
+    min-height: 200px;
+    box-shadow: var(--shadow-sm);
+  }
+  .stage-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .stage-title {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .empty-stage {
+    text-align: center;
+    color: var(--ink-3);
+    padding: 30px 0;
+    font-size: 12px;
+  }
+  .ongoing-trip {
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 3px solid var(--accent);
+  }
+  .trip-driver {
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+    width: 50px;
+  }
+  .trip-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .trip-order {
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .trip-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 11px;
+  }
+  .trip-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .trip-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.5s ease;
+  }
+  .trip-fare {
+    font-weight: 700;
+    color: var(--accent);
+  }
+  /* KPI 卡片 */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .kpi-label {
+    font-size: 10px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .kpi-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 4px;
+    letter-spacing: -0.5px;
+  }
+  .kpi-value.accent { color: var(--accent); }
+  .kpi-value.green { color: var(--green); }
+  /* 右侧 */
+  .vehicle-card {
+    background: var(--sub);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .vehicle-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .vehicle-name {
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .vehicle-driver {
+    font-size: 10px;
+    color: var(--ink-3);
+  }
+  .vehicle-driver.empty { color: var(--accent); }
+  .vehicle-meta {
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+  .vehicle-parts {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .part-chip {
+    font-size: 9px;
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 6px;
+    color: var(--ink-2);
+    border: 1px solid var(--border);
+  }
+  /* 通用按钮 */
+  .btn {
+    padding: 7px 14px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(255,107,53,0.25);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-deep);
+  }
+  .btn-ghost {
+    background: #fff;
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--sub);
+  }
+  .btn-block {
+    width: 100%;
+    padding: 9px;
+  }
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+  /* 培训按钮 */
+  .training-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .training-item {
+    background: var(--sub);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    transition: all 0.15s;
+  }
+  .training-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .training-name {
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .training-desc {
+    font-size: 10px;
+    color: var(--ink-3);
+  }
+  /* 日志 */
+  .log {
+    background: #fff;
+    border-top: 1px solid var(--border);
+    padding: 12px 24px;
+    height: 140px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .log-row {
+    color: var(--ink-2);
+    display: flex;
+    gap: 10px;
+  }
+  .log-row .time {
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    width: 60px;
+  }
+  .log-row.success .text { color: var(--green); }
+  .log-row.warn .text { color: var(--warn); }
+  .log-row.event .text { color: var(--accent-deep); font-weight: 600; }
+  /* 弹窗 */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(40,25,15,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(2px);
+  }
+  .modal {
+    background: #fff;
+    border-radius: 18px;
+    padding: 24px;
+    max-width: 480px;
+    width: calc(100vw - 40px);
+    box-shadow: var(--shadow-md);
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .modal-tag {
+    display: inline-block;
+    font-size: 10px;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .modal-desc {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+  .modal-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .modal-option {
+    background: var(--sub);
+    border-radius: 12px;
+    padding: 12px 14px;
+    text-align: left;
+    transition: all 0.15s;
+    border: 1.5px solid transparent;
+    width: 100%;
+  }
+  .modal-option:hover {
+    border-color: var(--accent);
+    background: #fff;
+    transform: translateY(-1px);
+  }
+  .modal-option-label {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+  .modal-option-effect {
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  /* Driver detail modal */
+  .driver-detail-card {
+    background: var(--sub);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stat-block {
+    background: var(--sub);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .stat-block-label {
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+  }
+  .stat-block-value {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .stat-block-bar {
+    height: 4px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .stat-block-fill {
+    height: 100%;
+    background: var(--accent);
+  }
+  /* 教学引导 */
+  .tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(40,25,15,0.5);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .tutorial-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 28px;
+    max-width: 520px;
+    width: calc(100vw - 40px);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+  }
+  .tutorial-step-tag {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .tutorial-title {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    letter-spacing: -0.3px;
+  }
+  .tutorial-text {
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.7;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  .tutorial-text strong { color: var(--ink); }
+  .tutorial-text ul { padding-left: 18px; margin: 8px 0; }
+  .tutorial-text li { margin-bottom: 4px; }
+  /* 招募/购买列表 */
+  .recruit-item {
+    background: var(--sub);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .recruit-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .recruit-name {
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .recruit-price {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .recruit-desc {
+    font-size: 11px;
+    color: var(--ink-2);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .recruit-stats {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .recruit-stat-chip {
+    background: #fff;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    color: var(--ink-2);
+  }
+  /* Tabs */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .tab {
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-3);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  /* Game over screen */
+  .ending-card {
+    text-align: center;
+    padding: 30px 20px;
+  }
+  .ending-emoji {
+    font-size: 50px;
+    margin-bottom: 12px;
+  }
+  .ending-title {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+  .ending-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .ending-stat {
+    background: var(--sub);
+    padding: 12px;
+    border-radius: 10px;
+  }
+  .ending-stat-label {
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .ending-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 4px;
+  }
+  /* Floating gain text */
+  .float-gain {
+    position: absolute;
+    color: var(--green);
+    font-weight: 700;
+    font-size: 14px;
+    pointer-events: none;
+    animation: floatUp 1.5s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translateY(0); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-30px); }
+  }
+  /* Notification */
+  .notification {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: var(--shadow-md);
+    z-index: 80;
+    animation: slideIn 0.25s ease-out, slideOut 0.3s ease-in 2.5s forwards;
+    border-left: 4px solid var(--accent);
+    font-size: 13px;
+    max-width: 320px;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideOut {
+    to { transform: translateX(100%); opacity: 0; }
+  }
+  /* Day banner */
+  .day-banner {
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 11px;
+    margin: 4px 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useReducer, useEffect, useRef, useMemo } = React;
+
+/* ============== 配置数据 ============== */
+
+const GAME = {
+  STARTING_FUNDS: 10000,
+  STARTING_REPUTATION: 50,
+  TICK_MS: 1000,
+  HOURS_PER_DAY: 24,
+  DAYS_PER_GAME: 30,
+  WIN_FUNDS: 50000,
+  WIN_REPUTATION: 500,
+  COMMISSION: 0.20,
+  STAT_CAP: 99,
+};
+
+const BACKGROUNDS = [
+  { id: 'veteran', name: '退伍军人', desc: '纪律严明,夜班抗压',
+    boosts: { driving: 18, service: 5, road: 8, mind: 15 }, salary: 1500, loyalty: 70 },
+  { id: 'beidrift', name: '北漂青年', desc: '吃苦耐劳,但常想家',
+    boosts: { driving: 8, service: 14, road: 6, mind: 4 }, salary: 1100, loyalty: 50 },
+  { id: 'dad', name: '二胎奶爸', desc: '服务好,熟悉路况',
+    boosts: { driving: 6, service: 18, road: 14, mind: 8 }, salary: 1300, loyalty: 80 },
+  { id: 'unemployed', name: '下岗大叔', desc: '稳重平均,学得慢',
+    boosts: { driving: 9, service: 9, road: 9, mind: 9 }, salary: 900, loyalty: 60 },
+  { id: 'influencer', name: '网红司机', desc: '自带流量,服务爆表',
+    boosts: { driving: 5, service: 25, road: 6, mind: 4 }, salary: 1800, loyalty: 40, orderRateBonus: 1.3 },
+];
+
+const VEHICLES = [
+  { id: 'santana', name: '桑塔纳', price: 5000, maint: 20, speed: 1.0, srvBonus: 0,
+    eligible: ['short'], unlock: 0 },
+  { id: 'camry', name: '凯美瑞', price: 15000, maint: 50, speed: 1.1, srvBonus: 5,
+    eligible: ['short', 'business'], unlock: 100 },
+  { id: 'han_ev', name: '比亚迪汉 EV', price: 25000, maint: 30, speed: 1.15, srvBonus: 8,
+    eligible: ['short', 'business', 'eco'], unlock: 250 },
+  { id: 'odyssey', name: '奥德赛', price: 35000, maint: 80, speed: 1.0, srvBonus: 10,
+    eligible: ['short', 'business', 'airport', 'long'], unlock: 500 },
+  { id: 'benz_e', name: '奔驰 E', price: 80000, maint: 200, speed: 1.2, srvBonus: 20,
+    eligible: ['business', 'airport', 'long', 'luxury'], unlock: 800 },
+];
+
+const ORDERS = [
+  { id: 'short', name: '市内短途', km: 3, fare: 28, hours: 1, req: {}, rate: 0.65 },
+  { id: 'business', name: '商务接送', km: 8, fare: 75, hours: 1, req: { service: 30 }, rate: 0.30, hours_window: [7, 21] },
+  { id: 'airport', name: '机场专线', km: 25, fare: 180, hours: 2, req: { driving: 30 }, partReq: 'rack', rate: 0.20 },
+  { id: 'night', name: '深夜场', km: 6, fare: 110, hours: 1, req: { mind: 50 }, rate: 0.45, hours_window: [22, 5] },
+  { id: 'long', name: '城际长途', km: 80, fare: 480, hours: 4, req: { road: 60 }, partReq: 'etc', rate: 0.10 },
+  { id: 'luxury', name: '高端商务', km: 12, fare: 280, hours: 2, req: { service: 70 }, rate: 0.15 },
+  { id: 'eco', name: '环保任务', km: 5, fare: 55, hours: 1, req: {}, rate: 0.20 },
+];
+
+const PARTS = [
+  { id: 'massage', name: '真皮按摩座椅', price: 2000, effect: '服务上限 +10' },
+  { id: 'aroma', name: '车载香薰', price: 500, effect: '好评率 +15%' },
+  { id: 'recorder', name: '行车记录仪', price: 800, effect: '投诉率 -30%' },
+  { id: 'etc', name: 'ETC 高速年卡', price: 1000, effect: '解锁城际单' },
+  { id: 'rack', name: '行李架', price: 600, effect: '解锁机场单' },
+  { id: 'fridge', name: '后排小冰箱', price: 3000, effect: '商务单 +20% 单价' },
+];
+
+const TRAININGS = [
+  { id: 'driving', name: '模拟驾驶舱', stat: 'driving', cost: 200, gainMin: 3, gainMax: 6 },
+  { id: 'service', name: '服务礼仪课', stat: 'service', cost: 300, gainMin: 3, gainMax: 6 },
+  { id: 'road', name: '城市道路课', stat: 'road', cost: 250, gainMin: 3, gainMax: 6 },
+  { id: 'mind', name: '心理咨询室', stat: 'mind', cost: 150, gainMin: 3, gainMax: 6 },
+];
+
+const RANKS = [
+  { id: 'rookie', name: '新手司机', need: {}, salaryMul: 1.0, fareMul: 1.0 },
+  { id: 'skilled', name: '熟练司机', need: { driving: 30 }, salaryMul: 1.2, fareMul: 1.1 },
+  { id: 'gold', name: '金牌司机', need: { service: 50 }, salaryMul: 1.5, fareMul: 1.25 },
+  { id: 'night', name: '夜行神龙', need: { mind: 60 }, salaryMul: 1.8, fareMul: 1.4 },
+  { id: 'master', name: '专车老炮', need: { driving: 80, service: 80, road: 80, mind: 80 }, salaryMul: 2.5, fareMul: 1.8 },
+];
+
+const EVENTS = [
+  {
+    id: 'rain', title: '暴雨天来了', tag: '天气',
+    desc: '今天下大雨,平台订单需求暴涨。要让司机出车吗?',
+    options: [
+      { label: '全员出车', detail: '订单 +60%,但事故风险上升', apply: (s) => ({ orderBoost: 1.6, accidentRisk: 0.3 }) },
+      { label: '只出金牌', detail: '只让金牌以上司机出车,稳健赚钱', apply: (s) => ({ orderBoost: 1.3, accidentRisk: 0.1, goldOnly: true }) },
+      { label: '全员休息', detail: '今天放假,口碑 +5', apply: (s) => ({ funds: 0, reputation: 5 }) },
+    ],
+  },
+  {
+    id: 'platform', title: '平台抽成调整', tag: '行业',
+    desc: '滴答出行宣布抽成从 20% 涨到 25%。你的应对策略?',
+    options: [
+      { label: '硬扛', detail: '继续合作,接受新抽成', apply: (s) => ({ commissionRate: 0.25 }) },
+      { label: '签独家', detail: '答应独家协议,抽成回到 18%,但 -5 口碑', apply: (s) => ({ commissionRate: 0.18, reputation: -5 }) },
+      { label: '搞自营小程序', detail: '花 5000 开发,从此抽成 0%(隐藏支线)', apply: (s) => ({ commissionRate: 0, funds: -5000 }) },
+    ],
+  },
+  {
+    id: 'borrow', title: '老张找你借钱', tag: '人事',
+    desc: '老张儿子要交学费,缺 2000 块,来找你借。',
+    options: [
+      { label: '借给他', detail: '-2000 资金,司机忠诚度 +30', apply: (s) => ({ funds: -2000, allLoyalty: 30 }) },
+      { label: '当奖金发', detail: '-2000 资金,所有司机忠诚度 +50', apply: (s) => ({ funds: -2000, allLoyalty: 50 }) },
+      { label: '装作没看见', detail: '司机失望,所有忠诚度 -20', apply: (s) => ({ allLoyalty: -20 }) },
+    ],
+  },
+  {
+    id: 'celeb', title: '明星打到你家车', tag: '运气',
+    desc: '一名歌手打到了你的车,司机服务很到位。',
+    options: [
+      { label: '配合宣传', detail: '+15 口碑,但司机被偷拍隐私', apply: (s) => ({ reputation: 15, allLoyalty: -10 }) },
+      { label: '低调处理', detail: '+8 口碑,司机赞', apply: (s) => ({ reputation: 8, allLoyalty: 5 }) },
+    ],
+  },
+  {
+    id: 'newpolicy', title: '网约车新政', tag: '监管',
+    desc: '当地颁布新政,3 年以上车龄车辆将被限制接单。',
+    options: [
+      { label: '更新车队', detail: '主动淘汰旧车,口碑 +10', apply: (s) => ({ reputation: 10 }) },
+      { label: '观望', detail: '看后续政策再说,口碑 -3', apply: (s) => ({ reputation: -3 }) },
+    ],
+  },
+  {
+    id: 'newyear', title: '春节将至', tag: '节日',
+    desc: '春节快到了,司机们想回家。',
+    options: [
+      { label: '春节红包', detail: '-3000 资金,所有忠诚度 +40', apply: (s) => ({ funds: -3000, allLoyalty: 40 }) },
+      { label: '加倍工资', detail: '-2000 资金,留人跑春运,订单 +50% 一周', apply: (s) => ({ funds: -2000, orderBoost: 1.5, boostDuration: 7 }) },
+      { label: '正常过节', detail: '不加薪,部分司机心情低落', apply: (s) => ({ allLoyalty: -10 }) },
+    ],
+  },
+  {
+    id: 'rival', title: '竞品挖人', tag: '竞争',
+    desc: '隔壁滴答车队想用月薪 +500 挖你最强的司机。',
+    options: [
+      { label: '加薪挽留', detail: '-500/月,司机留下,忠诚度 +30', apply: (s) => ({ keepBest: true, salaryRaise: 500 }) },
+      { label: '升职管理岗', detail: '司机变组长,新司机继承属性', apply: (s) => ({ promoteBest: true }) },
+      { label: '放走', detail: '司机离职,但留下 -10 口碑', apply: (s) => ({ loseBest: true, reputation: -10 }) },
+    ],
+  },
+  {
+    id: 'accident', title: '小李出小事故', tag: '人事',
+    desc: '小李剐蹭了一辆豪车,对方索赔 3000。',
+    options: [
+      { label: '公司全付', detail: '-3000 资金,司机 +40 忠诚度', apply: (s) => ({ funds: -3000, allLoyalty: 20 }) },
+      { label: '走保险', detail: '-1500 资金,口碑 -5', apply: (s) => ({ funds: -1500, reputation: -5 }) },
+      { label: '让司机自付', detail: '资金不变,所有忠诚度 -30', apply: (s) => ({ allLoyalty: -30 }) },
+    ],
+  },
+];
+
+const FIRST_NAMES = ['张', '王', '李', '赵', '刘', '陈', '杨', '黄', '周', '吴', '徐', '孙', '马', '朱', '胡', '林', '何', '高', '罗'];
+const NAMES_M = ['伟', '勇', '军', '建国', '建军', '强', '磊', '涛', '明', '辉', '兵', '波', '华', '志强', '志刚', '海军', '小刚', '大伟', '永福'];
+
+/* ============== 工具函数 ============== */
+
+const rand = (min, max) => Math.random() * (max - min) + min;
+const randInt = (min, max) => Math.floor(rand(min, max + 1));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const cap = (v, min, max) => Math.max(min, Math.min(max, v));
+
+let driverIdCounter = 100;
+let vehicleIdCounter = 100;
+let logIdCounter = 0;
+
+function genName() {
+  return pick(FIRST_NAMES) + pick(NAMES_M);
+}
+
+function genDriver(opts = {}) {
+  const bg = opts.background || pick(BACKGROUNDS);
+  const name = opts.name || genName();
+  const baseSpread = randInt(-3, 5);
+  return {
+    id: ++driverIdCounter,
+    name,
+    bg: bg.id,
+    bgName: bg.name,
+    bgDesc: bg.desc,
+    stats: {
+      driving: cap(bg.boosts.driving + baseSpread, 1, 99),
+      service: cap(bg.boosts.service + baseSpread, 1, 99),
+      road: cap(bg.boosts.road + baseSpread, 1, 99),
+      mind: cap(bg.boosts.mind + baseSpread, 1, 99),
+    },
+    salary: bg.salary,
+    loyalty: bg.loyalty,
+    fatigue: 0,
+    exp: 0,
+    completedOrders: 0,
+    totalEarned: 0,
+    vehicleId: null,
+    status: 'idle',
+    currentOrder: null,
+    rankId: 'rookie',
+    orderRateBonus: bg.orderRateBonus || 1.0,
+    constraint: bg.constraint || null,
+  };
+}
+
+function genVehicle(template) {
+  return {
+    id: ++vehicleIdCounter,
+    templateId: template.id,
+    name: template.name,
+    parts: [],
+  };
+}
+
+function getVehicleData(v) {
+  return VEHICLES.find(t => t.id === v.templateId);
+}
+
+function computeRank(driver) {
+  let best = RANKS[0];
+  for (const r of RANKS) {
+    let ok = true;
+    for (const k in r.need) {
+      if (driver.stats[k] < r.need[k]) { ok = false; break; }
+    }
+    if (ok) best = r;
+  }
+  return best;
+}
+
+function canTakeOrder(order, driver, vehicle) {
+  for (const k in order.req) {
+    if (driver.stats[k] < order.req[k]) return false;
+  }
+  if (order.partReq && !vehicle.parts.includes(order.partReq)) return false;
+  const vd = getVehicleData(vehicle);
+  if (!vd.eligible.includes(order.id)) return false;
+  return true;
+}
+
+function inHourWindow(window, hour) {
+  if (!window) return true;
+  const [s, e] = window;
+  if (s < e) return hour >= s && hour < e;
+  return hour >= s || hour < e;
+}
+
+function computeFare(order, driver, vehicle) {
+  const rank = computeRank(driver);
+  const vd = getVehicleData(vehicle);
+  let fare = order.fare * rank.fareMul;
+  fare *= (1 + vd.srvBonus / 100);
+  if (order.id === 'business' && vehicle.parts.includes('fridge')) fare *= 1.2;
+  if (order.id === 'night' && (driver.stats.mind >= 60)) fare *= 1.2;
+  fare *= rand(0.95, 1.1);
+  return Math.round(fare);
+}
+
+function rollGoodReview(driver, vehicle) {
+  const base = 0.5 + driver.stats.service * 0.005;
+  const aromaBonus = vehicle.parts.includes('aroma') ? 0.15 : 0;
+  return Math.random() < (base + aromaBonus);
+}
+
+/* ============== 初始 state ============== */
+
+function makeInitialState() {
+  driverIdCounter = 100;
+  vehicleIdCounter = 100;
+  logIdCounter = 0;
+  const d1 = genDriver({ background: BACKGROUNDS[0], name: '张建国' });
+  const d2 = genDriver({ background: BACKGROUNDS[3], name: '李大伟' });
+  const v1 = genVehicle(VEHICLES[0]);
+  const v2 = genVehicle(VEHICLES[0]);
+  d1.vehicleId = v1.id;
+  d2.vehicleId = v2.id;
+  return {
+    funds: GAME.STARTING_FUNDS,
+    reputation: GAME.STARTING_REPUTATION,
+    day: 1,
+    hour: 6,
+    speed: 1,
+    paused: true,
+    drivers: [d1, d2],
+    vehicles: [v1, v2],
+    log: [
+      { id: ++logIdCounter, time: '6:00', text: '车队成立!初始资金 ¥10,000,2 司机 + 2 桑塔纳。', level: 'event' },
+    ],
+    activeEvent: null,
+    showTutorial: true,
+    gameOver: null,
+    todayCompleted: 0,
+    todayEarned: 0,
+    todayGood: 0,
+    todayBad: 0,
+    totalEarned: 0,
+    totalCompleted: 0,
+    commissionRate: GAME.COMMISSION,
+    triggeredEvents: new Set(),
+    floatGains: [],
+    boostUntilDay: 0,
+    boostMul: 1,
+    notifications: [],
+  };
+}
+
+/* ============== 游戏循环 reducer ============== */
+
+function gameReducer(state, action) {
+  switch (action.type) {
+    case 'TICK': return tick(state);
+    case 'TOGGLE_PAUSE': return { ...state, paused: !state.paused };
+    case 'SET_SPEED': return { ...state, speed: action.speed, paused: false };
+    case 'CLOSE_TUTORIAL': return { ...state, showTutorial: false };
+    case 'CLOSE_EVENT': return { ...state, activeEvent: null };
+    case 'TRAIN': return doTrain(state, action.driverId, action.trainingId);
+    case 'RESOLVE_EVENT': return resolveEvent(state, action.optionIdx);
+    case 'BUY_VEHICLE': return buyVehicle(state, action.templateId);
+    case 'BUY_PART': return buyPart(state, action.vehicleId, action.partId);
+    case 'ASSIGN_VEHICLE': return assignVehicle(state, action.driverId, action.vehicleId);
+    case 'HIRE_DRIVER': return hireDriver(state, action.bgId);
+    case 'FIRE_DRIVER': return fireDriver(state, action.driverId);
+    case 'RESET': return makeInitialState();
+    case 'CLEAR_FLOAT_GAIN': return { ...state, floatGains: state.floatGains.filter(g => g.id !== action.id) };
+    case 'CLEAR_NOTIF': return { ...state, notifications: state.notifications.filter(n => n.id !== action.id) };
+    default: return state;
+  }
+}
+
+function pushLog(state, text, level = 'info') {
+  const time = `${state.day}日${state.hour}:00`;
+  return {
+    ...state,
+    log: [{ id: ++logIdCounter, time, text, level }, ...state.log].slice(0, 50),
+  };
+}
+
+function pushNotif(state, text) {
+  return {
+    ...state,
+    notifications: [...state.notifications, { id: Date.now() + Math.random(), text }],
+  };
+}
+
+function tick(state) {
+  if (state.gameOver || state.activeEvent || state.showTutorial) return state;
+
+  let s = { ...state };
+  let drivers = [...s.drivers];
+  let vehicles = [...s.vehicles];
+
+  // 推进时间
+  s.hour += 1;
+  if (s.hour >= 24) {
+    s = endOfDay(s);
+    drivers = s.drivers;
+    vehicles = s.vehicles;
+  }
+
+  // 跑单中的司机推进
+  drivers = drivers.map(d => {
+    if (d.status !== 'driving' || !d.currentOrder) return d;
+    const newRemain = d.currentOrder.remainHours - 1;
+    if (newRemain > 0) {
+      return { ...d, currentOrder: { ...d.currentOrder, remainHours: newRemain } };
+    }
+    // 完成订单
+    const v = vehicles.find(x => x.id === d.vehicleId);
+    const fare = d.currentOrder.fare;
+    const net = Math.round(fare * (1 - s.commissionRate));
+    s.funds += net;
+    s.totalEarned += net;
+    s.todayEarned += net;
+    s.todayCompleted += 1;
+    s.totalCompleted += 1;
+    const goodReview = rollGoodReview(d, v);
+    if (goodReview) {
+      s.reputation += 1;
+      s.todayGood += 1;
+    } else if (Math.random() < 0.1 && !v.parts.includes('recorder')) {
+      s.reputation = Math.max(0, s.reputation - 2);
+      s.todayBad += 1;
+    }
+    s.floatGains = [...s.floatGains, { id: Date.now() + Math.random(), driverId: d.id, amount: net }];
+    s = pushLog(s, `${d.name} 完成 ${d.currentOrder.orderName} 收入 ¥${net}${goodReview ? ' (好评)' : ''}`, goodReview ? 'success' : 'info');
+
+    return {
+      ...d,
+      status: 'idle',
+      currentOrder: null,
+      fatigue: Math.min(100, d.fatigue + (d.currentOrder.distance > 30 ? 20 : 8)),
+      exp: d.exp + 1,
+      completedOrders: d.completedOrders + 1,
+      totalEarned: d.totalEarned + net,
+      stats: levelUpStats(d.stats, d.currentOrder),
+    };
+  });
+
+  // 派单
+  for (let i = 0; i < drivers.length; i++) {
+    const d = drivers[i];
+    if (d.status !== 'idle') continue;
+    if (!d.vehicleId) continue;
+    if (d.fatigue >= 80) continue;
+    // 工作时间约束
+    if (d.constraint === '工作时间 8-18' && (s.hour < 8 || s.hour >= 18)) continue;
+
+    const v = vehicles.find(x => x.id === d.vehicleId);
+    if (!v) continue;
+
+    const eligible = ORDERS.filter(o => canTakeOrder(o, d, v) && inHourWindow(o.hours_window, s.hour));
+    if (eligible.length === 0) continue;
+
+    // 名声越高接单概率越高
+    const repMul = 0.5 + s.reputation / 150;
+    const speedMul = getVehicleData(v).speed;
+    const tryRate = Math.min(0.95, 0.55 * repMul * speedMul * d.orderRateBonus);
+    if (Math.random() > tryRate) continue;
+
+    // 按 rate 加权选订单
+    const totalWeight = eligible.reduce((sum, o) => sum + o.rate, 0);
+    let r = Math.random() * totalWeight;
+    let chosen = eligible[0];
+    for (const o of eligible) {
+      r -= o.rate;
+      if (r <= 0) { chosen = o; break; }
+    }
+
+    const fare = computeFare(chosen, d, v);
+    const boostMul = (s.day <= s.boostUntilDay) ? s.boostMul : 1;
+    const finalFare = Math.round(fare * boostMul);
+
+    drivers[i] = {
+      ...d,
+      status: 'driving',
+      currentOrder: {
+        orderId: chosen.id,
+        orderName: chosen.name,
+        fare: finalFare,
+        distance: chosen.km,
+        totalHours: chosen.hours,
+        remainHours: chosen.hours,
+        startedAt: s.hour,
+      },
+    };
+    s = pushLog(s, `${d.name} 接单:${chosen.name} (¥${finalFare}, ${chosen.hours}h)`, 'info');
+  }
+
+  // 检查胜利/失败
+  if (s.funds >= GAME.WIN_FUNDS) {
+    s.gameOver = { type: 'win', reason: '资金达成', stats: snapshotStats(s) };
+  } else if (s.day > GAME.DAYS_PER_GAME) {
+    s.gameOver = { type: 'end', reason: '一周目结束', stats: snapshotStats(s) };
+  } else if (s.funds < -3000) {
+    s.gameOver = { type: 'lose', reason: '资金枯竭破产', stats: snapshotStats(s) };
+  }
+
+  s.drivers = drivers;
+  s.vehicles = vehicles;
+  return s;
+}
+
+function endOfDay(state) {
+  let s = { ...state, hour: 0, day: state.day + 1 };
+  // 工资 (按月薪/30)
+  let dailyCost = 0;
+  s.drivers.forEach(d => {
+    const rank = computeRank(d);
+    dailyCost += Math.round(d.salary * rank.salaryMul / 30);
+  });
+  // 维护
+  s.vehicles.forEach(v => {
+    dailyCost += getVehicleData(v).maint;
+  });
+  s.funds -= dailyCost;
+  s = pushLog(s, `第 ${state.day} 日结算: 流水 ¥${s.todayEarned}, 工资+维护 ¥${dailyCost}, 完成 ${s.todayCompleted} 单`, 'event');
+  // 司机休息恢复疲劳
+  s.drivers = s.drivers.map(d => ({
+    ...d,
+    fatigue: Math.max(0, d.fatigue - 60),
+    status: d.status === 'driving' ? d.status : 'idle',
+  }));
+  // 重置今日数据
+  s.todayCompleted = 0;
+  s.todayEarned = 0;
+  s.todayGood = 0;
+  s.todayBad = 0;
+
+  // 触发随机事件 (每 4 天概率)
+  if (s.day > 1 && s.day % 4 === 0 && !s.activeEvent) {
+    const remaining = EVENTS.filter(e => !s.triggeredEvents.has(e.id));
+    if (remaining.length > 0) {
+      const ev = pick(remaining);
+      s.triggeredEvents = new Set([...s.triggeredEvents, ev.id]);
+      s.activeEvent = ev;
+      s.paused = true;
+    }
+  }
+
+  return s;
+}
+
+function snapshotStats(s) {
+  return {
+    funds: s.funds,
+    reputation: s.reputation,
+    totalCompleted: s.totalCompleted,
+    totalEarned: s.totalEarned,
+    days: s.day - 1,
+    drivers: s.drivers.length,
+    vehicles: s.vehicles.length,
+  };
+}
+
+function levelUpStats(stats, order) {
+  // 跑单提升对应属性
+  const statMap = {
+    short: ['driving', 'service'],
+    business: ['service', 'mind'],
+    airport: ['driving', 'road'],
+    night: ['mind', 'driving'],
+    long: ['road', 'mind'],
+    luxury: ['service', 'mind'],
+    eco: ['driving', 'service'],
+  };
+  const targets = statMap[order.orderId] || ['driving'];
+  const newStats = { ...stats };
+  for (const k of targets) {
+    if (Math.random() < 0.25) {
+      newStats[k] = Math.min(99, newStats[k] + 1);
+    }
+  }
+  return newStats;
+}
+
+function doTrain(state, driverId, trainingId) {
+  const t = TRAININGS.find(x => x.id === trainingId);
+  if (state.funds < t.cost) {
+    return pushNotif(state, `资金不足!需要 ¥${t.cost}`);
+  }
+  let s = { ...state, funds: state.funds - t.cost };
+  s.drivers = s.drivers.map(d => {
+    if (d.id !== driverId) return d;
+    const gain = randInt(t.gainMin, t.gainMax);
+    const newVal = Math.min(99, d.stats[t.stat] + gain);
+    s = pushLog(s, `${d.name} 完成 ${t.name},${t.stat} +${gain}`, 'success');
+    return { ...d, stats: { ...d.stats, [t.stat]: newVal } };
+  });
+  return s;
+}
+
+function resolveEvent(state, optionIdx) {
+  const ev = state.activeEvent;
+  if (!ev) return state;
+  const opt = ev.options[optionIdx];
+  const eff = opt.apply(state) || {};
+  let s = { ...state, activeEvent: null, paused: false };
+  if (eff.funds !== undefined) s.funds += eff.funds;
+  if (eff.reputation !== undefined) s.reputation = Math.max(0, s.reputation + eff.reputation);
+  if (eff.commissionRate !== undefined) s.commissionRate = eff.commissionRate;
+  if (eff.allLoyalty !== undefined) {
+    s.drivers = s.drivers.map(d => ({ ...d, loyalty: cap(d.loyalty + eff.allLoyalty, 0, 100) }));
+  }
+  if (eff.orderBoost && eff.boostDuration) {
+    s.boostUntilDay = s.day + eff.boostDuration;
+    s.boostMul = eff.orderBoost;
+  } else if (eff.orderBoost) {
+    s.boostUntilDay = s.day + 1;
+    s.boostMul = eff.orderBoost;
+  }
+  if (eff.salaryRaise && eff.keepBest) {
+    const best = [...s.drivers].sort((a,b) => sumStats(b.stats) - sumStats(a.stats))[0];
+    if (best) {
+      s.drivers = s.drivers.map(d => d.id === best.id
+        ? { ...d, salary: d.salary + eff.salaryRaise, loyalty: cap(d.loyalty + 30, 0, 100) }
+        : d);
+    }
+  }
+  if (eff.loseBest) {
+    const best = [...s.drivers].sort((a,b) => sumStats(b.stats) - sumStats(a.stats))[0];
+    if (best && s.drivers.length > 1) {
+      s.drivers = s.drivers.filter(d => d.id !== best.id);
+      s = pushLog(s, `${best.name} 被竞品挖走了!`, 'warn');
+    }
+  }
+  if (eff.promoteBest) {
+    const best = [...s.drivers].sort((a,b) => sumStats(b.stats) - sumStats(a.stats))[0];
+    if (best) {
+      const newDriver = genDriver();
+      newDriver.stats = {
+        driving: Math.round(best.stats.driving * 0.3),
+        service: Math.round(best.stats.service * 0.3),
+        road: Math.round(best.stats.road * 0.3),
+        mind: Math.round(best.stats.mind * 0.3),
+      };
+      s.drivers = [...s.drivers.filter(d => d.id !== best.id), newDriver];
+      s = pushLog(s, `${best.name} 升任组长,新司机 ${newDriver.name} 加入车队`, 'event');
+    }
+  }
+  s = pushLog(s, `事件「${ev.title}」: ${opt.label}`, 'event');
+  return s;
+}
+
+function sumStats(s) { return s.driving + s.service + s.road + s.mind; }
+
+function buyVehicle(state, templateId) {
+  const t = VEHICLES.find(x => x.id === templateId);
+  if (state.funds < t.price) return pushNotif(state, `资金不足!`);
+  if (state.reputation < t.unlock) return pushNotif(state, `口碑不足 ${t.unlock}`);
+  let s = { ...state, funds: state.funds - t.price };
+  s.vehicles = [...s.vehicles, genVehicle(t)];
+  s = pushLog(s, `购入 ${t.name},花费 ¥${t.price}`, 'event');
+  return s;
+}
+
+function buyPart(state, vehicleId, partId) {
+  const p = PARTS.find(x => x.id === partId);
+  if (state.funds < p.price) return pushNotif(state, `资金不足!`);
+  let s = { ...state, funds: state.funds - p.price };
+  s.vehicles = s.vehicles.map(v => {
+    if (v.id !== vehicleId) return v;
+    if (v.parts.includes(partId)) return v;
+    return { ...v, parts: [...v.parts, partId] };
+  });
+  s = pushLog(s, `安装 ${p.name},花费 ¥${p.price}`, 'success');
+  return s;
+}
+
+function assignVehicle(state, driverId, vehicleId) {
+  let s = { ...state };
+  // 把这辆车原属司机解绑
+  s.drivers = s.drivers.map(d => {
+    if (d.vehicleId === vehicleId && d.id !== driverId) return { ...d, vehicleId: null };
+    if (d.id === driverId) return { ...d, vehicleId };
+    return d;
+  });
+  return s;
+}
+
+function hireDriver(state, bgId) {
+  const bg = BACKGROUNDS.find(x => x.id === bgId);
+  const fee = 500;
+  if (state.funds < fee) return pushNotif(state, `招聘费 ¥${fee} 不足`);
+  let s = { ...state, funds: state.funds - fee };
+  const newDriver = genDriver({ background: bg });
+  s.drivers = [...s.drivers, newDriver];
+  s = pushLog(s, `招募 ${newDriver.name} (${bg.name}) 入队`, 'event');
+  return s;
+}
+
+function fireDriver(state, driverId) {
+  let s = { ...state };
+  const d = s.drivers.find(x => x.id === driverId);
+  if (!d) return s;
+  s.drivers = s.drivers.filter(x => x.id !== driverId);
+  s = pushLog(s, `${d.name} 离开了车队`, 'warn');
+  return s;
+}
+
+/* ============== 组件 ============== */
+
+function App() {
+  const [state, dispatch] = useReducer(gameReducer, null, makeInitialState);
+  const [selectedDriverId, setSelectedDriverId] = useState(null);
+  const [showRecruit, setShowRecruit] = useState(false);
+  const [showShop, setShowShop] = useState(false);
+  const [shopVehicleId, setShopVehicleId] = useState(null);
+
+  // 游戏循环
+  useEffect(() => {
+    if (state.paused || state.activeEvent || state.showTutorial || state.gameOver) return;
+    const interval = setInterval(() => dispatch({ type: 'TICK' }), GAME.TICK_MS / state.speed);
+    return () => clearInterval(interval);
+  }, [state.paused, state.speed, state.activeEvent, state.showTutorial, state.gameOver]);
+
+  // 浮动收益清理
+  useEffect(() => {
+    state.floatGains.forEach(g => {
+      setTimeout(() => dispatch({ type: 'CLEAR_FLOAT_GAIN', id: g.id }), 1500);
+    });
+  }, [state.floatGains]);
+
+  // 通知清理
+  useEffect(() => {
+    state.notifications.forEach(n => {
+      setTimeout(() => dispatch({ type: 'CLEAR_NOTIF', id: n.id }), 3000);
+    });
+  }, [state.notifications]);
+
+  const selectedDriver = state.drivers.find(d => d.id === selectedDriverId);
+
+  return (
+    <>
+      <div className="topbar">
+        <h1>网约车物语 <span className="v">V1 demo</span></h1>
+        <div className="topbar-stats">
+          <div className="stat">
+            <span className="stat-label">日 / 时</span>
+            <span className="stat-value">{state.day}日 {state.hour}:00</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">资金</span>
+            <span className="stat-value accent">¥{state.funds.toLocaleString()}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">口碑</span>
+            <span className="stat-value green">{state.reputation}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">总单</span>
+            <span className="stat-value">{state.totalCompleted}</span>
+          </div>
+          <div className="speed-controls">
+            <button className={`speed-btn ${state.paused ? 'active' : ''}`} onClick={() => dispatch({ type: 'TOGGLE_PAUSE' })}>
+              {state.paused ? '已暂停' : '暂停'}
+            </button>
+            <button className={`speed-btn ${!state.paused && state.speed === 1 ? 'active' : ''}`} onClick={() => dispatch({ type: 'SET_SPEED', speed: 1 })}>1×</button>
+            <button className={`speed-btn ${!state.paused && state.speed === 2 ? 'active' : ''}`} onClick={() => dispatch({ type: 'SET_SPEED', speed: 2 })}>2×</button>
+            <button className={`speed-btn ${!state.paused && state.speed === 4 ? 'active' : ''}`} onClick={() => dispatch({ type: 'SET_SPEED', speed: 4 })}>4×</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="main">
+        {/* 左 - 司机 */}
+        <div className="col">
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">司机</span>
+              <span className="panel-count">{state.drivers.length} 人</span>
+            </div>
+            {state.drivers.map(d => (
+              <DriverCard
+                key={d.id}
+                driver={d}
+                vehicle={state.vehicles.find(v => v.id === d.vehicleId)}
+                selected={selectedDriverId === d.id}
+                onClick={() => setSelectedDriverId(selectedDriverId === d.id ? null : d.id)}
+              />
+            ))}
+            <button className="btn btn-ghost btn-block" onClick={() => setShowRecruit(true)}>
+              + 招募新司机
+            </button>
+          </div>
+
+          {selectedDriver && (
+            <div className="panel">
+              <div className="panel-header">
+                <span className="panel-title">培训 {selectedDriver.name}</span>
+              </div>
+              <div className="training-list">
+                {TRAININGS.map(t => (
+                  <div key={t.id} className="training-item">
+                    <div className="training-info">
+                      <div className="training-name">{t.name}</div>
+                      <div className="training-desc">+{t.gainMin}~{t.gainMax} {statName(t.stat)} · 当前 {selectedDriver.stats[t.stat]}</div>
+                    </div>
+                    <button className="btn btn-primary btn-sm" onClick={() => dispatch({ type: 'TRAIN', driverId: selectedDriver.id, trainingId: t.id })} disabled={state.funds < t.cost}>
+                      ¥{t.cost}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {state.drivers.length > 1 && (
+                <button className="btn btn-ghost btn-block" style={{ marginTop: 10, color: 'var(--warn)' }} onClick={() => {
+                  if (confirm(`确定让 ${selectedDriver.name} 离开车队?`)) {
+                    dispatch({ type: 'FIRE_DRIVER', driverId: selectedDriver.id });
+                    setSelectedDriverId(null);
+                  }
+                }}>
+                  解雇司机
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 中 - 运营 */}
+        <div className="col">
+          <div className="kpi-row">
+            <div className="kpi-card">
+              <div className="kpi-label">今日流水</div>
+              <div className="kpi-value accent">¥{state.todayEarned}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">完成单数</div>
+              <div className="kpi-value">{state.todayCompleted}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">好评 / 差评</div>
+              <div className="kpi-value green">{state.todayGood} / {state.todayBad}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">平台抽成</div>
+              <div className="kpi-value">{Math.round(state.commissionRate * 100)}%</div>
+            </div>
+          </div>
+
+          <div className="stage-board">
+            <div className="stage-header">
+              <span className="stage-title">运营中</span>
+              <span style={{fontSize: 11, color: 'var(--ink-3)'}}>
+                {state.boostUntilDay >= state.day && state.boostMul > 1 ? `订单 +${Math.round((state.boostMul-1)*100)}% 中` : ''}
+              </span>
+            </div>
+            {state.drivers.filter(d => d.status === 'driving').length === 0 ? (
+              <div className="empty-stage">
+                {state.paused ? '点击右上角的 1× / 2× / 4× 开始营业' : '司机们正在等单 / 休息...'}
+              </div>
+            ) : (
+              state.drivers.filter(d => d.status === 'driving').map(d => {
+                const o = d.currentOrder;
+                const pct = ((o.totalHours - o.remainHours) / o.totalHours) * 100;
+                return (
+                  <div key={d.id} className="ongoing-trip">
+                    <div className="trip-driver">{d.name}</div>
+                    <div className="trip-info">
+                      <div className="trip-order">{o.orderName} · {o.distance}km</div>
+                      <div className="trip-progress">
+                        <div className="trip-bar"><div className="trip-bar-fill" style={{width: `${pct}%`}}></div></div>
+                        <span style={{color: 'var(--ink-3)'}}>剩 {o.remainHours}h</span>
+                        <span className="trip-fare">¥{o.fare}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="panel" style={{flex: 1}}>
+            <div className="panel-header">
+              <span className="panel-title">事件日志</span>
+            </div>
+            <div style={{maxHeight: 200, overflowY: 'auto'}}>
+              {state.log.slice(0, 15).map(l => (
+                <div key={l.id} className={`log-row ${l.level}`}>
+                  <span className="time">{l.time}</span>
+                  <span className="text">{l.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 右 - 车辆 + 商店 */}
+        <div className="col">
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">车辆</span>
+              <span className="panel-count">{state.vehicles.length} 辆</span>
+            </div>
+            {state.vehicles.map(v => {
+              const d = state.drivers.find(x => x.vehicleId === v.id);
+              const vd = getVehicleData(v);
+              return (
+                <div key={v.id} className="vehicle-card">
+                  <div className="vehicle-head">
+                    <span className="vehicle-name">{v.name}</span>
+                    <span className={`vehicle-driver ${d ? '' : 'empty'}`}>
+                      {d ? d.name : '空闲'}
+                    </span>
+                  </div>
+                  <div className="vehicle-meta">日维护 ¥{vd.maint} · 速 {vd.speed}× · 服务+{vd.srvBonus}</div>
+                  <div className="vehicle-parts">
+                    {v.parts.length === 0 && <span style={{fontSize: 10, color: 'var(--ink-3)'}}>无改装件</span>}
+                    {v.parts.map(p => {
+                      const pp = PARTS.find(x => x.id === p);
+                      return <span key={p} className="part-chip">{pp.name}</span>;
+                    })}
+                  </div>
+                  <div style={{display: 'flex', gap: 6, marginTop: 8}}>
+                    <button className="btn btn-ghost btn-sm" style={{flex: 1}} onClick={() => { setShopVehicleId(v.id); setShowShop(true); }}>
+                      改装
+                    </button>
+                    {!d && state.drivers.filter(dd => !dd.vehicleId).length > 0 && (
+                      <button className="btn btn-ghost btn-sm" style={{flex: 1}} onClick={() => {
+                        const free = state.drivers.find(dd => !dd.vehicleId);
+                        if (free) dispatch({ type: 'ASSIGN_VEHICLE', driverId: free.id, vehicleId: v.id });
+                      }}>分配</button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            <button className="btn btn-ghost btn-block" onClick={() => { setShopVehicleId(null); setShowShop(true); }}>
+              + 4S 店买车
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 底部日志固定区(已合并到中间) */}
+
+      {/* 弹窗 */}
+      {state.showTutorial && <Tutorial onClose={() => dispatch({ type: 'CLOSE_TUTORIAL' })} />}
+      {state.activeEvent && <EventModal event={state.activeEvent} onResolve={(idx) => dispatch({ type: 'RESOLVE_EVENT', optionIdx: idx })} />}
+      {showRecruit && <RecruitModal onClose={() => setShowRecruit(false)} onHire={(bg) => { dispatch({ type: 'HIRE_DRIVER', bgId: bg }); setShowRecruit(false); }} funds={state.funds} />}
+      {showShop && <ShopModal vehicleId={shopVehicleId} vehicles={state.vehicles} onClose={() => setShowShop(false)} onBuyVehicle={(t) => { dispatch({ type: 'BUY_VEHICLE', templateId: t }); setShowShop(false); }} onBuyPart={(vid, pid) => dispatch({ type: 'BUY_PART', vehicleId: vid, partId: pid })} state={state} />}
+      {state.gameOver && <EndingModal ending={state.gameOver} onReset={() => dispatch({ type: 'RESET' })} />}
+
+      {/* 通知 */}
+      {state.notifications.length > 0 && state.notifications.slice(-1).map(n => (
+        <div key={n.id} className="notification">{n.text}</div>
+      ))}
+    </>
+  );
+}
+
+function DriverCard({ driver, vehicle, selected, onClick }) {
+  const rank = computeRank(driver);
+  const isBusy = driver.status === 'driving';
+  return (
+    <div className={`driver-card ${selected ? 'selected' : ''} ${isBusy ? 'busy' : ''}`} onClick={onClick}>
+      <div className="driver-head">
+        <div className="driver-avatar">{driver.name.slice(0, 1)}</div>
+        <div>
+          <div className="driver-name">{driver.name}</div>
+          <div className="driver-bg">{driver.bgName} · {vehicle ? vehicle.name : '未配车'}</div>
+        </div>
+        <div className="driver-rank">{rank.name}</div>
+      </div>
+      <div className="driver-stats">
+        <div className="stat-mini"><div className="stat-mini-label">驾驶</div><div className="stat-mini-value">{driver.stats.driving}</div></div>
+        <div className="stat-mini"><div className="stat-mini-label">服务</div><div className="stat-mini-value">{driver.stats.service}</div></div>
+        <div className="stat-mini"><div className="stat-mini-label">路感</div><div className="stat-mini-value">{driver.stats.road}</div></div>
+        <div className="stat-mini"><div className="stat-mini-label">心力</div><div className="stat-mini-value">{driver.stats.mind}</div></div>
+      </div>
+      <div className="progress-row">
+        <span className="label">疲劳</span>
+        <div className="progress-bar"><div className={`progress-fill fatigue ${driver.fatigue >= 60 ? 'high' : ''}`} style={{width: `${driver.fatigue}%`}}></div></div>
+        <span>{driver.fatigue}</span>
+      </div>
+      <div className="progress-row">
+        <span className="label">忠诚</span>
+        <div className="progress-bar"><div className="progress-fill" style={{width: `${driver.loyalty}%`}}></div></div>
+        <span>{driver.loyalty}</span>
+      </div>
+    </div>
+  );
+}
+
+function statName(s) {
+  return { driving: '驾驶', service: '服务', road: '路感', mind: '心力' }[s];
+}
+
+function Tutorial({ onClose }) {
+  return (
+    <div className="tutorial-overlay">
+      <div className="tutorial-card">
+        <div className="tutorial-step-tag">第 1 周目 · 起步</div>
+        <div className="tutorial-title">网约车物语</div>
+        <div className="tutorial-text">
+          你刚从工厂下岗,亲戚借了你 <strong>¥10,000</strong>。
+          你买了 <strong>2 辆桑塔纳</strong>,招了 <strong>2 名司机</strong>(老张、李大伟),决定干网约车。
+          <br /><br />
+          <strong>玩法核心:</strong>
+          <ul>
+            <li>右上角点 <strong>1×</strong>(或 2×/4×)开始营业,司机会自动接单跑车</li>
+            <li>每天 24 点结算工资和维护费,司机休息恢复疲劳</li>
+            <li>点司机卡片 → 培训四项属性,解锁更高级订单和职业</li>
+            <li>买改装件解锁机场单/城际单,买高级车解锁豪华单</li>
+            <li>每 4 天遇随机事件,带来策略选择</li>
+          </ul>
+          <br />
+          <strong>胜利条件:</strong> 30 天内攒够 <strong>¥50,000</strong>,或一周目结束时口碑 ≥ 500。
+        </div>
+        <button className="btn btn-primary btn-block" onClick={onClose} style={{padding: 12}}>开始营业</button>
+      </div>
+    </div>
+  );
+}
+
+function EventModal({ event, onResolve }) {
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <div className="modal-tag">{event.tag}事件</div>
+        <div className="modal-title">{event.title}</div>
+        <div className="modal-desc">{event.desc}</div>
+        <div className="modal-options">
+          {event.options.map((o, i) => (
+            <button key={i} className="modal-option" onClick={() => onResolve(i)}>
+              <div className="modal-option-label">{o.label}</div>
+              <div className="modal-option-effect">{o.detail}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecruitModal({ onClose, onHire, funds }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-title">招募新司机</div>
+        <div className="modal-desc">招聘费 ¥500,从 5 类背景中选一名加入车队。</div>
+        <div className="modal-options">
+          {BACKGROUNDS.map(bg => (
+            <div key={bg.id} className="recruit-item">
+              <div className="recruit-head">
+                <span className="recruit-name">{bg.name}</span>
+                <span className="recruit-price">月薪 ¥{bg.salary}</span>
+              </div>
+              <div className="recruit-desc">{bg.desc}</div>
+              <div className="recruit-stats">
+                <span className="recruit-stat-chip">驾 {bg.boosts.driving}</span>
+                <span className="recruit-stat-chip">服 {bg.boosts.service}</span>
+                <span className="recruit-stat-chip">路 {bg.boosts.road}</span>
+                <span className="recruit-stat-chip">心 {bg.boosts.mind}</span>
+                <span className="recruit-stat-chip">忠 {bg.loyalty}</span>
+              </div>
+              <button className="btn btn-primary btn-sm" disabled={funds < 500} onClick={() => onHire(bg.id)}>招募 ¥500</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShopModal({ vehicleId, vehicles, onClose, onBuyVehicle, onBuyPart, state }) {
+  const [tab, setTab] = useState(vehicleId ? 'parts' : 'vehicles');
+  const targetVehicle = vehicles.find(v => v.id === vehicleId);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth: 540}}>
+        <div className="modal-title">4S 店</div>
+        <div className="tabs">
+          <button className={`tab ${tab === 'vehicles' ? 'active' : ''}`} onClick={() => setTab('vehicles')}>买车</button>
+          <button className={`tab ${tab === 'parts' ? 'active' : ''}`} onClick={() => setTab('parts')}>改装件 {targetVehicle ? `(${targetVehicle.name})` : ''}</button>
+        </div>
+        {tab === 'vehicles' && (
+          <div className="modal-options">
+            {VEHICLES.map(v => (
+              <div key={v.id} className="recruit-item">
+                <div className="recruit-head">
+                  <span className="recruit-name">{v.name}</span>
+                  <span className="recruit-price">¥{v.price.toLocaleString()}</span>
+                </div>
+                <div className="recruit-desc">日维护 ¥{v.maint} · 速度 {v.speed}× · 服务+{v.srvBonus}</div>
+                <div className="recruit-stats">
+                  {v.eligible.map(o => {
+                    const od = ORDERS.find(x => x.id === o);
+                    return <span key={o} className="recruit-stat-chip">{od.name}</span>;
+                  })}
+                </div>
+                <button className="btn btn-primary btn-sm"
+                  disabled={state.funds < v.price || state.reputation < v.unlock}
+                  onClick={() => onBuyVehicle(v.id)}>
+                  {state.reputation < v.unlock ? `口碑需达 ${v.unlock}` : `购买`}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {tab === 'parts' && (
+          <div>
+            {!vehicleId && <div className="modal-desc">从右侧车辆面板点"改装"按钮,可针对单辆车买配件。这里仅展示。</div>}
+            <div className="modal-options">
+              {PARTS.map(p => {
+                const installed = targetVehicle && targetVehicle.parts.includes(p.id);
+                return (
+                  <div key={p.id} className="recruit-item">
+                    <div className="recruit-head">
+                      <span className="recruit-name">{p.name}</span>
+                      <span className="recruit-price">¥{p.price}</span>
+                    </div>
+                    <div className="recruit-desc">{p.effect}</div>
+                    {targetVehicle && (
+                      <button className="btn btn-primary btn-sm"
+                        disabled={installed || state.funds < p.price}
+                        onClick={() => onBuyPart(vehicleId, p.id)}>
+                        {installed ? '已安装' : '购买安装'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EndingModal({ ending, onReset }) {
+  const titleMap = {
+    win: '恭喜!车队跑出来了',
+    end: '一周目结束',
+    lose: '车队破产',
+  };
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <div className="ending-card">
+          <div className="ending-title">{titleMap[ending.type]}</div>
+          <div style={{color: 'var(--ink-2)', marginBottom: 8}}>{ending.reason}</div>
+          <div className="ending-stats">
+            <div className="ending-stat">
+              <div className="ending-stat-label">营运天数</div>
+              <div className="ending-stat-value">{ending.stats.days} 天</div>
+            </div>
+            <div className="ending-stat">
+              <div className="ending-stat-label">总流水</div>
+              <div className="ending-stat-value">¥{ending.stats.totalEarned.toLocaleString()}</div>
+            </div>
+            <div className="ending-stat">
+              <div className="ending-stat-label">完成订单</div>
+              <div className="ending-stat-value">{ending.stats.totalCompleted}</div>
+            </div>
+            <div className="ending-stat">
+              <div className="ending-stat-label">城市口碑</div>
+              <div className="ending-stat-value">{ending.stats.reputation}</div>
+            </div>
+          </div>
+          <button className="btn btn-primary btn-block" onClick={onReset} style={{padding: 12}}>再来一遍</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

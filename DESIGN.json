@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-01T00:00:00Z",
+  "title": "Design System: 网约车物语",
+  "extensions": {
+    "colorMeta": {
+      "bg": { "role": "neutral", "displayName": "大地黄 Earth Yellow", "canonical": "oklch(91% 0.06 85)" },
+      "bg-deep": { "role": "neutral", "displayName": "深大地黄 Deep Earth", "canonical": "oklch(85% 0.08 85)" },
+      "card": { "role": "neutral", "displayName": "奶卡白 Cream Card", "canonical": "oklch(97% 0.03 90)" },
+      "sub": { "role": "neutral", "displayName": "次背景 Sub Surface", "canonical": "oklch(89% 0.06 85)" },
+      "ink": { "role": "neutral", "displayName": "油墨深棕 Ink Brown", "canonical": "oklch(20% 0.02 60)" },
+      "ink-2": { "role": "neutral", "displayName": "油墨次棕 Ink Soft", "canonical": "oklch(45% 0.02 60)" },
+      "ink-3": { "role": "neutral", "displayName": "油墨淡棕 Ink Faint", "canonical": "oklch(60% 0.02 60)" },
+      "accent": { "role": "primary", "displayName": "工坊橙 Workshop Orange", "canonical": "oklch(72% 0.17 50)" },
+      "accent-soft": { "role": "primary", "displayName": "晨光橙 Sunlight Orange", "canonical": "oklch(91% 0.06 65)" },
+      "accent-deep": { "role": "primary", "displayName": "油渍橙 Grease Orange", "canonical": "oklch(56% 0.16 45)" },
+      "green": { "role": "secondary", "displayName": "完单绿 Order Green", "canonical": "oklch(67% 0.16 130)" },
+      "green-soft": { "role": "secondary", "displayName": "完单绿软底 Order Green Soft", "canonical": "oklch(89% 0.07 130)" },
+      "warn": { "role": "tertiary", "displayName": "警告红 Alert Red", "canonical": "oklch(60% 0.20 25)" },
+      "blue": { "role": "tertiary", "displayName": "状态蓝 Status Blue", "canonical": "oklch(63% 0.16 250)" },
+      "purple": { "role": "tertiary", "displayName": "故事紫 Story Purple", "canonical": "oklch(60% 0.20 290)" },
+      "gold": { "role": "secondary", "displayName": "金币 Pixel Gold", "canonical": "oklch(86% 0.16 95)" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Modal 标题、关键弹窗主文字。24px / 800 weight。" },
+      "headline": { "displayName": "Headline", "purpose": "分组小标题、重要状态值。18px / 700 weight。" },
+      "body": { "displayName": "Body", "purpose": "正文、按钮、绝大多数 UI 元素。14px / 400-700 weight。" },
+      "label": { "displayName": "Label", "purpose": "辅助文字、ts-sub。11px。" }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "2px 2px 0 #2A23202E", "purpose": "topbar-stat、紧凑卡片、轻量元素。硬阴影无 blur。" },
+      { "name": "shadow-md", "value": "3px 3px 0 #2A23202E, 0 8px 20px #2A23202F", "purpose": "modal、关键决策弹窗。系统中唯一允许的硬+柔混合。" },
+      { "name": "shadow-hard", "value": "3px 3px 0 #2A2320", "purpose": "实色硬阴影，强焦点元素、按下/激活态。" }
+    ],
+    "motion": [
+      { "name": "transition-default", "value": "all 0.15s", "purpose": "按钮、modal-option、可交互元素的默认状态过渡。" }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "工坊橙主按钮，唯一动作色按钮。注意：当前实现使用了柔阴影，是已知违规，下方 snippet 给出修复后的硬阴影版本。",
+      "html": "<button class=\"ds-btn-primary\">立即派单</button>",
+      "css": ".ds-btn-primary { font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #FF8C42; color: #FFF8E7; padding: 8px 14px; font-size: 14px; font-weight: 600; border: none; border-radius: 3px; box-shadow: 2px 2px 0 #D4621F; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 4px; } .ds-btn-primary:hover { background: #D4621F; transform: translate(1px, 1px); box-shadow: 1px 1px 0 #D4621F; } .ds-btn-primary:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #D4621F; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "奶卡白底 + 1px 油墨深棕边的次级按钮。",
+      "html": "<button class=\"ds-btn-ghost\">取消</button>",
+      "css": ".ds-btn-ghost { font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #FFF8E7; color: #2A2320; border: 1px solid #2A2320; padding: 7px 13px; font-size: 14px; font-weight: 600; border-radius: 3px; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 4px; } .ds-btn-ghost:hover { background: #F0E2BC; }"
+    },
+    {
+      "name": "Modal",
+      "kind": "card",
+      "refersTo": "modal",
+      "description": "事件弹窗主体。奶卡白底 + 2px 圆角 + 硬+柔混合阴影。",
+      "html": "<div class=\"ds-modal\"><span class=\"ds-modal-tag\">投资人压力</span><h2 class=\"ds-modal-title\">资金告急</h2><p class=\"ds-modal-desc\">投资人警告：本月现金流缺口 ¥18,000，若 7 日内未回正，撤资并游戏结束。</p></div>",
+      "css": ".ds-modal { font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #FFF8E7; border-radius: 2px; padding: 24px; max-width: 520px; box-shadow: 3px 3px 0 #2A23202E, 0 8px 20px #2A23202F; color: #2A2320; } .ds-modal-tag { display: inline-block; font-size: 14px; font-weight: 700; background: #FFE0B8; color: #D4621F; padding: 3px 9px; border-radius: 2px; margin-bottom: 8px; } .ds-modal-title { font-size: 24px; font-weight: 800; margin: 0 0 6px 0; line-height: 1; letter-spacing: 0; } .ds-modal-desc { font-size: 14px; color: #6D635A; line-height: 1.6; margin: 0; }"
+    },
+    {
+      "name": "Modal Option",
+      "kind": "card",
+      "refersTo": "modal-option",
+      "description": "事件选项卡，hover 时边框变工坊橙、底变奶卡白、上浮 1px。",
+      "html": "<button class=\"ds-modal-option\"><div class=\"ds-modal-option-label\">向高利贷借 ¥30,000</div><div class=\"ds-modal-option-effect\">+¥30,000 资金 / 30 日内还 ¥45,000 / 失败破产</div></button>",
+      "css": ".ds-modal-option { font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #F0E2BC; border-radius: 3px; padding: 12px 14px; text-align: left; transition: all 0.15s; border: 1.5px solid transparent; width: 100%; cursor: pointer; color: #2A2320; } .ds-modal-option:hover { border-color: #FF8C42; background: #FFF8E7; transform: translateY(-1px); } .ds-modal-option-label { font-weight: 700; font-size: 14px; margin-bottom: 2px; } .ds-modal-option-effect { font-size: 14px; color: #9A8C7E; line-height: 1.4; }"
+    },
+    {
+      "name": "TopBar Stat",
+      "kind": "card",
+      "refersTo": "topbar-stat",
+      "description": "顶部 KPI 单元——资金、口碑、供需状态等。次背景底 + 微硬阴影。",
+      "html": "<div class=\"ds-topbar-stat\"><span class=\"ds-ts-label\">资金</span><span class=\"ds-ts-value\">¥12,400</span><span class=\"ds-ts-sub\">月底前需偿还 ¥30,000</span></div>",
+      "css": ".ds-topbar-stat { font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; column-gap: 8px; row-gap: 2px; background: #F0E2BC; border: 1px solid #2A23202E; min-height: 44px; padding: 6px 9px; box-shadow: 1px 1px 0 #2A23201A; color: #2A2320; min-width: 150px; } .ds-ts-label { grid-column: 1; font-size: 14px; color: #9A8C7E; text-transform: uppercase; } .ds-ts-value { grid-column: 2; font-size: 18px; font-weight: 700; } .ds-ts-sub { grid-column: 1 / -1; margin-top: 0; font-size: 11px; line-height: 1; color: #9A8C7E; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "开罗工坊（The Kairo Workshop）",
+    "overview": "视觉系统的灵感来自 Kairosoft 像素经营游戏——但不是治愈的开罗，是\"在滴滴做网约车经营惨剧\"的版本。整个系统刻意保留手作的'棱角'：硬边框、硬阴影、低圆角、暖色调底子上的尖锐警告色，所有视觉决策都为传播力服务，不为通用产品的可读性妥协。",
+    "keyCharacteristics": [
+      "暖黄大地底色（#F4E4BC），不用纯白也不用纯灰",
+      "深棕油墨文字（#2A2320）作为唯一文字基调，不用纯黑",
+      "硬阴影系统（2-3px 偏移、0 模糊），无 box-shadow blur radius",
+      "极小圆角（2-3px），保留像素方块感",
+      "14/18/24 三档字号阶梯（理想），实际有漂移待修正",
+      "一屏不滚动，主屏即玩"
+    ],
+    "rules": [
+      { "name": "The 暖黄即底 Rule", "body": "不允许使用 #fff 或 #000 作为大面积底色或文字色。所有'白'必须是 #FFF8E7（奶卡白），所有'黑'必须是 #2A2320（油墨深棕）。", "section": "colors" },
+      { "name": "The 一橙独大 Rule", "body": "工坊橙 (#FF8C42) 在任意一屏的占用面积不超过 10%。它是动作色，不是装饰色。", "section": "colors" },
+      { "name": "The 警告红独占严重态 Rule", "body": "警告红 (#E84545) 只用于真正严重的事件——投资人压力、破产倒计时、司机离职、事故。", "section": "colors" },
+      { "name": "The 三档字号 Rule", "body": "字号必须收敛到 14 / 18 / 24 三档。当前代码有 9/10/11/12/13/15/16/17/20/22 漂移值约 49 处需消除。", "section": "typography" },
+      { "name": "The 像素字体待启用 Rule", "body": "ark-pixel-16px.woff2 文件已存在但未 @font-face 加载。首次给同事/老板 demo 前必须启用。", "section": "typography" },
+      { "name": "The 无 Blur Rule", "body": "任何独立 box-shadow 都不允许出现 blur radius > 0。当前 .btn-primary 的 0 2px 6px rgba(255,107,53,0.25) 是已知违规。", "section": "elevation" },
+      { "name": "The 反 Glassmorphism Rule", "body": "backdrop-filter 全局禁用。当前 .modal-overlay 的 backdrop-filter: blur(2px) 是已知违规，需移除。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 用暖黄大地色 (#F4E4BC) 作为游戏主背景。",
+      "Do 用深棕油墨色 (#2A2320) 作为唯一文字主色，不用纯黑。",
+      "Do 用硬阴影（Npx Npx 0 半透深棕）传达深度，不用 blur radius。",
+      "Do 严守 14/18/24 字号阶梯。",
+      "Do 把工坊橙 (#FF8C42) 当稀缺动作色用，单屏占用 ≤10%。",
+      "Do 把警告红 (#E84545) 留给真正严重的经营事件。",
+      "Do 圆角控制在 2-3px，保留像素方块感。",
+      "Do 启用 Ark Pixel 像素字体作为 display/headline 字体。"
+    ],
+    "donts": [
+      "Don't 用 #fff 或 #000——所有'白'必须是奶卡白 #FFF8E7，所有'黑'必须是油墨深棕 #2A2320。",
+      "Don't 用 backdrop-filter: blur()——直接踩中 PRODUCT.md 的'glassmorphism'反例。",
+      "Don't 用带 blur radius 的 box-shadow 作为独立阴影。",
+      "Don't 引入字号 9/10/12/13/15/16/17/20/22 漂移值。",
+      "Don't 引入圆角 > 4px。",
+      "Don't 模仿滴滴官方 App 视觉语言（品牌蓝、Material/iOS 控件）。",
+      "Don't 引入 SaaS Dashboard 视觉模板（KPI 大数字卡 + 渐变图表 + Inter 字体）。",
+      "Don't 引入 Web3 / 赛博朋克 / 新拟态（neumorphism）。",
+      "Don't 引入糖果色卡通风（圆滚滚拟人 + 高饱和糖色）。",
+      "Don't 让 UI 看起来'像 PPT 一样规整'。",
+      "Don't 在文档说一套（Ark Pixel）、代码做一套（PingFang SC）——当前最大偏差需修复。"
+    ]
+  }
+}

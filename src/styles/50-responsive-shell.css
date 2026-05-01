@@ -1,0 +1,308 @@
+  /* 响应式 */
+  @media (max-width: 1280px) {
+    .main { grid-template-columns: 290px 1fr; }
+    .compact-kpi { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  }
+
+  /* ========= V3: 任务条 ========= */
+  .mission-bar {
+    background: linear-gradient(135deg, #FFF5EE 0%, #FFEBDD 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .mission-bar.finale {
+    background: linear-gradient(135deg, #FFF7E6 0%, #FCD34D 100%);
+  }
+  .mb-tag {
+    flex-shrink: 0;
+    font-size: 14px;
+    background: var(--accent);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .mb-content { flex: 1; min-width: 0; }
+  .mb-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: 0;
+  }
+  .mb-hint {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin-top: 1px;
+  }
+  .mb-progress-num {
+    font-size: 14px;
+    color: var(--accent-deep);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ========= V8: 主屏三栏调度布局 + 城市订单池(一屏化) ========= */
+  .main-v3 {
+    flex: 1; /* 占满 #root 剩余空间 */
+    display: grid;
+    grid-template-columns: 300px minmax(520px, 1fr) 360px;
+    gap: 12px;
+    padding: 12px;
+    min-height: 0; /* 关键:让 grid 可以缩 */
+    overflow: hidden;
+  }
+  .topbar { flex-shrink: 0; }
+  .mission-bar { flex-shrink: 0; }
+
+  /* ========= V3: 紧凑司机/车辆列表 ========= */
+  .compact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1; /* 撑满父 panel 剩余空间 */
+    overflow-y: auto;
+    min-height: 0;
+    /* V14.59: 给 hover/selected 硬阴影留缓冲,避免滚动容器裁掉左右/底部边缘 */
+    padding: 2px 6px 6px 2px;
+    margin: -2px -6px -6px -2px;
+  }
+  .compact-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--sub);
+    padding: 8px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1.5px solid transparent;
+  }
+  .compact-card:hover {
+    border-color: var(--accent-soft);
+    background: #fff;
+  }
+  .compact-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .compact-card.linked:not(.selected) {
+    border-color: var(--gold);
+    background: #FFF6C7;
+  }
+  .cc-info { flex: 1; min-width: 0; }
+  .cc-name {
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.1;
+  }
+  .cc-sub {
+    font-size: 14px;
+    color: var(--ink-3);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cc-badge {
+    font-size: 14px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .cc-status-light {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cc-status-light.idle { background: var(--ink-3); }
+  .cc-status-light.driving { background: var(--green); animation: pulse 1.4s infinite; }
+  .cc-status-light.tired { background: var(--warn); }
+  .cc-status-light.empty { background: var(--accent); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ========= V3: 抽屉 ========= */
+  .drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(40,25,15,0.25);
+    z-index: 70;
+    backdrop-filter: blur(1px);
+    animation: fadeIn 0.2s ease-out;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    max-width: calc(100vw - 40px);
+    background: var(--card);
+    box-shadow: -8px 0 24px rgba(40,25,15,0.12);
+    z-index: 71;
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 0.25s ease-out;
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  .drawer-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .drawer-header-info { flex: 1; min-width: 0; }
+  .drawer-header-title {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0;
+  }
+  .drawer-header-sub {
+    font-size: 14px;
+    color: var(--ink-3);
+    margin-top: 3px;
+  }
+  .drawer-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 2px;
+    background: var(--sub);
+    color: var(--ink-2);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 30px;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+  }
+  .drawer-close:hover { background: var(--bg-deep); }
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px 20px;
+  }
+  .drawer-section {
+    margin-bottom: 18px;
+  }
+  .drawer-section-title {
+    font-size: 14px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .drawer-train-row {
+    background: var(--sub);
+    padding: 10px 12px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .drawer-train-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .drawer-train-name {
+    font-weight: 700;
+    font-size: 14px;
+    flex: 1;
+  }
+  .drawer-train-cost {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 14px;
+  }
+  .drawer-train-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .drawer-train-num {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .drawer-train-after {
+    font-weight: 800;
+  }
+  .drawer-current-order {
+    background: linear-gradient(135deg, #FFF5EE, var(--accent-soft));
+    border-radius: 3px;
+    padding: 12px;
+  }
+  .dco-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .dco-name {
+    font-weight: 700;
+    flex: 1;
+  }
+  .dco-fare {
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .dco-progress {
+    height: 6px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .dco-progress-fill {
+    height: 100%;
+    background: var(--accent);
+  }
+  .dco-eta {
+    font-size: 14px;
+    color: var(--ink-3);
+    margin-top: 4px;
+  }
+  .vehicle-assign-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--sub);
+    padding: 10px 12px;
+    border-radius: 3px;
+  }
+  .vehicle-assign-current {
+    font-size: 14px;
+    color: var(--ink-2);
+    flex: 1;
+  }
+  .order-list-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 14px;
+    background: #fff;
+    border: 1px solid;
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
