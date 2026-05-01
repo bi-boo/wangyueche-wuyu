@@ -1,0 +1,149 @@
+  /* ========= V4 像素游戏化 ========= */
+
+  /* 头像、车辆图标 - 加硬边框 */
+  .ph-avatar, .ph-vehicle {
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 var(--border-soft);
+  }
+
+  /* 司机紧凑卡片加硬边框感 */
+  .compact-card {
+    border: 2px solid var(--border-soft) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.10);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .compact-card:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--border);
+  }
+  .compact-card.selected {
+    border-color: var(--accent) !important;
+    box-shadow: 3px 3px 0 var(--accent-deep);
+  }
+  .compact-card.linked:not(.selected) {
+    border-color: var(--gold) !important;
+    box-shadow: 3px 3px 0 #D7A900;
+  }
+
+  /* 顶栏 / 任务条 / 主面板加底边强调 */
+  .topbar {
+    border-bottom: 3px solid var(--ink);
+    background: var(--card);
+  }
+  .mission-bar {
+    border-bottom: 3px solid var(--ink);
+    background: linear-gradient(135deg, var(--gold) 0%, #FFE066 100%) !important;
+    border-top: 1px solid var(--ink);
+  }
+  .panel {
+    border: 2px solid var(--border-soft);
+    box-shadow: 2px 2px 0 var(--border-soft);
+  }
+  .btn-ghost {
+    border: 2px solid var(--ink);
+    background: var(--card);
+  }
+
+  /* 任务条标签更醒目 */
+  .mb-tag {
+    background: var(--ink) !important;
+    color: var(--gold) !important;
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 var(--accent-deep);
+  }
+
+  /* 顶栏数值字体放大 */
+  .ts-value {
+    font-size: 18px !important;
+    letter-spacing: 0;
+  }
+  .ts-label, .ts-sub {
+  }
+
+  /* 顶栏时间 chip */
+  .ph-clock {
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.20);
+    border-radius: 3px !important;
+  }
+
+  /* ========= 飘字动效 ========= */
+  .compact-card { position: relative; }  @keyframes floatUp {
+    0% { transform: translateY(0) scale(0.6); opacity: 0; }
+    15% { transform: translateY(-2px) scale(1.15); opacity: 1; }
+    25% { transform: translateY(-4px) scale(1); opacity: 1; }
+    80% { transform: translateY(-30px); opacity: 1; }
+    100% { transform: translateY(-44px); opacity: 0; }
+  }
+
+  /* 完单时短暂震动卡片 */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-2px); }
+    40% { transform: translateX(2px); }
+    60% { transform: translateX(-1px); }
+    80% { transform: translateX(1px); }
+  }
+  .compact-card.just-paid {
+    animation: shake 0.4s ease;
+  }
+  .crew-earnings {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--green);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .crew-earnings span {
+    color: var(--ink-3);
+    font-weight: 800;
+  }
+  .crew-earnings strong {
+    color: var(--green);
+    font-weight: 900;
+  }
+  .compact-card.just-paid .crew-earnings {
+    color: var(--accent-deep);
+  }
+
+  /* 加固头像 hover 效果 */
+  .ph-avatar:hover {
+    transform: rotate(-3deg);
+  }  /* 速度按钮 */
+  .speed-btn {
+    border: 1px solid rgba(42,35,32,0.58);
+  }
+  .speed-btn.play-toggle {
+    letter-spacing: 0;
+  }
+  .speed-btn.active {
+    border: 2px solid var(--ink);
+    background: var(--gold) !important;
+    color: var(--ink) !important;
+    box-shadow: 1px 1px 0 var(--ink);
+  }  .mobile-tabs {
+    display: none;
+  }
+
+  /* 城市地图加边框 */
+  .city-wrap {
+    border: 2px dashed rgba(42,35,32,0.15);
+    background: linear-gradient(135deg, #FFF8DC, #F5E5C0) !important;
+  }
+
+  /* 事件 mini 横条任务事件高亮金黄 */
+  .event-mini-text.event {
+    color: var(--accent-deep);
+    background: var(--gold);
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+

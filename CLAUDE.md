@@ -13,21 +13,47 @@
 
 ---
 
-## 文件结构
+## 文件结构（V14.93 反向拆分后）
 
 ```
 网约车物语/
-├── 网约车物语-V3.html           主入口(2700+ 行,内嵌 React 组件)
+├── 网约车物语-V3.html           主入口薄壳(106 行,只引用 src/ 和外部库)
 ├── wycwy-data.js                游戏配置(司机/车辆/订单/任务/结局/事件)
 ├── wycwy-engine.js              游戏引擎(reducer + tick + 死亡/结局检测)
-# (V14.9 已删除 wycwy-app.js — 是 V11 旧快照,误导维护;HTML 内嵌副本是唯一真相源)
-├── ark-pixel-16px.woff2         中文像素字体(58KB)
+├── ark-pixel-16px.woff2         字体存档(已决策不启用,见 PRODUCT.md)
+├── zcool-qingke-huangyou.ttf    字体存档(同上)
 ├── admin.html                   数值调参后台(独立工具页)
 ├── GAME_DESIGN.md               游戏机制文档(每次改动同步更新)
+├── PRODUCT.md / DESIGN.md       impeccable 设计上下文
 ├── CLAUDE.md                    本文件
-└── archive/
-    ├── v1/                      初版(单文件,无任务系统)
-    └── v2/                      多文件 + KPI 但还有滚动
+├── src/
+│   ├── styles/                  CSS 拆分(11 个文件,文件名 0-99 数字前缀决定加载顺序)
+│   │   ├── 00-tokens.css        (CSS 变量 / 字体)
+│   │   ├── 10-base.css          (reset / 占位元素)
+│   │   ├── 20-topbar.css        (顶栏 + KPI)
+│   │   ├── 30-modals.css        (基础弹窗)
+│   │   ├── 40-tasks-list.css    (任务条 + 三栏 + 列表)
+│   │   ├── 50-feedback.css      (统一游戏反馈层)
+│   │   ├── 60-inspector.css     (常驻调度台)
+│   │   ├── 70-pixel-flytext.css (像素游戏化 + 飘字)
+│   │   ├── 80-map-hud.css       (地图 + HUD,本组最大 1740 行)
+│   │   ├── 90-toggles-recruit.css (CRT 滤镜 + 招募券)
+│   │   └── 99-overrides.css     (V10.3 像素硬边回调,最后覆盖层 1037 行)
+│   └── app/                     React 组件拆分(9 个文件,Babel 多 script 共享作用域)
+│       ├── 00-runtime.jsx       (helpers / hooks / 常量)
+│       ├── 10-icons.jsx         (DriverAvatar/VehicleIcon/OrderIcon/StatIcon/CityMap)
+│       ├── 20-topbar.jsx        (TopBar + KPI + MissionBar + SpeedControl + BottomHUD)
+│       ├── 30-fleet.jsx         (CrewCompact + FleetPanel)
+│       ├── 40-inspector.jsx     (CrewInspector + ZoneInspector + DriverAttributeRows)
+│       ├── 50-modals.jsx        (Tutorial/Event/Recruit/Shop/Story/Monthly)
+│       ├── 60-roadmap.jsx       (UnlockRoadmap/EndingAchievement/RunHistory)
+│       ├── 70-endings.jsx       (EndingModal/EndingUnlock/MissionToast/ConfirmModal)
+│       └── 90-app.jsx           (App + ReactDOM.createRoot)
+├── scripts/
+│   ├── generate-pixel-assets.mjs (像素资产生成)
+│   └── sim-strategies.js         (策略模拟)
+├── assets/                      像素图素材(司机头像 / 车辆图 / 改装件)
+└── archive/                     历史版本(v1 / v2)
 ```
 
 ---
@@ -53,14 +79,24 @@
 | 改司机背景 | 「十、司机背景」 |
 | 视觉/字体改 | 「十二、UI/视觉规范」 |
 
-### 约定 2:数值改在 `wycwy-data.js`,逻辑改在 `wycwy-engine.js`
+### 约定 2:按层修改对应文件(V14.93 反向拆分后)
 
 - **纯数值调整**(单价、阈值、门槛、奖励金额)→ `wycwy-data.js`
 - **逻辑变化**(派单算法、死亡判定、结局判定)→ `wycwy-engine.js`
-- **UI/视觉**(布局、颜色、动画)→ `网约车物语-V3.html` 的 `<style>` 块
-- **React 组件**(组件逻辑)→ HTML 里的 `<script type="text/babel">` 块
+- **UI/视觉**(布局、颜色、动画)→ `src/styles/*.css` 对应章节文件
+- **React 组件**(组件逻辑)→ `src/app/*.jsx` 对应职责文件
+- **HTML 主入口**(网约车物语-V3.html)是 106 行薄壳,只放 `<link>` 和 `<script>` 引用。**绝对不要再往这里塞内嵌 style 或 babel 代码**
 
-**重要**:V14.9 起 `wycwy-app.js` 已删除。HTML 里的内嵌 babel 块是 React 组件唯一真相源。改组件直接改 HTML。
+**判断 React 组件归哪个文件**:
+- 顶栏/KPI/速度控制/底部 HUD → `src/app/20-topbar.jsx`
+- 左栏车队卡 → `src/app/30-fleet.jsx`
+- 右栏 inspector(司机/车辆/区片详情) → `src/app/40-inspector.jsx`
+- 弹窗(教程/事件/招募/月报/故事) → `src/app/50-modals.jsx`
+- 路线图/成就墙/历史记录 → `src/app/60-roadmap.jsx`
+- 结局相关弹窗 / Toast / Confirm → `src/app/70-endings.jsx`
+- App 主组件 → `src/app/90-app.jsx`(只动这里加新 state / 新 modal 渲染)
+
+**判断 CSS 归哪个文件**:看 `<link>` 加载顺序(后定义覆盖前定义),按章节归到 11 个文件之一。新组件优先放 `99-overrides.css`(末尾覆盖层),稳定后再视情况合并到主章节。
 
 ### 约定 3:数值后台 admin.html 与 data.js 数据结构同步
 
@@ -75,12 +111,22 @@
 
 ## 关键陷阱(踩过)
 
-### 陷阱 1:Babel `<script type="text/babel" src="...">` 在 file:// 下不工作
+### 陷阱 1:Babel `<script type="text/babel" src="...">` 在 file:// 下不工作 → V14.93 已不再适用
 
-**症状**:CORS 错误 `XMLHttpRequest blocked`
-**原因**:Babel 用 fetch 加载 JSX 文件,Chrome 在 file:// 下禁止跨域 fetch
-**对策**:React 组件代码必须**内嵌**在 HTML 的 `<script type="text/babel">` 块里
-**唯一改组件代码的方式**:直接改 HTML 内嵌的 babel 块。V14.9 起 wycwy-app.js 文件已删除(原本是参考源,但长期与 HTML 副本脱节后变成误导)。
+**历史**:Babel 用 fetch 加载 JSX 文件,Chrome 在 file:// 下禁止跨域 fetch,所以 V11-V14.92 期间 React 组件代码全部**内嵌**在 HTML 的单一 `<script type="text/babel">` 块里。
+
+**V14.93 改造**:已经反向拆分到 `src/app/*.jsx` 9 个文件,HTML 只放 `<script type="text/babel" src="...">` 引用。**前提:必须用 http:// 协议访问**,不能直接双击 file:// 打开。
+
+**本地测试方式**(替代双击 file://):
+```bash
+# 在项目根目录起一个 http server
+python3 -m http.server 8765
+# 浏览器打开 http://localhost:8765/网约车物语-V3.html
+```
+
+**部署方式**:把整个项目目录(含 src/ wycwy-data.js wycwy-engine.js 字体 assets)上传到 Web server,玩家通过 https://yoursite.com/网约车物语-V3.html 访问。
+
+**Babel 多 script 作用域 PoC 验证**(V14.93):多个 `<script type="text/babel" src=...>` **共享全局作用域**——`function Foo() {}` 和 `const x = ...` 跨文件可见,**不需要** `Object.assign(window, ...)` 显式导出。所以 src/app/*.jsx 各文件可以直接互相调用对方定义的组件,只需保证文件名 0-9 数字前缀的加载顺序。
 
 ### 陷阱 2:像素字体必须按"原生设计尺寸的整数倍"渲染
 

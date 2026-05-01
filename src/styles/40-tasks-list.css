@@ -1,0 +1,103 @@
+  /* ========= V3: 任务条 ========= */
+  .mission-bar {
+    background: linear-gradient(135deg, #FFF5EE 0%, #FFEBDD 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .mission-bar.finale {
+    background: linear-gradient(135deg, #FFF7E6 0%, #FCD34D 100%);
+  }
+  .mb-tag {
+    flex-shrink: 0;
+    font-size: 14px;
+    background: var(--accent);
+    color: #FFF8E7;
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .mb-content { flex: 1; min-width: 0; }  .mb-hint {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin-top: 1px;
+  }
+  /* ========= V8: 主屏三栏调度布局 + 城市订单池(一屏化) ========= */
+  .main-v3 {
+    flex: 1; /* 占满 #root 剩余空间 */
+    display: grid;
+    grid-template-columns: 300px minmax(520px, 1fr) 360px;
+    gap: 12px;
+    padding: 12px;
+    min-height: 0; /* 关键:让 grid 可以缩 */
+    overflow: hidden;
+  }
+  .topbar { flex-shrink: 0; }
+  .mission-bar { flex-shrink: 0; }
+
+  /* ========= V3: 紧凑司机/车辆列表 ========= */
+  .compact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1; /* 撑满父 panel 剩余空间 */
+    overflow-y: auto;
+    min-height: 0;
+    /* V14.59: 给 hover/selected 硬阴影留缓冲,避免滚动容器裁掉左右/底部边缘 */
+    padding: 2px 6px 6px 2px;
+    margin: -2px -6px -6px -2px;
+  }
+  .compact-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--sub);
+    padding: 8px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1.5px solid transparent;
+  }
+  .compact-card:hover {
+    border-color: var(--accent-soft);
+    background: #FFF8E7;
+  }
+  .compact-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .compact-card.linked:not(.selected) {
+    border-color: var(--gold);
+    background: #FFF6C7;
+  }  .cc-status-light {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cc-status-light.idle { background: var(--ink-3); }
+  .cc-status-light.driving { background: var(--green); animation: pulse 1.4s infinite; }
+  .cc-status-light.tired { background: var(--warn); }
+  .cc-status-light.empty { background: var(--accent); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }  @keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }  .order-list-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 14px;
+    background: #FFF8E7;
+    border: 1px solid;
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
+

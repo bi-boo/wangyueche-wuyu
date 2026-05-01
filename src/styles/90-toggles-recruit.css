@@ -1,0 +1,223 @@
+  /* ========= V4: CRT 扫描线滤镜(可关闭) ========= */
+  body.crt-on::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.04) 0,
+        rgba(0, 0, 0, 0.04) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    mix-blend-mode: multiply;
+  }  @keyframes flashOnce {
+    0% { opacity: 0; }
+    20% { opacity: 0.85; }
+    100% { opacity: 0; }
+  }  @keyframes coinFly {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% {
+      opacity: 0;
+      transform: translate(var(--dx, 30px), var(--dy, -40px)) scale(0.5);
+    }
+  }
+
+  /* ========= V4: 静音 / CRT toggle 按钮 ========= */
+  .toggle-btn {
+    /* V14.92: 改为自适应宽度,容纳 2 字标签不挤 */
+    min-width: 44px;
+    height: 32px;
+    padding: 0 8px;
+    border: 2px solid var(--ink);
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: 1px 1px 0 var(--ink);
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 14px;
+    line-height: 1;
+    font-family: var(--font-body);
+    margin-left: 0;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  .toggle-btn.on { background: var(--gold); }
+  .toggle-btn:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--ink); }
+  .toggle-btn:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+
+  /* ========= V6: 招募券 + 抽卡 ========= */
+  .recruit-modal {
+    width: min(100%, 980px);
+  }
+  .ticket-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+  }
+  .ticket-card {
+    background: var(--sub);
+    border: 2px solid var(--border);
+    border-radius: 3px;
+    padding: 22px 18px 18px;
+    box-shadow: 2px 2px 0 var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 248px;
+  }
+  /* V14.92: 去 side-stripe + 去 linear-gradient,改全硬边框 + 实色（DESIGN.md 既反对 side-stripe 也反对糖色渐变）*/
+  .ticket-card.normal { border: 2px solid var(--ink-3); background: var(--card); }
+  .ticket-card.vip { border: 2px solid var(--purple); background: var(--card); }
+  .ticket-card.headhunter { border: 2px solid var(--accent); background: var(--card); }
+  .ticket-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .ticket-name { font-weight: 700; font-size: 18px; }
+  .ticket-cost { font-weight: 700; color: var(--accent-deep); font-size: 18px; }
+  .ticket-desc { font-size: 14px; color: var(--ink-2); margin-bottom: 20px; line-height: 1.55; flex: 1; }
+  .ticket-card .btn-block { margin-top: auto; }
+  .gacha-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+  }
+  .gacha-card {
+    border: 3px solid;
+    border-radius: 3px;
+    padding: 10px;
+    text-align: left;
+    box-shadow: 3px 3px 0 var(--border-soft);
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 8px;
+    position: relative;
+    transition: transform 0.15s;
+    min-width: 0;
+  }
+  .gacha-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--border-soft);
+  }
+  .gacha-card.rarity-SSR {
+    box-shadow: 0 0 0 2px var(--gold), 3px 3px 0 var(--accent-deep);
+    animation: ssrPulse 2s ease-in-out infinite;
+  }
+  @keyframes ssrPulse {
+    0%, 100% { box-shadow: 0 0 0 2px var(--gold), 3px 3px 0 var(--accent-deep); }
+    50% { box-shadow: 0 0 0 4px var(--gold), 4px 4px 0 var(--accent-deep); }
+  }
+  .gacha-rarity {
+    color: #FFF8E7;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .gacha-id-block {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+  }
+  .gacha-avatar-wrap { margin: 0; }
+  .gacha-profile {
+    min-width: 0;
+  }
+  .gacha-name { font-size: 18px; font-weight: 800; line-height: 1.15; }
+  .gacha-bg { font-size: 14px; color: var(--ink-2); font-weight: 700; margin-top: 2px; }  .gacha-salary { font-size: 14px; color: var(--accent-deep); font-weight: 800; margin-top: 6px; }
+  .gacha-stats-block {
+    min-width: 0;
+  }
+  .gacha-card .stat-bars {
+    margin-bottom: 4px;
+  }
+  .gacha-card .btn {
+    align-self: stretch;
+    min-height: 44px;
+  }
+  .gacha-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-soft);
+  }
+  .ending-detail-line {
+    font-size: 14px;
+    color: var(--ink-3);
+    background: var(--sub);
+    padding: 8px 12px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  /* 配置同步提示横幅 */
+  .config-update-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gold);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    padding: 10px 16px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 95;
+    animation: slideUp 0.3s ease-out;
+  }
+  @keyframes slideUp {
+    from { transform: translate(-50%, 100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+  }  @media (max-width: 760px) {
+    .ticket-list {
+      grid-template-columns: 1fr;
+      overflow-x: visible;
+      padding-bottom: 0;
+    }
+    .gacha-grid {
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .gacha-card {
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 8px;
+      padding: 9px 10px;
+    }
+    .gacha-id-block {
+      grid-row: span 2;
+      align-self: start;
+    }
+    .gacha-stats-block,
+    .gacha-card .btn {
+      grid-column: 1 / -1;
+    }
+    .gacha-card .btn {
+      min-height: 40px;
+    }
+    .gacha-rarity {
+      font-size: 14px;
+      white-space: normal;
+      line-height: 1.2;
+    }
+  }
+
