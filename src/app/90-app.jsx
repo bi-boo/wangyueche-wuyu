@@ -41,11 +41,31 @@ function App() {
     drivers: state.drivers.length,
   });
 
+  // V15: 8× 自适应空白压缩 — 上一 tick 无完单/无日切/无剧情/口碑无变化时,下次间隔压到 50ms;
+  // 有事则保持 250ms。其他档位维持固定间隔行为不变。
+  const lastTickSnapshotRef = useRef(null);
   useEffect(() => {
-    if (state.paused || state.activeEvent || state.activeStory || state.showTutorial || state.gameOver) return;
-    const interval = setInterval(() => dispatch({type: 'TICK'}), GAME.TICK_MS / state.speed);
-    return () => clearInterval(interval);
-  }, [state.paused, state.speed, state.activeEvent, state.activeStory, state.showTutorial, state.gameOver]);
+    if (state.paused || state.activeEvent || state.activeStory || state.showTutorial || state.gameOver) {
+      lastTickSnapshotRef.current = null;
+      return;
+    }
+    const prev = lastTickSnapshotRef.current;
+    const eventful = !prev
+      || prev.totalCompleted !== state.totalCompleted
+      || prev.day !== state.day
+      || prev.reputation !== state.reputation
+      || prev.activeStory !== !!state.activeStory;
+    lastTickSnapshotRef.current = {
+      totalCompleted: state.totalCompleted,
+      day: state.day,
+      reputation: state.reputation,
+      activeStory: !!state.activeStory,
+    };
+    const baseInterval = GAME.TICK_MS / state.speed;
+    const interval = (state.speed === 8 && !eventful) ? 50 : baseInterval;
+    const t = setTimeout(() => dispatch({type: 'TICK'}), interval);
+    return () => clearTimeout(t);
+  }, [state.paused, state.speed, state.activeEvent, state.activeStory, state.showTutorial, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
 
   useEffect(() => {
     if (!selectedZoneId) return;
