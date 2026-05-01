@@ -4682,6 +4682,15 @@
     background: var(--card) !important;
     color: var(--ink) !important;
   }
+  /* V14.89: ConfirmModal 危险确认按钮 — 红底白字,覆盖 .btn-primary 的橙色 !important */
+  .btn.ds-confirm-danger {
+    background: var(--warn) !important;
+    color: #FFF8E7 !important;
+    border-color: var(--warn) !important;
+  }
+  .btn.ds-confirm-danger:hover:not(:disabled) {
+    background: #c62828 !important;
+  }
   .btn-xs {
     min-height: 28px;
     padding: 4px 8px;
@@ -5739,7 +5748,7 @@ function SpeedControlGroup({ state, dispatch }) {
   );
 }
 
-function BottomHUD({ state, dispatch, onOpenLog }) {
+function BottomHUD({ state, dispatch, onOpenLog, requestConfirm }) {
   const currentTier = state.unlockedEndingTier || 0;
   const tierEnding = ENDINGS.find((e) => e.tier === currentTier);
   const latestLog = state.log[0];
@@ -5756,7 +5765,17 @@ function BottomHUD({ state, dispatch, onOpenLog }) {
         <div className="run-control-group">
         <SpeedControlGroup state={state} dispatch={dispatch} />
         {currentTier > 0 && (
-          <button className="btn btn-primary btn-sm hud-end-btn" onClick={() => { if (confirm(`以《${tierEnding.name}》结局结束游戏?`)) dispatch({type: 'CONCEDE'}); }}>
+          <button
+            className="btn btn-primary btn-sm hud-end-btn"
+            onClick={() => requestConfirm?.({
+              tag: '结束游戏',
+              title: '确认结束运营？',
+              message: `以《${tierEnding.name}》结局结算本局。结束后不可继续，将进入结局画面。`,
+              confirmLabel: '结束运营',
+              danger: true,
+              onConfirm: () => dispatch({ type: 'CONCEDE' }),
+            })}
+          >
             结束运营
           </button>
         )}
@@ -5766,7 +5785,7 @@ function BottomHUD({ state, dispatch, onOpenLog }) {
   );
 }
 
-function RunControlsFloating({ state, dispatch }) {
+function RunControlsFloating({ state, dispatch, requestConfirm }) {
   const currentTier = state.unlockedEndingTier || 0;
   const tierEnding = ENDINGS.find((e) => e.tier === currentTier);
   const firstStart = state.paused && !hasRunStarted(state);
@@ -5774,7 +5793,17 @@ function RunControlsFloating({ state, dispatch }) {
     <div className={`map-run-controls ${firstStart ? 'is-first-start' : ''}`} aria-label="运行控制">
       <SpeedControlGroup state={state} dispatch={dispatch} />
       {currentTier > 0 && (
-        <button className="btn btn-primary btn-sm hud-end-btn" onClick={() => { if (confirm(`以《${tierEnding.name}》结局结束游戏?`)) dispatch({type: 'CONCEDE'}); }}>
+        <button
+          className="btn btn-primary btn-sm hud-end-btn"
+          onClick={() => requestConfirm({
+            tag: '结束游戏',
+            title: '确认结束运营？',
+            message: `以《${tierEnding.name}》结局结算本局。结束后不可继续，将进入结局画面。`,
+            confirmLabel: '结束运营',
+            danger: true,
+            onConfirm: () => dispatch({ type: 'CONCEDE' }),
+          })}
+        >
           结束运营
         </button>
       )}
@@ -6359,7 +6388,7 @@ function VehicleSwapModal({ driver, vehicles, drivers, dispatch, onClose }) {
   );
 }
 
-function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, onSelectVehicle, onSelectDriver }) {
+function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, requestConfirm, onSelectVehicle, onSelectDriver }) {
   const [showVehicleSwap, setShowVehicleSwap] = useState(false);
   if (!driver && !inspectedVehicle) return null;
   const vehicle = driver ? vehicles.find((v) => v.id === driver.vehicleId) : inspectedVehicle;
@@ -6541,9 +6570,14 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
               <button className="btn btn-ghost btn-danger"
                 onClick={() => {
                   const severance = driver.salary * 2;
-                  if (confirm(`确定解雇 ${driver.name}?\n需支付 2 个月补偿 ¥${severance.toLocaleString()}。${driverBusy ? '\n注意:跑单中,订单会中断。' : ''}`)) {
-                    dispatch({type: 'FIRE_DRIVER', driverId: driver.id});
-                  }
+                  requestConfirm({
+                    tag: '风险操作',
+                    title: `确认解雇 ${driver.name}？`,
+                    message: `需支付 2 个月补偿 ¥${severance.toLocaleString()}。${driverBusy ? '\n注意：当前正在跑单，订单会中断。' : ''}`,
+                    confirmLabel: '解雇',
+                    danger: true,
+                    onConfirm: () => dispatch({ type: 'FIRE_DRIVER', driverId: driver.id }),
+                  });
                 }}>
                 解雇 {driver.name}(补偿 ¥{(driver.salary * 2).toLocaleString()})
               </button>
@@ -6553,9 +6587,14 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
               return (
                 <button className="btn btn-ghost btn-danger"
                   onClick={() => {
-                    if (confirm(`卖出 ${vd.name},回收 ¥${refund}(60% 残值)?${vehicleBusy ? '\n注意:跑单中,订单会中断。' : ''}`)) {
-                      dispatch({type: 'SELL_VEHICLE', vehicleId: vehicle.id});
-                    }
+                    requestConfirm({
+                      tag: '风险操作',
+                      title: `卖出 ${vd.name}？`,
+                      message: `回收 ¥${refund.toLocaleString()}（60% 残值）。${vehicleBusy ? '\n注意：当前正在跑单，订单会中断。' : ''}`,
+                      confirmLabel: '卖车',
+                      danger: true,
+                      onConfirm: () => dispatch({ type: 'SELL_VEHICLE', vehicleId: vehicle.id }),
+                    });
                   }}>
                   卖车 {vd.name}(回收 ¥{refund.toLocaleString()})
                 </button>
@@ -7639,13 +7678,44 @@ function MissionToast({ mission, onClose }) {
   );
 }
 
+/* ============== ConfirmModal:替代 native confirm(),保持开罗工坊视觉一致 ============== */
+
+function ConfirmModal({ title, message, confirmLabel = '确定', cancelLabel = '取消', danger = false, tag, onConfirm, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+        <span className="modal-tag">
+          {tag || (danger ? '风险确认' : '操作确认')}
+        </span>
+        <h2 className="modal-title">{title}</h2>
+        {message && (
+          <p className="modal-desc" style={{ whiteSpace: 'pre-line' }}>{message}</p>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 8, marginTop: 4 }}>
+          <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1 }}>
+            {cancelLabel}
+          </button>
+          <button
+            className={`btn ${danger ? 'ds-confirm-danger' : 'btn-primary'}`}
+            onClick={() => { onConfirm(); onClose(); }}
+            style={{ flex: 1 }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ============== App 主组件 ============== */
 
 function App() {
   const [state, dispatch] = useReducer(E.gameReducer, null, E.makeInitialState);
   const savedGameOverKeyRef = useRef(null);
   // V12.2: 暴露给测试脚本(Playwright)用,生产可见但只读取/写入,无 UI 影响
-  window.__WYCWY_TEST = { dispatch, state, exportGameDiagnostics, getSavedRunHistory, saveRunRecord };
+  // V14.89: 加 requestConfirm 暴露,方便 ConfirmModal 视觉验证
+  window.__WYCWY_TEST = { dispatch, state, exportGameDiagnostics, getSavedRunHistory, saveRunRecord, get requestConfirm() { return requestConfirm; } };
   const [selectedDriverId, setSelectedDriverId] = useState(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [selectedZoneId, setSelectedZoneId] = useState(null);
@@ -7656,6 +7726,9 @@ function App() {
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [muted, setMutedState] = useState(isMuted());
   const [configUpdated, setConfigUpdated] = useState(false);
+  // V14.89: ConfirmModal 替代 native confirm()
+  const [confirmOpts, setConfirmOpts] = useState(null);
+  const requestConfirm = (opts) => setConfirmOpts(opts);
 
   // V5: 监听 admin 后台的配置变化(跨 tab 通讯)
   useEffect(() => {
@@ -7869,7 +7942,7 @@ function App() {
                 selectedZoneId={selectedZoneId}
                 onSelectZone={selectZone}
               />
-              <RunControlsFloating state={state} dispatch={dispatch} />
+              <RunControlsFloating state={state} dispatch={dispatch} requestConfirm={requestConfirm} />
             </div>
           </div>
         </div>
@@ -7893,6 +7966,7 @@ function App() {
                 vehicles={state.vehicles}
                 dispatch={dispatch}
                 funds={state.funds}
+                requestConfirm={requestConfirm}
                 onSelectVehicle={(vid) => { setSelectedDriverId(null); setSelectedVehicleId(vid); setInspectorTab('details'); }}
                 onSelectDriver={(did) => { setSelectedVehicleId(null); setSelectedDriverId(did); setInspectorTab('details'); }}
               />
@@ -7942,6 +8016,12 @@ function App() {
       {showShop && <ShopModal state={state} onClose={() => setShowShop(false)} onBuyVehicle={(t) => { dispatch({type: 'BUY_VEHICLE', templateId: t}); setShowShop(false); }} />}
       {showRoadmap && <UnlockRoadmapModal state={state} onClose={() => setShowRoadmap(false)} onOpenShop={() => setShowShop(true)} />}
       {state.gameOver && <EndingModal ending={state.gameOver} onReset={() => dispatch({type: 'RESET'})} />}
+      {confirmOpts && (
+        <ConfirmModal
+          {...confirmOpts}
+          onClose={() => setConfirmOpts(null)}
+        />
+      )}
 
       {state.notifications.length > 0 && state.notifications.slice(-1).map((n) => (
         <div key={n.id} className={`notification notification-${n.level || 'info'}`}>{n.text}</div>
