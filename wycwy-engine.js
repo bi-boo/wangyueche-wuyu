@@ -732,6 +732,8 @@
   function tick(state) {
     if (state.gameOver || state.activeEvent || state.showTutorial || state.activeStory) return state;
     let s = { ...state };
+    s = openDueMonthlyReport(s);
+    if (s.showMonthlyReport) return s;
     let drivers = [...s.drivers];
     let vehicles = [...s.vehicles];
 
@@ -1208,22 +1210,37 @@
       }
     }
 
-    // V14: 月度结算弹窗 — 每 30 天触发一次。
-    // 决策 C: 进入第 31/61/91 天时触发,展示"过去 30 天总结"。
-    // V14.41: 数据完整后一次性发放本月工资,再展示月报。
-    if (s.day > 1 && (s.day - 1) % 30 === 0 && !s.showMonthlyReport && !s.activeEvent && !s.activeStory && !s.gameOver) {
-      const salaryDue = s.monthlySalary || 0;
-      if (salaryDue > 0) {
-        s.funds -= salaryDue;
-        s = pushLog(s, `月结发薪: 支付司机工资 ¥${salaryDue}`, 'event');
-        if (s.funds < GAME.DEATH_FUNDS_THRESHOLD) {
-          s.negFundsDays = Math.max(1, s.negFundsDays || 0);
-        }
-      }
-      s.showMonthlyReport = makeMonthlyReport(s);
-      s.paused = true;
-    }
+    s = openDueMonthlyReport(s);
 
+    return s;
+  }
+
+  function isMonthlyReportDue(s) {
+    const nextReportDay = (s.monthCounter || 1) * 30 + 1;
+    return s.day >= nextReportDay
+      && !s.showMonthlyReport
+      && !s.activeEvent
+      && !s.activeStory
+      && !s.gameOver;
+  }
+
+  // V14: 月度结算弹窗 — 每 30 天触发一次。
+  // 决策 C: 进入第 31/61/91 天时触发,展示"过去 30 天总结"。
+  // V14.90: 月报触发改成可重试。若月结当天先弹随机事件/投资人事件,
+  // 玩家处理事件后会补弹月报,避免第 91 天这类 7 天事件与月报重合时永久漏结。
+  function openDueMonthlyReport(state) {
+    if (!isMonthlyReportDue(state)) return state;
+    let s = { ...state };
+    const salaryDue = s.monthlySalary || 0;
+    if (salaryDue > 0) {
+      s.funds -= salaryDue;
+      s = pushLog(s, `月结发薪: 支付司机工资 ¥${salaryDue}`, 'event');
+      if (s.funds < GAME.DEATH_FUNDS_THRESHOLD) {
+        s.negFundsDays = Math.max(1, s.negFundsDays || 0);
+      }
+    }
+    s.showMonthlyReport = makeMonthlyReport(s);
+    s.paused = true;
     return s;
   }
 
@@ -1431,7 +1448,7 @@
       // V14.67: 显示与 InvestorPressureModal 一致,把 bankruptcyGraceBonus 算进破产倒计时。
       const daysLeft = Math.max(0, GAME.DEATH_FUNDS_DAYS + (s.bankruptcyGraceBonus || 0) - (s.negFundsDays || 0));
       s = pushNotif(s, `${daysLeft} 天内资金未回正就会破产`, 'warn');
-      return s;
+      return openDueMonthlyReport(s);
     }
 
     if (c.fire) {
@@ -1498,7 +1515,7 @@
       label: took.length ? took.join(' + ') : '硬扛',
       detail: '卖车回血 / 借款等现金变动',
     });
-    return s;
+    return openDueMonthlyReport(s);
   }
 
   function resolveEvent(state, optionIdx) {
@@ -1595,7 +1612,7 @@
       label: opt.label,
       detail: eventDetail || `事件已弹出并处理: ${opt.label}`,
     });
-    return s;
+    return openDueMonthlyReport(s);
   }
 
   function buyVehicle(state, templateId) {
@@ -1765,13 +1782,14 @@
       }
       case 'CLOSE_EVENT': {
         const next = { ...state, activeEvent: null, paused: false };
-        return pushActionHistory(next, {
+        const logged = pushActionHistory(next, {
           category: 'player',
           type: 'CLOSE_EVENT',
           label: `玩家关闭事件弹窗: ${state.activeEvent?.title || '未知事件'}`,
           level: 'warn',
           before: state,
         });
+        return openDueMonthlyReport(logged);
       }
       case 'TRAIN': return doTrain(state, action.driverId, action.trainingId);
       case 'RESOLVE_EVENT': return resolveEvent(state, action.optionIdx);
