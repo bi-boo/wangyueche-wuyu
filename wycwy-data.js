@@ -1043,9 +1043,98 @@
     multiChoice: true,
   };
 
+  // V15: 政策事件框架(按游戏绝对时间触发的链式事件)
+  // 与现有 EVENTS(按 7 天周期 + 抽签触发)完全独立。
+  // 设计为可扩展结构,V1 只填监管整改一个事件,后续疫情/油价/限号等可复用。
+  // 详见「监管整改机制设计-V1.md」。
+  const POLICY_GOV_BAN = {
+    id: 'gov_ban',
+    title: '监管整改',
+    // 时间表:游戏绝对天数触发
+    schedule: [
+      { atDay: 30,  stage: 'notice_1', type: 'notice' },
+      { atDay: 60,  stage: 'decision', type: 'decision' },
+      { atDay: 90,  stage: 'verdict',  type: 'verdict' },
+      { atDay: 150, stage: 'resume',   type: 'resume' },
+    ],
+    // 数值参数(全部以 Day 60 当月营收 R₀ 为基准)
+    params: {
+      A_STARTUP_FEE_PCT: 0.40,
+      COMPLIANCE_SCHEDULE_PCT: [0.25, 0.20, 0.15, 0.10], // 月衰减(第 1/2/3/4 月+)
+      A_COOLDOWN_DAYS: 5,
+      A_VERDICT_GOOD_PCT: 0.5,
+      A_VERDICT_FINE_PCT: 0.10,
+      B_BUFF_ORDER_PCT: 0.25,
+      B_BUFF_PROFIT_PCT: 0.15,
+      B_LOAN_PCT: 1.00,
+      B_LOAN_RATE: 0.10,
+      B_LOAN_DUE_DAYS: 90,
+      B_FINE_PCT: 1.00,
+      B_BAN_ORDER_BOOST: 0.20,
+      B_BAN_DAYS: 60,
+    },
+    // 各阶段的弹窗文案与选项
+    stages: {
+      notice_1: {
+        title: '行业协会发布合规倡议',
+        tag: '行业新闻',
+        desc: '近日,中国互联网协会牵头发布《网约车行业自律公约》,倡议各平台主动加强司机背调、车辆审查、用户数据保护等合规建设。多家头部平台已发表声明积极响应。\n\n业内分析人士认为,监管层面的新一轮规范化或将启动。',
+        buttonLabel: '知道了',
+      },
+      decision: {
+        title: '监管部门约谈头部平台',
+        tag: '重大事件',
+        desc: '今日上午,国家网信办、交通部联合约谈包括你在内的多家头部网约车平台,要求"主动履行社会责任、加强合规建设、配合监管检查"。会议明确表示将于近期启动专项检查工作。\n\n你的法务总监建议尽快做出决策。',
+        options: [
+          {
+            id: 'A',
+            label: 'A. 启动合规专项',
+            detail: '立即投入当月营收 40%。Day 90 起每月持续合规支出,首月 25%,逐月衰减至 10% 永久。合规审查期间 30 天内,司机招募和车辆采购进入 5 天冷却。长期、不可撤销。',
+          },
+          {
+            id: 'B',
+            label: 'B. 聚焦扩张窗口期 ⭐ 法务建议',
+            detail: '当前正值行业景气高点,合规支出可暂缓。未来 30 天:订单量 +25%、单均利润 +15%。',
+            extraToggle: {
+              id: 'loan',
+              label: '同时申请扩张贷款',
+              detail: '一次性贷款当月营收 100%(年化利率 10%),90 天后还本付息',
+            },
+          },
+        ],
+      },
+      verdict_pass: {
+        title: '专项检查通过',
+        tag: '监管反馈',
+        desc: '监管部门完成本轮专项检查。鉴于贵平台已主动启动合规专项、相关材料齐备、流程规范,本次检查全部通过。\n\n继续正常运营。',
+        buttonLabel: '知道了',
+      },
+      verdict_fine: {
+        title: '检查发现细节问题',
+        tag: '监管反馈',
+        desc: '监管部门指出贵平台合规建设仍有改进空间(部分司机背调流程文件不全),依据相关规定处以当月营收 10% 的象征性罚款。\n\n建议持续完善合规体系。',
+        buttonLabel: '接受处罚',
+      },
+      verdict_ban: {
+        title: '⛔ 平台监管整改通知',
+        tag: '监管整改',
+        desc: '经专项检查,监管部门认定贵平台存在以下严重合规问题:\n· 缺乏完整司机背调记录\n· 车辆审查体系不健全\n· 用户数据保护不达标\n\n依据《网络安全法》《数据安全法》及交通部相关规定,作出以下处罚决定:\n\n1. 立即缴纳当月营收 100% 罚款\n2. 即日起 60 天内禁止接收新用户订单,仅限存量用户继续使用,订单量降至 20%\n3. 即日起强制启动合规建设,每月支出按衰减曲线(25%→20%→15%→10%)\n\n整改期间运营成本需照常承担。如需止损,可在车队管理界面卖车或裁员。',
+        buttonLabel: '接受处罚',
+      },
+      resume: {
+        title: '整改期解除',
+        tag: '监管反馈',
+        desc: '经过 60 天整改期,贵平台合规体系基本建立,监管部门即日起解除运营限制,恢复正常服务。\n\n建议持续保持合规标准,以避免再次发生类似事件。',
+        buttonLabel: '重新开始运营',
+      },
+    },
+  };
+
+  const POLICY_EVENTS = [POLICY_GOV_BAN];
+
   window.WYCWY_DATA = {
     GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES,
-    TRAININGS, EVENTS, INVESTOR_PRESSURE,
+    TRAININGS, EVENTS, INVESTOR_PRESSURE, POLICY_EVENTS,
     FIRST_NAMES, MISSIONS, ENDINGS,
     RECRUIT_TICKETS, RARITY_META, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES,
   };

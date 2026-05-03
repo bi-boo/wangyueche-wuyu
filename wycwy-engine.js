@@ -1,7 +1,7 @@
 /* 网约车物语 V3 - 游戏引擎 (reducer + 工具 + 任务系统) */
 (function () {
   const D = window.WYCWY_DATA;
-  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, INVESTOR_PRESSURE, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES } = D;
+  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, INVESTOR_PRESSURE, POLICY_EVENTS, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES } = D;
 
   let driverIdCounter = 100;
   let vehicleIdCounter = 100;
@@ -30,6 +30,7 @@
     return !!state.hasStarted
       && !state.paused
       && !state.activeEvent
+      && !state.activePolicyDecision
       && !state.activeStory
       && !state.showTutorial
       && !state.showMonthlyReport
@@ -463,6 +464,9 @@
       if (candidates.length === 0) continue;
 
       for (let i = 0; i < count; i++) {
+        // V15: 政策事件订单减量(如禁运期 orderMultiplier = 0.2 → 80% 订单丢弃)
+        const policyMul = (state.policyOngoingEffects && state.policyOngoingEffects.orderMultiplier) ?? 1;
+        if (policyMul < 1 && Math.random() > policyMul) continue;
         const weights = candidates.map((o) => getZoneOrderWeight(zone, o.id));
         const total = weights.reduce((a, b) => a + b, 0);
         let r = Math.random() * total;
@@ -599,6 +603,36 @@
       activeStory: null,
       seenStories: loadSeenStories(),
       lastStoryDay: -999,
+      // V15: 政策事件框架(按游戏绝对时间触发的链式黑天鹅事件)
+      // 详见「监管整改机制设计-V1.md」。仅本局有效,RESET 时重置。
+      policyState: {
+        govBan: {
+          notice1Fired: false,
+          decisionFired: false,
+          decision: null,            // 'A' | 'B'
+          loanTaken: false,
+          loanAmount: 0,
+          verdictFired: false,
+          verdictResult: null,       // 'pass' | 'fine' | 'ban'
+          banLifted: false,
+          complianceStartDay: 0,     // 合规月扣起始日(衰减曲线锚点)
+          banUntilDay: 0,            // B 玩家禁运结束日
+          cooldownUntilDay: 0,       // A 玩家招募/购车冷却结束日
+          refMonthlyRevenue: 0,      // R₀:决策点当月营收基准
+          stats: {                   // 复盘用累计统计
+            fine: 0,
+            banLossEstimate: 0,
+            compliancePaid: 0,
+            loanPaid: 0,
+          },
+        },
+      },
+      // V15: 政策事件统一汇总当前生效效果(派单/招募/购车/月结读取此处)
+      policyOngoingEffects: {
+        orderMultiplier: 1,          // 派单丢弃概率(禁运 0.2)
+        recruitCooldownDays: 0,      // 司机招募冷却(预留,V1 内嵌检查 cooldownUntilDay)
+        vehicleCooldownDays: 0,      // 车辆购买冷却(同上)
+      },
     };
     return pushActionHistory(initial, {
       category: 'system',
@@ -770,10 +804,20 @@
     if (!state.gachaCards) return state;
     const card = state.gachaCards.find((c) => c.id === cardId);
     if (!card) return state;
+    // V15: A 选项合规期招募冷却(Day 60-90 期间,每次招募后 5 天才能再招)
+    const ps = state.policyState && state.policyState.govBan;
+    if (ps && ps.decision === 'A' && state.day < ps.cooldownUntilDay) {
+      const lastDay = state.lastRecruitDay || 0;
+      const cd = state.policyOngoingEffects?.recruitCooldownDays || 0;
+      if (cd > 0 && lastDay > 0 && state.day - lastDay < cd) {
+        return pushNotif(state, `合规审查期招募冷却中 · 还剩 ${cd - (state.day - lastDay)} 天`, 'warn');
+      }
+    }
     let s = { ...state, gachaCards: null, gachaTicketId: null };
     const emptyVehicle = findEmptyVehicle(s.drivers, s.vehicles);
     const hiredDriver = emptyVehicle ? { ...card, vehicleId: emptyVehicle.id } : card;
     s.drivers = [...s.drivers, hiredDriver];
+    s.lastRecruitDay = s.day;
     s = pushLog(s, `招募 ${card.name} (${D.RARITY_META[card.rarity].name} ${card.bgName}) 入队`, 'event');
     if (emptyVehicle) {
       const vd = getVehicleData(emptyVehicle);
@@ -790,7 +834,7 @@
   // V14.67: updateZoneHeat 整套删除(V14.6 已删 heat 圆圈渲染,字段累而不读)。
 
   function tick(state) {
-    if (state.gameOver || state.activeEvent || state.showTutorial || state.activeStory) return state;
+    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.showTutorial || state.activeStory) return state;
     let s = { ...state };
     s = openDueMonthlyReport(s);
     if (s.showMonthlyReport) return s;
@@ -1220,6 +1264,14 @@
     }
     if (s.funds >= 0) s.investorPressureFired = false;
 
+    // V15: 政策事件按游戏绝对时间触发,优先于随机事件。
+    // 触发后会 set s.activeEvent = activePolicyEvent,后续随机事件分支自动跳过。
+    s = policyEventTick(s);
+    if (s.activeEvent || s.gameOver) {
+      s = openDueMonthlyReport(s);
+      return s;
+    }
+
     // V10.10: 事件降频。前 10 天只抽轻事件,链式复杂事件推迟到中后期。
     // 使用 eventCooldowns: { [eventId]: dayUnlocked },事件触发后写入解锁日
     const eventInterval = GAME.EVENT_INTERVAL_DAYS || 7;
@@ -1275,6 +1327,356 @@
     return s;
   }
 
+  // === V15: 政策事件框架(按游戏绝对时间触发的链式黑天鹅事件) ===
+  // 设计抽象为可扩展结构,V1 只填监管整改一个事件。
+  // 详见「监管整改机制设计-V1.md」。
+
+  function getPolicyDef(eventId) {
+    return (POLICY_EVENTS || []).find((e) => e.id === eventId);
+  }
+
+  // 把 'gov_ban' 转 'govBan' 用于 policyState 取值
+  function policyStateKey(eventId) {
+    return eventId.replace(/_([a-z])/g, (_, ch) => ch.toUpperCase());
+  }
+
+  // 决策点用的"基准月营收 R₀":取上个完整月净营收(若不足 1 月则按当月线性外推)
+  function estimateMonthlyRevenue(s) {
+    const grossNet = (s.monthlyEarnedGross || 0) - (s.monthlyCommission || 0);
+    const dayInMonth = ((s.day - 1) % 30) + 1;
+    const projected = grossNet / Math.max(1, dayInMonth) * 30;
+    return Math.max(1, Math.round(projected));
+  }
+
+  // 主调度:按游戏绝对天数触发各政策事件的各阶段
+  function policyEventTick(state) {
+    let s = state;
+    if (s.activeEvent || s.activePolicyDecision || s.gameOver) return s;
+    for (const eventDef of (POLICY_EVENTS || [])) {
+      const psKey = policyStateKey(eventDef.id);
+      const ps = s.policyState && s.policyState[psKey];
+      if (!ps) continue;
+      for (const item of eventDef.schedule) {
+        if (s.day !== item.atDay) continue;
+        // 防重触发(用 stage-specific 标志)
+        if (eventDef.id === 'gov_ban') {
+          if (item.stage === 'notice_1' && ps.notice1Fired) continue;
+          if (item.stage === 'decision' && ps.decisionFired) continue;
+          if (item.stage === 'verdict' && ps.verdictFired) continue;
+          if (item.stage === 'resume' && ps.banLifted) continue;
+          // 只有 B 玩家整改后才需要 resume,A 玩家直接跳过
+          if (item.stage === 'resume' && ps.verdictResult !== 'ban') continue;
+        }
+        if (item.type === 'notice') {
+          s = triggerPolicyNotice(s, eventDef, item.stage);
+        } else if (item.type === 'decision') {
+          s = triggerPolicyDecision(s, eventDef, item.stage);
+        } else if (item.type === 'verdict') {
+          s = triggerPolicyVerdict(s, eventDef);
+        } else if (item.type === 'resume') {
+          s = triggerPolicyResume(s, eventDef);
+        }
+        if (s.activeEvent || s.activePolicyDecision) return s;
+      }
+    }
+    return s;
+  }
+
+  function triggerPolicyNotice(state, eventDef, stage) {
+    const stageData = eventDef.stages[stage];
+    let s = { ...state };
+    if (eventDef.id === 'gov_ban' && stage === 'notice_1') {
+      s.policyState = {
+        ...s.policyState,
+        govBan: { ...s.policyState.govBan, notice1Fired: true },
+      };
+    }
+    s.activeEvent = {
+      id: `policy_${eventDef.id}_${stage}`,
+      title: stageData.title,
+      tag: stageData.tag,
+      desc: stageData.desc,
+      isPolicyEvent: true,
+      policyEventId: eventDef.id,
+      policyStage: stage,
+      options: [
+        { label: stageData.buttonLabel || '知道了', detail: '', apply: () => ({}) },
+      ],
+    };
+    s.paused = true;
+    s = pushLog(s, `【政策事件】${stageData.title}`, 'event');
+    return s;
+  }
+
+  function triggerPolicyDecision(state, eventDef, stage) {
+    const stageData = eventDef.stages[stage];
+    let s = { ...state };
+    if (eventDef.id === 'gov_ban') {
+      const r0 = estimateMonthlyRevenue(s);
+      s.policyState = {
+        ...s.policyState,
+        govBan: {
+          ...s.policyState.govBan,
+          decisionFired: true,
+          refMonthlyRevenue: r0,
+        },
+      };
+    }
+    s.activePolicyDecision = {
+      eventId: eventDef.id,
+      stage,
+      title: stageData.title,
+      tag: stageData.tag,
+      desc: stageData.desc,
+      options: stageData.options,
+      refMonthlyRevenue: s.policyState[policyStateKey(eventDef.id)].refMonthlyRevenue,
+      params: eventDef.params,
+    };
+    s.paused = true;
+    s = pushLog(s, `【政策决策】${stageData.title}`, 'event');
+    return s;
+  }
+
+  function triggerPolicyVerdict(state, eventDef) {
+    let s = { ...state };
+    if (eventDef.id !== 'gov_ban') return s;
+    const ps = s.policyState.govBan;
+    if (!ps.decisionFired || !ps.decision) return s;
+    let stageKey;
+    if (ps.decision === 'A') {
+      stageKey = Math.random() < eventDef.params.A_VERDICT_GOOD_PCT ? 'verdict_pass' : 'verdict_fine';
+    } else {
+      stageKey = 'verdict_ban';
+    }
+    const stageData = eventDef.stages[stageKey];
+    const verdictResult = stageKey === 'verdict_pass' ? 'pass' : (stageKey === 'verdict_fine' ? 'fine' : 'ban');
+    s.policyState = {
+      ...s.policyState,
+      govBan: {
+        ...ps,
+        verdictFired: true,
+        verdictResult,
+      },
+    };
+    s.activeEvent = {
+      id: `policy_${eventDef.id}_${stageKey}`,
+      title: stageData.title,
+      tag: stageData.tag,
+      desc: stageData.desc,
+      isPolicyEvent: true,
+      policyEventId: eventDef.id,
+      policyStage: stageKey,
+      options: [{ label: stageData.buttonLabel || '接受', detail: '', apply: () => ({}) }],
+    };
+    s.paused = true;
+    s = pushLog(s, `【监管结果】${stageData.title}`, stageKey === 'verdict_ban' ? 'warn' : 'info');
+    return s;
+  }
+
+  function triggerPolicyResume(state, eventDef) {
+    let s = { ...state };
+    if (eventDef.id !== 'gov_ban') return s;
+    const ps = s.policyState.govBan;
+    s.policyState = {
+      ...s.policyState,
+      govBan: { ...ps, banLifted: true },
+    };
+    const stageData = eventDef.stages.resume;
+    s.activeEvent = {
+      id: `policy_${eventDef.id}_resume`,
+      title: stageData.title,
+      tag: stageData.tag,
+      desc: stageData.desc,
+      isPolicyEvent: true,
+      policyEventId: eventDef.id,
+      policyStage: 'resume',
+      options: [{ label: stageData.buttonLabel || '继续', detail: '', apply: () => ({}) }],
+    };
+    s.paused = true;
+    s = pushLog(s, `【监管反馈】${stageData.title}`, 'success');
+    return s;
+  }
+
+  // 玩家在决策点选完 A/B 之后调用
+  function resolvePolicyDecision(state, choiceId, extraToggles) {
+    const apd = state.activePolicyDecision;
+    if (!apd) return state;
+    const eventDef = getPolicyDef(apd.eventId);
+    if (!eventDef) return state;
+
+    let s = { ...state, activePolicyDecision: null, paused: false };
+    if (eventDef.id !== 'gov_ban') return s;
+    const params = eventDef.params;
+    const r0 = apd.refMonthlyRevenue || 1;
+    const fundsBefore = s.funds;
+
+    if (choiceId === 'A') {
+      const startupFee = Math.round(r0 * params.A_STARTUP_FEE_PCT);
+      s.funds -= startupFee;
+      s.policyState = {
+        ...s.policyState,
+        govBan: {
+          ...s.policyState.govBan,
+          decision: 'A',
+          complianceStartDay: 90,
+          cooldownUntilDay: 90,
+        },
+      };
+      s.policyOngoingEffects = {
+        ...s.policyOngoingEffects,
+        recruitCooldownDays: params.A_COOLDOWN_DAYS,
+        vehicleCooldownDays: params.A_COOLDOWN_DAYS,
+      };
+      s = recordMonthlyEventImpact(s, -startupFee, {
+        title: '监管整改',
+        label: '启动合规专项',
+        detail: `一次性合规启动费 ¥${startupFee.toLocaleString()}`,
+      });
+      s = pushLog(s, `选择启动合规专项,扣款 ¥${startupFee.toLocaleString()}`, 'event');
+      s = pushNotif(s, `合规专项启动 · 司机/车辆 ${params.A_COOLDOWN_DAYS} 天冷却(至 Day 90)`, 'warn');
+    } else {
+      // B 选项:30 天 buff(订单 +25% × 单均利润 +15% ≈ ×1.4375 净营收倍率)
+      s.policyState = {
+        ...s.policyState,
+        govBan: {
+          ...s.policyState.govBan,
+          decision: 'B',
+          loanTaken: !!(extraToggles && extraToggles.loan),
+        },
+      };
+      const buffMul = (1 + params.B_BUFF_ORDER_PCT) * (1 + params.B_BUFF_PROFIT_PCT);
+      s.boostUntilDay = s.day + 30;
+      s.boostMul = buffMul;
+      s = pushLog(s, `选择聚焦扩张窗口期 · 30 天 fare ×${buffMul.toFixed(2)}`, 'event');
+      s = pushNotif(s, `扩张 buff 30 天 · 订单 +25% · 单均利润 +15%`, 'success');
+
+      if (extraToggles && extraToggles.loan) {
+        const loanAmount = Math.round(r0 * params.B_LOAN_PCT);
+        const interest = Math.round(loanAmount * params.B_LOAN_RATE * (params.B_LOAN_DUE_DAYS / 365));
+        const repayTotal = loanAmount + interest;
+        s.funds += loanAmount;
+        s.policyState = {
+          ...s.policyState,
+          govBan: {
+            ...s.policyState.govBan,
+            loanAmount,
+          },
+        };
+        // 复用现有 debt 系统(L1114-1126 已有处理):到期一次性扣 debtAmount
+        s.debtAmount = (s.debtAmount || 0) + repayTotal;
+        s.debtDueDay = s.day + params.B_LOAN_DUE_DAYS;
+        s = pushLog(s, `借入扩张贷款 ¥${loanAmount.toLocaleString()},${params.B_LOAN_DUE_DAYS} 天后还本付息 ¥${repayTotal.toLocaleString()}`, 'warn');
+        s = pushNotif(s, `+¥${loanAmount.toLocaleString()} 贷款 · 90 天后到期 ¥${repayTotal.toLocaleString()}`, 'warn');
+      }
+    }
+
+    // 累计资金变化到月报(便于追溯)
+    const delta = s.funds - fundsBefore;
+    if (delta !== 0 && choiceId === 'B' && extraToggles && extraToggles.loan) {
+      // 贷款是 +funds,已记录在 log,不再重复累计到 monthlyEventImpact(避免月报误读为"经营事件收入")
+    }
+    return s;
+  }
+
+  // 关闭政策提示/结果弹窗时执行实际副作用(罚款扣款、禁运启动、解禁等)
+  function applyPolicyEventClose(state, ev) {
+    if (!ev || !ev.isPolicyEvent) return state;
+    let s = { ...state };
+    const eventDef = getPolicyDef(ev.policyEventId);
+    if (!eventDef) return s;
+
+    if (ev.policyEventId === 'gov_ban') {
+      const ps = s.policyState.govBan;
+      const params = eventDef.params;
+      const r0 = ps.refMonthlyRevenue || 1;
+
+      if (ev.policyStage === 'verdict_fine') {
+        const fine = Math.round(r0 * params.A_VERDICT_FINE_PCT);
+        s.funds -= fine;
+        s.policyState = {
+          ...s.policyState,
+          govBan: { ...ps, stats: { ...ps.stats, fine: ps.stats.fine + fine } },
+        };
+        s = recordMonthlyEventImpact(s, -fine, {
+          title: '监管整改',
+          label: '检查发现细节问题',
+          detail: `象征性罚款 ¥${fine.toLocaleString()}`,
+        });
+        s = pushLog(s, `监管轻罚扣款 ¥${fine.toLocaleString()}`, 'warn');
+      } else if (ev.policyStage === 'verdict_ban') {
+        const fine = Math.round(r0 * params.B_FINE_PCT);
+        s.funds -= fine;
+        s.policyOngoingEffects = {
+          ...s.policyOngoingEffects,
+          orderMultiplier: params.B_BAN_ORDER_BOOST,
+        };
+        s.policyState = {
+          ...s.policyState,
+          govBan: {
+            ...ps,
+            banUntilDay: s.day + params.B_BAN_DAYS,
+            complianceStartDay: s.day,
+            stats: { ...ps.stats, fine: ps.stats.fine + fine },
+          },
+        };
+        s = recordMonthlyEventImpact(s, -fine, {
+          title: '监管整改',
+          label: '平台监管整改',
+          detail: `立即罚款 ¥${fine.toLocaleString()}`,
+        });
+        s = pushLog(s, `平台监管整改:罚款 ¥${fine.toLocaleString()},60 天禁运启动 · 订单残血 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}%`, 'warn');
+        s = pushNotif(s, `平台被整改 · 订单暴跌至 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}% · 60 天解禁`, 'warn');
+      } else if (ev.policyStage === 'resume') {
+        s.policyOngoingEffects = {
+          ...s.policyOngoingEffects,
+          orderMultiplier: 1,
+        };
+        s = pushLog(s, `60 天禁运期解除,平台恢复正常运营`, 'success');
+        s = pushNotif(s, `禁运解除 · 平台恢复运营`, 'success');
+      }
+      // verdict_pass / notice_1 无副作用,关闭即可
+    }
+    return s;
+  }
+
+  // 月结时按合规衰减曲线扣款(A/B 玩家共用)
+  function applyPolicyMonthlyCompliance(state) {
+    let s = state;
+    const ps = s.policyState && s.policyState.govBan;
+    if (!ps || !ps.complianceStartDay || s.day < ps.complianceStartDay) return s;
+    const eventDef = getPolicyDef('gov_ban');
+    if (!eventDef) return s;
+    const params = eventDef.params;
+    const schedule = params.COMPLIANCE_SCHEDULE_PCT || [0.10];
+    // 计算"自合规起始日起的月序号"(1-indexed)
+    const monthsSinceStart = Math.floor((s.day - ps.complianceStartDay) / 30) + 1;
+    const idx = Math.min(monthsSinceStart - 1, schedule.length - 1);
+    const pct = schedule[idx];
+    const r0 = ps.refMonthlyRevenue || 1;
+    const cost = Math.round(r0 * pct);
+    if (cost <= 0) return s;
+    s = { ...s, funds: s.funds - cost };
+    s = {
+      ...s,
+      policyState: {
+        ...s.policyState,
+        govBan: {
+          ...ps,
+          stats: { ...ps.stats, compliancePaid: ps.stats.compliancePaid + cost },
+        },
+      },
+    };
+    s = recordMonthlyEventImpact(s, -cost, {
+      title: '监管整改',
+      label: `合规月支出(第 ${monthsSinceStart} 个月,${Math.round(pct * 100)}%)`,
+      detail: `按衰减曲线扣款 ¥${cost.toLocaleString()}`,
+    });
+    s = pushLog(s, `合规月支出 ¥${cost.toLocaleString()}(第 ${monthsSinceStart} 月,${Math.round(pct * 100)}%)`, 'event');
+    return s;
+  }
+
+  // === V15 政策事件框架结束 ===
+
   function isMonthlyReportDue(s) {
     const nextReportDay = (s.monthCounter || 1) * 30 + 1;
     return s.day >= nextReportDay
@@ -1298,6 +1700,11 @@
       if (s.funds < GAME.DEATH_FUNDS_THRESHOLD) {
         s.negFundsDays = Math.max(1, s.negFundsDays || 0);
       }
+    }
+    // V15: 月结时扣合规支出(衰减曲线 25/20/15/10%)
+    s = applyPolicyMonthlyCompliance(s);
+    if (s.funds < GAME.DEATH_FUNDS_THRESHOLD) {
+      s.negFundsDays = Math.max(1, s.negFundsDays || 0);
     }
     s.showMonthlyReport = makeMonthlyReport(s);
     s.paused = true;
@@ -1581,6 +1988,12 @@
   function resolveEvent(state, optionIdx) {
     const ev = state.activeEvent;
     if (!ev) return state;
+    // V15: 政策事件走专属处理(notice / verdict / resume),不进入通用 effect 计算
+    if (ev.isPolicyEvent) {
+      let s = { ...state, activeEvent: null, paused: false };
+      s = applyPolicyEventClose(s, ev);
+      return openDueMonthlyReport(s);
+    }
     const opt = ev.options[optionIdx];
     let eff = {};
     try {
@@ -1679,7 +2092,16 @@
     const t = VEHICLES.find((x) => x.id === templateId);
     if (state.funds < t.price) return pushNotif(state, `资金不足!`, 'warn');
     if (state.reputation < t.unlock) return pushNotif(state, `口碑不足 ${t.unlock}`, 'warn');
-    let s = { ...state, funds: state.funds - t.price };
+    // V15: A 选项合规期购车冷却(Day 60-90 期间,每次购车后 5 天才能再购)
+    const ps = state.policyState && state.policyState.govBan;
+    if (ps && ps.decision === 'A' && state.day < ps.cooldownUntilDay) {
+      const lastDay = state.lastVehicleBuyDay || 0;
+      const cd = state.policyOngoingEffects?.vehicleCooldownDays || 0;
+      if (cd > 0 && lastDay > 0 && state.day - lastDay < cd) {
+        return pushNotif(state, `合规审查期购车冷却中 · 还剩 ${cd - (state.day - lastDay)} 天`, 'warn');
+      }
+    }
+    let s = { ...state, funds: state.funds - t.price, lastVehicleBuyDay: state.day };
     const newVehicle = genVehicle(t);
     const unassignedDriver = s.drivers.find((d) => !d.vehicleId);
     s.vehicles = [...s.vehicles, newVehicle];
@@ -1855,6 +2277,8 @@
       case 'TRAIN': return doTrain(state, action.driverId, action.trainingId);
       case 'RESOLVE_EVENT': return resolveEvent(state, action.optionIdx);
       case 'RESOLVE_INVESTOR': return resolveInvestorPressure(state, action.choices);
+      // V15: 政策决策点(A/B + 子勾选如贷款)
+      case 'RESOLVE_POLICY_DECISION': return resolvePolicyDecision(state, action.choiceId, action.extraToggles);
       case 'BUY_VEHICLE': return buyVehicle(state, action.templateId);
       case 'ASSIGN_VEHICLE': return assignVehicle(state, action.driverId, action.vehicleId);
       case 'FIRE_DRIVER': return fireDriver(state, action.driverId);

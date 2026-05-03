@@ -771,6 +771,67 @@ V7 12 个新事件遵循"写实经营"调性 — 让玩家在做决策时手抖,
 
 ---
 
+## 八-A、政策事件框架(V15 — 按游戏绝对时间触发的链式黑天鹅)
+
+### 设计目标
+
+借鉴滴滴 2021 年下架事件,给中后期玩家设置教学型难度墙。第一次大概率破产,但破产时复盘把伏笔翻给玩家看,玩家归因到自己的决策而非游戏不公,第二次能扛住。
+
+详细机制设计见根目录 `监管整改机制设计-V1.md`。
+
+### 与「八、随机事件」的区别
+
+| 维度 | 随机事件(EVENTS) | 政策事件(POLICY_EVENTS) |
+|---|---|---|
+| 触发方式 | 每 7 天 + 抽签 | 按游戏绝对天数(每局必触发) |
+| 持续性 | 即时结算,无后续 | 链式 4 阶段,跨数月 |
+| 选项 | 2 选项二元抉择 | A/B 决策点 + 子勾选(贷款) |
+| 影响范围 | 单局某次的资金/口碑/忠诚 | 永久月扣款 + 订单倍率 + 状态机 |
+| UI | EventModal | EventModal + PolicyDecisionModal |
+| 数据位置 | `EVENTS`(wycwy-data.js) | `POLICY_EVENTS`(wycwy-data.js) |
+| 触发器 | dayTick 内 `s.day % 7 === 0` 抽签 | endOfDay 内 `policyEventTick(s)` 调度 |
+| state 字段 | `eventCooldowns` / `eventChainCount` | `policyState` / `policyOngoingEffects` |
+
+### V15 监管整改完整时间线
+
+| 游戏天数 | 阶段 | 玩家可操作 |
+|---|---|---|
+| Day 30 | 第 1 次通知:行业协会合规倡议 | 仅信息提示(notice_1 弹窗) |
+| Day 60 | 第 2 次通知:监管约谈(决策点) | A:启动合规专项 / B:聚焦扩张窗口期 + 可选贷款 |
+| Day 90 | 监管检查 / 整改公告 | A 玩家:50% verdict_pass(完全躲过) / 50% verdict_fine(轻罚 10% R₀)<br>B 玩家:必触发 verdict_ban(罚 100% R₀ + 60 天禁运) |
+| Day 150 | B 玩家整改解除 | resume 弹窗 + orderMultiplier 恢复 1 |
+
+### 关键参数(POLICY_GOV_BAN.params)
+
+- 一次性启动费(A):40% × R₀
+- 月合规衰减曲线(A/B 共用):25% → 20% → 15% → 10%(永久)
+- 招募/购车冷却(A):5 天,Day 60-90 期间生效
+- A 监管结果:50% pass / 50% 10% R₀ 轻罚
+- B buff(Day 60-90):订单 +25% × 单均利润 +15% ≈ ×1.4375 fare
+- B 贷款:100% R₀ × 10% 年化,90 天到期一次性还本付息(复用 debt 系统)
+- B 整改:100% R₀ 立即罚款 + 60 天 orderMultiplier 0.2 + 强制启动合规
+
+### 抽象框架(为后续黑天鹅扩展预留)
+
+`POLICY_EVENTS` 数组结构通用,V1 只填一个 `gov_ban`。后续加疫情、油价、限号等只需:
+1. 数据层添加新条目(`schedule` + `stages` + `params`)
+2. 在 engine 的 `policyEventTick` / `applyPolicyEventClose` / `applyPolicyMonthlyCompliance` 加 if 分支处理
+3. UI 端 PolicyDecisionModal 已通用,无需改
+
+`policyOngoingEffects` 字段(`orderMultiplier` / `recruitCooldownDays` / `vehicleCooldownDays`)由派单/招募/购车等子系统读取,不关心来自哪个政策事件。
+
+### R₀(基准月营收)
+
+决策点(Day 60)当时通过 `estimateMonthlyRevenue(s)` 计算并锁定。此后所有百分比惩罚/支出都基于 R₀ 而非当前实时营收,避免玩家"先卖车降营收来减罚款"等异常套路。
+
+### 复盘归因
+
+破产时(`gameOver.deathCause === 'bankruptcy'`)若 `policyState.govBan.verdictResult === 'ban'`,UI 端可在破产复盘界面展示监管整改累计影响(`policyState.govBan.stats` 已累加 fine / compliancePaid),并提示"Day 30 行业新闻"和"Day 60 监管约谈"是早期信号 — 让玩家归因到自己的决策。
+
+> 注:V1 复盘界面 UI 增强暂未实现,V2 阶段补齐。
+
+---
+
 ## 九、车辆系统(V13 — 3 种车型,数值见 data.js)
 
 V13 把车型从 5 种压缩到 3 档(经济 / 中端 / 高端),价格梯度清晰,删除汉 EV / 奥德赛(功能与凯美瑞重叠)。**V12 起删除车型解锁的口碑门槛**,只用钱买。

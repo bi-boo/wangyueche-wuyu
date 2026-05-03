@@ -62,7 +62,7 @@ function App() {
   // 有事则保持 250ms。其他档位维持固定间隔行为不变。
   const lastTickSnapshotRef = useRef(null);
   useEffect(() => {
-    if (state.paused || state.activeEvent || state.activeStory || state.showTutorial || state.gameOver) {
+    if (state.paused || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showTutorial || state.gameOver) {
       lastTickSnapshotRef.current = null;
       return;
     }
@@ -82,7 +82,7 @@ function App() {
     const interval = (state.speed === 8 && !eventful) ? 50 : baseInterval;
     const t = setTimeout(() => dispatch({type: 'TICK'}), interval);
     return () => clearTimeout(t);
-  }, [state.paused, state.speed, state.activeEvent, state.activeStory, state.showTutorial, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
+  }, [state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activeStory, state.showTutorial, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
 
   useEffect(() => {
     if (!selectedZoneId) return;
@@ -295,6 +295,8 @@ function App() {
       {state.activeEvent && <EventModal event={state.activeEvent} state={state}
         onResolve={(idx) => dispatch({type: 'RESOLVE_EVENT', optionIdx: idx})}
         onResolveInvestor={(choices) => dispatch({type: 'RESOLVE_INVESTOR', choices})} />}
+      {state.activePolicyDecision && <PolicyDecisionModal decision={state.activePolicyDecision} state={state}
+        onResolve={(choiceId, extraToggles) => dispatch({type: 'RESOLVE_POLICY_DECISION', choiceId, extraToggles})} />}
       {state.activeStory && <StoryModal story={state.activeStory} drivers={state.drivers} onClose={() => dispatch({type: 'STORY_SHOWN'})} />}
       {state.showMonthlyReport && <MonthlyReportModal report={state.showMonthlyReport} onClose={() => dispatch({type: 'CLOSE_MONTHLY_REPORT'})} />}
       {hasFinaleMissionNotice && (

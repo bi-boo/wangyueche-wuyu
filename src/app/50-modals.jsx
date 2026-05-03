@@ -332,6 +332,78 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
   );
 }
 
+// V15: 政策决策弹窗(用于监管整改 Day 60 决策点等)
+// 与 EventModal 区别:支持选项的 extraToggle(子勾选)
+function PolicyDecisionModal({ decision, state, onResolve }) {
+  const [extraToggles, setExtraToggles] = React.useState({});
+  const r0 = decision.refMonthlyRevenue || 0;
+  return (
+    <div className="modal-overlay">
+      <div className="modal event-modal policy-decision-modal">
+        <div className="event-modal-header">
+          <div className="modal-tag">{decision.tag || '政策决策'}</div>
+          <div className="modal-title">{decision.title}</div>
+          <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{decision.desc}</div>
+        </div>
+        <EventResourceSnapshot state={state} />
+        {r0 > 0 && (
+          <div className="policy-decision-baseline" style={{padding: '8px 16px', fontSize: 12, color: 'var(--ink-3, #888)'}}>
+            基准月营收 R₀ ≈ ¥{r0.toLocaleString()} (后续百分比按此基准计算)
+          </div>
+        )}
+        <div className="modal-options">
+          {decision.options.map((opt) => {
+            const toggleVal = extraToggles[opt.id] || {};
+            return (
+              <div key={opt.id} className="modal-option-wrapper" style={{display: 'flex', flexDirection: 'column', marginBottom: 12}}>
+                <button
+                  className="modal-option"
+                  onClick={() => onResolve(opt.id, toggleVal)}
+                >
+                  <div className="modal-option-label">{opt.label}</div>
+                  {opt.detail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{opt.detail}</div>}
+                </button>
+                {opt.extraToggle && (
+                  <label
+                    className="policy-decision-toggle"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      marginTop: 6,
+                      padding: '8px 12px',
+                      background: 'rgba(255, 200, 100, 0.08)',
+                      border: '1px dashed rgba(255, 200, 100, 0.4)',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      fontSize: 13,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!(extraToggles[opt.id] && extraToggles[opt.id][opt.extraToggle.id])}
+                      onChange={(e) => setExtraToggles({
+                        ...extraToggles,
+                        [opt.id]: { ...(extraToggles[opt.id] || {}), [opt.extraToggle.id]: e.target.checked },
+                      })}
+                      style={{marginTop: 3}}
+                    />
+                    <span style={{flex: 1}}>
+                      <strong>{opt.extraToggle.label}</strong>
+                      {opt.extraToggle.detail && <div style={{marginTop: 2, fontSize: 12, color: 'var(--ink-3, #888)'}}>{opt.extraToggle.detail}</div>}
+                    </span>
+                  </label>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GameFeedbackCard({
   tone = 'accent',
   tag,
