@@ -906,6 +906,31 @@
   .topbar-settings .toggle-btn.on {
     background: var(--gold) !important;
   }
+  .topbar-settings .topbar-menu-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    border: 3px solid var(--ink) !important;
+    background: var(--gold) !important;
+    color: var(--ink) !important;
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.38) !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    cursor: pointer !important;
+  }
+  .topbar-settings .topbar-menu-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--ink) !important;
+  }
+  .topbar-settings .topbar-menu-btn em {
+    font-style: normal;
+    font-size: 11px;
+    color: var(--ink-2);
+    padding-left: 7px;
+    border-left: 2px solid rgba(42,35,32,0.28);
+  }
 
   .ts-sub,
   .order-ticket-zone {
@@ -918,8 +943,6 @@
   .cc-badge,
   .dispatch-state-badge,
   .order-ticket-kind,
-  .order-list-chip,
-  .shop-order-chip,
   .roadmap-item-status,
   .ending-roadmap-status,
   .gacha-rarity {
@@ -929,6 +952,20 @@
     border-radius: 0 !important;
     box-shadow: 1px 1px 0 rgba(42,35,32,0.16) !important;
     background: var(--card) !important;
+    color: var(--ink) !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap;
+  }
+
+  .order-list-chip,
+  .shop-order-chip {
+    min-height: 22px !important;
+    padding: 2px 4px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
     color: var(--ink) !important;
     font-weight: 900 !important;
     line-height: 1 !important;

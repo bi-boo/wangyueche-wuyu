@@ -777,6 +777,10 @@
     border-color: var(--warn);
     background: color-mix(in srgb, var(--warn) 6%, var(--card) 94%);
   }
+  .run-history-card.outcome-current {
+    border-color: var(--green);
+    background: color-mix(in srgb, var(--green) 8%, var(--card) 92%);
+  }
   .run-history-tag {
     font-size: 11px;
     font-weight: 800;
@@ -792,6 +796,10 @@
   }
   .run-history-card.outcome-lose .run-history-tag {
     background: var(--warn);
+    color: #FFF8E7;
+  }
+  .run-history-card.outcome-current .run-history-tag {
+    background: var(--green);
     color: #FFF8E7;
   }
   .run-history-main {
@@ -1694,7 +1702,7 @@
       gap: 10px;
     }
     .mission-feedback {
-      grid-template-columns: 1fr;
+      grid-template-columns: 42px minmax(0, 1fr);
       padding: 14px 16px;
     }
     .game-feedback-icon {
@@ -1737,4 +1745,3 @@
       line-height: 1.2;
     }
   }
-

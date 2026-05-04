@@ -37,8 +37,10 @@ function MissionBar({ state, onOpenRoadmap }) {
 
 /* ============== V3: 顶栏 ============== */
 
-const APP_VERSION = 'V15.2';
+const APP_VERSION = 'V15.7';
 const RUN_HISTORY_KEY = 'wycwy-run-history-v1';
+const CURRENT_RUN_KEY = 'wycwy-current-run-v1';
+const AUTOSAVE_KEY = 'wycwy-autosave-v1';
 const RUN_HISTORY_LIMIT = 20;
 
 function isoOrNull(ms) {
@@ -164,15 +166,17 @@ function exportGameDiagnostics(state) {
   URL.revokeObjectURL(url);
 }
 
-function buildRunRecord(state) {
-  const payload = buildGameDiagnosticsPayload(state, { savedReason: 'game-over' });
+function buildRunRecord(state, { savedReason = 'game-over', idPrefix = 'run' } = {}) {
+  const payload = buildGameDiagnosticsPayload(state, { savedReason });
+  const isGameOver = !!state.gameOver;
   return {
-    id: `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `${idPrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    exportedAt: payload.exportedAt,
     savedAt: payload.exportedAt,
     version: APP_VERSION,
-    result: state.gameOver?.type || 'unknown',
+    result: isGameOver ? (state.gameOver?.type || 'unknown') : 'in_progress',
     deathCause: state.gameOver?.deathCause || null,
-    reason: state.gameOver?.reason || state.gameOver?.endingName || '',
+    reason: state.gameOver?.reason || state.gameOver?.endingName || '当前运营中',
     summary: payload.summary,
     drivers: payload.drivers,
     vehicles: payload.vehicles,
@@ -194,6 +198,94 @@ function getSavedRunHistory() {
   }
 }
 
+function getSavedCurrentRun() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CURRENT_RUN_KEY) || 'null');
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildAutosaveState(state) {
+  return {
+    ...state,
+    paused: true,
+    showTutorial: false,
+    gameOver: null,
+    floatGains: [],
+    newMissionComplete: null,
+    newEndingUnlocked: null,
+  };
+}
+
+function buildAutosaveSummary(state) {
+  return {
+    day: state.day,
+    hour: state.hour,
+    funds: state.funds,
+    reputation: state.reputation,
+    totalCompleted: state.totalCompleted,
+    totalEarned: state.totalEarned,
+    drivers: state.drivers?.length || 0,
+    vehicles: state.vehicles?.length || 0,
+    currentMissionIdx: state.currentMissionIdx || 0,
+  };
+}
+
+function getSavedAutosave() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || 'null');
+    if (!parsed || typeof parsed !== 'object' || !parsed.state) return null;
+    return parsed;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveAutosave(state) {
+  if (!state || !state.hasStarted || state.gameOver) return null;
+  try {
+    const payload = {
+      version: APP_VERSION,
+      savedAt: new Date().toISOString(),
+      summary: buildAutosaveSummary(state),
+      state: buildAutosaveState(state),
+    };
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
+    window.__WYCWY_AUTOSAVE = payload;
+    return payload;
+  } catch (e) {
+    console.warn('[WYCWY] autosave failed', e);
+    return null;
+  }
+}
+
+function clearAutosave() {
+  try {
+    localStorage.removeItem(AUTOSAVE_KEY);
+  } catch (e) {}
+}
+
+function clearCurrentRunRecord() {
+  try {
+    localStorage.removeItem(CURRENT_RUN_KEY);
+  } catch (e) {}
+}
+
+function saveCurrentRunRecord(state) {
+  if (!state || state.gameOver || !state.hasStarted) return null;
+  const record = buildRunRecord(state, { savedReason: 'current-run', idPrefix: 'current-run' });
+  try {
+    localStorage.setItem(CURRENT_RUN_KEY, JSON.stringify(record));
+    window.__WYCWY_CURRENT_RUN_RECORD = record;
+    return record;
+  } catch (e) {
+    console.warn('[WYCWY] current run save failed', e);
+    return null;
+  }
+}
+
 function saveRunRecord(state) {
   if (!state?.gameOver) return null;
   const record = buildRunRecord(state);
@@ -201,6 +293,8 @@ function saveRunRecord(state) {
     const history = getSavedRunHistory();
     const next = [record, ...history].slice(0, RUN_HISTORY_LIMIT);
     localStorage.setItem(RUN_HISTORY_KEY, JSON.stringify(next));
+    clearAutosave();
+    clearCurrentRunRecord();
     window.__WYCWY_LAST_RUN_RECORD = record;
     return record;
   } catch (e) {
@@ -227,7 +321,7 @@ function HelpRow({ label, children }) {
   );
 }
 
-function TopBar({ state, fundsDisplay, repDisplay, muted, onToggleMute, crtOn, onToggleCrt, onShowTutorial }) {
+function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
   const currentTier = state.unlockedEndingTier || 0;
   const tierEnding = ENDINGS.find((e) => e.tier === currentTier);
   const tierName = tierEnding ? tierEnding.name : '初创期';
@@ -373,23 +467,15 @@ function TopBar({ state, fundsDisplay, repDisplay, muted, onToggleMute, crtOn, o
             </TopbarHelp>
           </div>
         </div>
-        <div className="topbar-settings" aria-label="设置">
-          <button className="toggle-btn" onClick={onShowTutorial} title="重新查看新手指引" aria-label="新手指引">
-            帮助
-          </button>
+        <div className="topbar-settings" aria-label="系统菜单">
           <button
-            className="toggle-btn"
-            onClick={() => exportGameDiagnostics(state)}
-            title="导出诊断数据(供开发者分析卡点)"
-            aria-label="导出诊断数据"
+            className="topbar-menu-btn"
+            onClick={onOpenPauseMenu}
+            title="打开系统菜单(ESC)"
+            aria-label="打开系统菜单"
           >
-            诊断
-          </button>
-          <button className={`toggle-btn ${muted ? '' : 'on'}`} onClick={onToggleMute} title={muted ? '已静音' : '音效开'}>
-            {muted ? '静音' : '声音'}
-          </button>
-          <button className={`toggle-btn ${crtOn ? 'on' : ''}`} onClick={onToggleCrt} title={crtOn ? '复古滤镜开' : '关'}>
-            滤镜
+            <span>设置</span>
+            <em>ESC</em>
           </button>
         </div>
       </div>

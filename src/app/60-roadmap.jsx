@@ -164,30 +164,37 @@ function formatRunHistoryDate(iso) {
 }
 
 function RunHistoryPanel({ onSelect }) {
+  const currentRun = getSavedCurrentRun();
   const history = getSavedRunHistory();
-  if (!history.length) {
+  if (!currentRun && !history.length) {
     return (
       <div className="run-history-empty">
-        还没有历史记录。每局结算后(通关或破产)会自动保存最近 20 局。
+        还没有运营记录。开始运营后会保存当前快照,通关或破产后会进入最近 20 局历史。
       </div>
     );
   }
+  const records = currentRun
+    ? [{ rec: currentRun, idx: 'current', isCurrent: true }, ...history.map((rec, idx) => ({ rec, idx, isCurrent: false }))]
+    : history.map((rec, idx) => ({ rec, idx, isCurrent: false }));
   return (
     <div className="run-history-list">
-      {history.map((rec, idx) => {
+      {records.map(({ rec, idx, isCurrent }) => {
         const summary = rec?.summary || {};
         const gameOver = summary.gameOver || {};
         const isWin = gameOver.type === 'win';
         const isLose = gameOver.type === 'lose';
-        const cls = isWin ? 'outcome-win' : (isLose ? 'outcome-lose' : 'outcome-end');
-        const tagText = isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '结束');
-        const titleText = isWin
+        const cls = isCurrent ? 'outcome-current' : (isWin ? 'outcome-win' : (isLose ? 'outcome-lose' : 'outcome-end'));
+        const tagText = isCurrent ? '当前快照' : (isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '结束'));
+        const titleText = isCurrent
+          ? `自动记录 · 第 ${summary.day || '?'} 天 ${String(summary.hour || 0).padStart(2, '0')}:00`
+          : isWin
           ? `《${gameOver.endingName || '已通关'}》`
           : (gameOver.reason || '本局结束');
-        const meta = `第 ${summary.day || '?'} 天 · ¥${(summary.funds || 0).toLocaleString()} · 口碑 ${summary.reputation || 0} · ${formatRunHistoryDate(rec.exportedAt)}`;
+        const savedAt = rec.exportedAt || rec.savedAt;
+        const meta = `¥${(summary.funds || 0).toLocaleString()} · 口碑 ${summary.reputation || 0} · 完成 ${summary.totalCompleted || 0} 单 · ${formatRunHistoryDate(savedAt)}`;
         return (
           <button
-            key={`${rec.exportedAt || idx}-${idx}`}
+            key={`${rec.exportedAt || rec.savedAt || idx}-${idx}`}
             className={`run-history-card ${cls}`}
             onClick={() => onSelect(rec)}
             type="button"
@@ -208,10 +215,13 @@ function RunHistoryPanel({ onSelect }) {
 function RunHistoryDetailModal({ record, onClose }) {
   const summary = record?.summary || {};
   const gameOver = summary.gameOver || {};
+  const isCurrent = record?.result === 'in_progress' || !gameOver.type;
   const isWin = gameOver.type === 'win';
   const isLose = gameOver.type === 'lose';
-  const tag = isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '本局结束');
-  const headline = isWin
+  const tag = isCurrent ? '当前快照' : (isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '本局结束'));
+  const headline = isCurrent
+    ? `自动记录 · 第 ${summary.day || '?'} 天 ${String(summary.hour || 0).padStart(2, '0')}:00`
+    : isWin
     ? `《${gameOver.endingName || '已通关'}》`
     : (gameOver.reason || '本局结束');
   const story = isWin ? (gameOver.endingDesc || '') : '';
@@ -241,7 +251,7 @@ function RunHistoryDetailModal({ record, onClose }) {
             <div>共结算 {monthly.monthCounter} 次月报</div>
           )}
           <div style={{ color: 'var(--ink-3)', marginTop: 4 }}>
-            记录时间：{formatRunHistoryDate(record?.exportedAt)}
+            记录时间：{formatRunHistoryDate(record?.exportedAt || record?.savedAt)}
           </div>
         </div>
         <button className="btn btn-primary btn-block" onClick={onClose} style={{ padding: 12, marginTop: 14 }}>关闭</button>
@@ -250,8 +260,8 @@ function RunHistoryDetailModal({ record, onClose }) {
   );
 }
 
-function UnlockRoadmapModal({ state, onClose, onOpenShop }) {
-  const [activeTab, setActiveTab] = useState('missions');
+function UnlockRoadmapModal({ state, onClose, onOpenShop, initialTab = 'missions' }) {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [historyDetail, setHistoryDetail] = useState(null);
   const allStatus = ORDERS.map((o) => computeOrderUnlockStatus(o, state));
   const orderStatusById = Object.fromEntries(allStatus.map((s) => [s.order.id, s]));
@@ -331,4 +341,3 @@ function UnlockRoadmapModal({ state, onClose, onOpenShop }) {
     </div>
   );
 }
-
