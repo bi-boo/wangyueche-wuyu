@@ -725,6 +725,265 @@
   </table>
 </div>
 
+<h2>表 C:候选新链式 <span class="h2-sub">5 条 V15.x+ 储备 · 待 review,确认后再开发</span></h2>
+
+<div class="note-block">
+  下面 5 条链式都是<b>带新机制</b>的提议(不是简单的"二选一"):
+  <ul style="margin-top:8px;padding-left:20px;line-height:1.8">
+    <li><b>C1 media 媒体公关</b> — 危机管理早晚做差很多;新增 <code>mediaFriend</code> 状态,后续危机能被压稿化解</li>
+    <li><b>C2 union 工会运动</b> — 集体劳动关系;新增 <code>unionPower 0~3</code>,影响所有"全员忠诚"事件倍率(双刃剑)</li>
+    <li><b>C3 franchise 加盟商</b> — 横向扩张;新增 <code>franchiseCount</code>,被动月收入 + 持续维护成本</li>
+    <li><b>C4 vip_client 大客户依赖</b> — B 端依赖度;新增 <code>vipClientId / vipLoyalty</code>,大客户流失断崖</li>
+    <li><b>C5 mass_quit 集体跳槽</b> — 凝聚力危机;新增 <code>teamCohesion</code>,极端时刻领导力倾向选择</li>
+  </ul>
+</div>
+
+<div class="chain-block">
+  <div class="chain-title">C1. media · 媒体公关链(舆情放大器轴)</div>
+  <div class="chain-axis">机制:state 新增 <code>mediaFriend: bool</code> · 后续危机事件被媒体盟友"压稿"化解</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:140px">段 ID</th>
+        <th style="width:200px">触发条件</th>
+        <th style="width:240px">场景</th>
+        <th>选项 A</th>
+        <th>选项 B</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="stage-id">media_seed</span></td>
+        <td>unlockMission ≥ 4</td>
+        <td class="scene">一名乘客在小红书发帖:"打了你家车,司机一路抽烟、骂街"。帖子几百赞了,司机辩称"乘客先骂"。</td>
+        <td><div class="opt-a"><b>公开道歉 + 退款 + 解雇该司机</b><br>-¥500,失去最强司机,全员忠诚 -10,口碑 +10<div class="next">→ 解锁 <code>media_pr</code></div></div></td>
+        <td><div class="opt-b"><b>观望,等舆情自然平息</b><br>钱保住,全员忠诚 +5(讲义气),口碑 -5<div class="next">→ 解锁 <code>media_storm</code></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">media_pr</span></td>
+        <td>mission ≥ 8 + chainChoices.media == 'apologize'</td>
+        <td class="scene">本地都市报记者主动联系:"想做个专访,讲讲你怎么做到不爆雷"。</td>
+        <td><div class="opt-a"><b>接受专访</b><br>-¥3k 公关费,口碑 +25,<b>获得 mediaFriend 标签</b><div class="next">→ 解锁 <code>media_crisis_resolve</code></div></div></td>
+        <td><div class="opt-b"><b>婉拒,继续低调</b><br>无变化</div></td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">media_storm</span></td>
+        <td>mission ≥ 8 + chainChoices.media == 'wait'</td>
+        <td class="scene">帖子被搬运到知乎/微博,标题"网约车司机骂街:某车队成黑车窝点",十几家自媒体跟进。</td>
+        <td><div class="opt-a"><b>请专业公关公司 -¥15k</b><br>平息舆情,口碑 +5(为时已晚)</div></td>
+        <td><div class="opt-b"><b>硬扛</b><br>每天 -¥500 持续 30 天,口碑 -10</div></td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">media_crisis_resolve</span></td>
+        <td>mission ≥ 12 + state.mediaFriend == true</td>
+        <td class="scene">监管风声紧,媒体圈在挖网约车黑料。专访那位记者主动来电:"要不要我帮你写一篇正面稿?"</td>
+        <td><div class="opt-a"><b>接受 -¥2k 请客</b><br>未来 90 天监管事件触发时获得"行业典范"标签,口碑扣减 -50%</div></td>
+        <td><div class="opt-b"><b>自己处理</b><br>保持中立</div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="chain-block">
+  <div class="chain-title">C2. union · 工会运动链(集体劳动关系轴)</div>
+  <div class="chain-axis">机制:state 新增 <code>unionPower: 0~3</code> · 影响所有"全员忠诚"事件倍率(双刃剑)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:140px">段 ID</th>
+        <th style="width:200px">触发条件</th>
+        <th style="width:240px">场景</th>
+        <th>选项 A</th>
+        <th>选项 B(C)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="stage-id">union_seed</span></td>
+        <td>unlockMission ≥ 7</td>
+        <td class="scene">茶水间几个老司机围着小李的手机看视频:"某城市网约车司机集体维权,月薪涨 30%"。看完默不作声散开。</td>
+        <td><div class="opt-a"><b>主动召开座谈,鼓励组建司机协会</b><br>-¥3k 场地茶歇,月度运营 +¥800,<b>unionPower +1</b>,全员忠诚 +30<div class="next">→ 解锁 <code>union_bargain</code></div></div></td>
+        <td><div class="opt-b"><b>警告煽动者,强势压制</b><br>钱保住,全员忠诚 -25<div class="next">→ 解锁 <code>union_strike</code></div></div></td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">union_bargain</span></td>
+        <td>mission ≥ 11 + chainChoices.union == 'support'</td>
+        <td class="scene">司机选出 3 个代表来谈:"基础月薪上调 ¥600"。语气客气,但你知道这就是底线。</td>
+        <td colspan="2">
+          <div class="opt-a"><b>A:全部接受</b> — 全员月薪 +¥600,<b>unionPower +1</b>,全员忠诚 +25</div>
+          <div class="opt-a" style="border-left-color: var(--accent); margin-top: 4px;"><b>B:折中(薪 +¥300 + 餐补 +¥200)</b> — unionPower 持平,全员忠诚 +10</div>
+          <div class="opt-b" style="margin-top: 4px;"><b>C:拒绝,关系破裂</b> — <b>unionPower -2</b>,全员忠诚 -30</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">union_strike</span></td>
+        <td>mission ≥ 11 + chainChoices.union == 'oppose'</td>
+        <td class="scene">车队群里 8 个司机集体宣布:今天起停止接单,要求重新谈判。</td>
+        <td><div class="opt-a"><b>紧急加薪 + 道歉</b><br>-¥5k 一次性,全员月薪 +¥800,<b>unionPower +1</b>(被迫高位),罢工平息</div></td>
+        <td><div class="opt-b"><b>解雇煽动者杀鸡儆猴</b><br>失去 1-2 名司机,口碑 -15,<b>unionPower -1</b>,罢工平息但全员忠诚 -25</div></td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">union_consolidate</span></td>
+        <td>mission ≥ 14 + state.unionPower ≥ 2</td>
+        <td class="scene">代表们提议:"借鉴别家成功经验,搞个内部小金库,司机互助?"</td>
+        <td><div class="opt-a"><b>拨款支持 -¥10k 一次性,月度 -¥500</b><br><b>unionPower +1(最高)</b>,未来所有"全员忠诚 +X"事件效果 ×1.5</div></td>
+        <td><div class="opt-b"><b>婉拒,保持现状</b><br>不变</div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="chain-block">
+  <div class="chain-title">C3. franchise · 加盟商链(横向扩张轴)</div>
+  <div class="chain-axis">机制:state 新增 <code>franchiseCount: int</code> · 月度被动收入 + 持续维护成本(被动收益 vs 持续注意力消耗)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:140px">段 ID</th>
+        <th style="width:200px">触发条件</th>
+        <th style="width:240px">场景</th>
+        <th>选项 A</th>
+        <th>选项 B(C)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="stage-id">franchise_seed</span></td>
+        <td>unlockMission ≥ 9</td>
+        <td class="scene">河北保定一位小车队主王老板:"我有 5 辆车,想加盟你的品牌。我们出车出人,你出系统和品牌,月给你抽 8% 加盟费。"</td>
+        <td><div class="opt-a"><b>接受合作</b><br>-¥5k 设备培训,月度运营 +¥1k,<b>每月被动 +¥3k</b>,franchiseCount = 1<div class="next">→ 解锁 <code>franchise_dispute</code></div></div></td>
+        <td><div class="opt-b"><b>婉拒,集中资源</b><br>无变化</div></td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">franchise_dispute</span></td>
+        <td>mission ≥ 12 + chainChoices.franchise == 'accept'</td>
+        <td class="scene">王老板手下司机被乘客投诉收黑钱,投诉单挂着你家品牌。媒体追问"XXX 究竟管不管加盟商?"</td>
+        <td colspan="2">
+          <div class="opt-a"><b>A:高调处理 -¥8k</b> — 解雇司机+退款,franchiseCount 保持,声誉 +10</div>
+          <div class="opt-b" style="margin-top: 4px;"><b>B:冷处理,让加盟商自己摆平</b> — 口碑 -15,franchiseCount 保持</div>
+          <div class="opt-b" style="border-left-color: var(--warn); margin-top: 4px;"><b>C:终止加盟合同 -¥5k 违约金</b> — franchiseCount = 0,加盟收入终止</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">franchise_expand</span></td>
+        <td>mission ≥ 14 + chainChoices.franchise_dispute ∈ {'high_profile', 'hands_off'}</td>
+        <td class="scene">3 家其他城市小车队主想加盟。</td>
+        <td colspan="2">
+          <div class="opt-a"><b>A:全部接受 -¥15k</b> — 月度运营 +¥3k,franchiseCount = 4,月被动 +¥10k</div>
+          <div class="opt-a" style="border-left-color: var(--accent); margin-top: 4px;"><b>B:精挑细选 -¥6k</b> — 月度运营 +¥1k,franchiseCount = 2,月被动 +¥6k</div>
+          <div class="opt-b" style="margin-top: 4px;"><b>C:暂停扩张</b> — 维持现状</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">franchise_brand_check</span></td>
+        <td>mission ≥ 15 + state.franchiseCount ≥ 2</td>
+        <td class="scene">新规要求"品牌方对所有挂牌车辆负完全责任",加盟商出问题你担连带。</td>
+        <td><div class="opt-a"><b>全员合规升级 -¥30k</b><br>月度运营 +¥3k,franchise 模式继续</div></td>
+        <td><div class="opt-b"><b>剥离加盟业务 -¥10k 剥离成本</b><br>franchiseCount = 0,监管风险归 0</div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="chain-block">
+  <div class="chain-title">C4. vip_client · 大客户依赖链(B 端依赖轴)</div>
+  <div class="chain-axis">机制:state 新增 <code>vipClientId / vipLoyalty</code> · 大客户在则月稳定 +¥X,流失则断崖式下跌</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:140px">段 ID</th>
+        <th style="width:200px">触发条件</th>
+        <th style="width:240px">场景</th>
+        <th>选项 A</th>
+        <th>选项 B(C)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="stage-id">vip_seed</span></td>
+        <td>unlockMission ≥ 8</td>
+        <td class="scene">本地律所合伙人陈律师每天打两趟你家车,主动提:"月付 ¥5k 包月,你给我固定一个司机一辆车?"</td>
+        <td><div class="opt-a"><b>接受协议 + VIP 服务</b><br>占用 1 司机 + 1 车专属,<b>月被动 +¥5k</b>,vipClientId = 'mr_chen'<div class="next">→ 解锁 <code>vip_test</code></div></div></td>
+        <td><div class="opt-b"><b>婉拒,保持公平派单</b><br>无变化</div></td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">vip_test</span></td>
+        <td>mission ≥ 12 + chainChoices.vip_client == 'accept'</td>
+        <td class="scene">陈律师朋友圈:"老板提了新车,偶尔被 Camry 接也是没办法。"助理问要不要给他专门买奔驰 E。</td>
+        <td colspan="2">
+          <div class="opt-a"><b>A:买奔驰 E 专门给他</b> — 奔驰 E 一辆 + 高级司机,vipLoyalty +30,月付涨到 ¥8k</div>
+          <div class="opt-a" style="border-left-color: var(--accent); margin-top: 4px;"><b>B:服务培训软处理 -¥1k</b> — vipLoyalty +10</div>
+          <div class="opt-b" style="margin-top: 4px;"><b>C:坚持原车型</b> — vipLoyalty -20</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">vip_loyalty</span></td>
+        <td>mission ≥ 14 + chainChoices.vip_test ∈ {'upgrade', 'soft_serve'}</td>
+        <td class="scene">陈律师在律所午餐推荐你的车队,3 位合伙人想签同款长期协议。</td>
+        <td><div class="opt-a"><b>扩展 VIP 服务(接 3 位)</b><br>占用 3 司机 + 3 车,<b>月被动 +¥18k</b>,vip 体系建立</div></td>
+        <td><div class="opt-b"><b>婉拒,保持原协议</b><br>陈律师可能感到失望</div></td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">vip_loss</span></td>
+        <td>mission ≥ 14 + chainChoices.vip_test == 'stay_firm'</td>
+        <td class="scene">陈律师没打招呼直接终止协议,朋友圈发"换了别家平台"。月被动 ¥5k 收入消失。</td>
+        <td><div class="opt-a"><b>分析失败原因 -¥3k 流程升级</b><br>未来 VIP 协议成功率 +20%</div></td>
+        <td><div class="opt-b"><b>算了,回归散单</b><br>保持灵活性</div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="chain-block">
+  <div class="chain-title">C5. mass_quit · 集体跳槽链(凝聚力危机轴)</div>
+  <div class="chain-axis">机制:state 新增 <code>teamCohesion: int</code> · 极端时刻 3 选项领导力倾向(讨好 / 强硬 / 整合)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:140px">段 ID</th>
+        <th style="width:200px">触发条件</th>
+        <th style="width:240px">场景</th>
+        <th>选项 A</th>
+        <th>选项 B</th>
+        <th>选项 C</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="stage-id">mass_quit_seed</span></td>
+        <td>unlockMission ≥ 10</td>
+        <td class="scene">早上你打开车队群,看到 3 条退群提示——老张、小李、老周一夜被滴答挖走(加薪 +¥3k + 签约金 ¥10k)。剩下的司机看着群,没人说话。</td>
+        <td>
+          <div class="opt-a"><b>紧急全员加薪</b><br>-¥5k,全员月薪 +¥600,<br>teamCohesion +30<div class="next">→ <code>mass_quit_followup</code> 'concede'</div></div>
+        </td>
+        <td>
+          <div class="opt-b"><b>解雇引荐者杀鸡儆猴</b><br>再失去 1 名司机,口碑 -10,<br>teamCohesion -20<div class="next">→ <code>mass_quit_followup</code> 'crack'</div></div>
+        </td>
+        <td>
+          <div class="opt-a" style="border-left-color: var(--accent);"><b>开诚布公团建</b><br>-¥3k 团建,暂停 1 天运营,<br>teamCohesion +20<div class="next">→ <code>mass_quit_followup</code> 'team'</div></div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="stage-id">mass_quit_followup</span></td>
+        <td>mission ≥ 12 + chainChoices.mass_quit ∈ all</td>
+        <td class="scene">老张找到你说:"滴答那边累得要死,完全不像他们承诺的。我能回来吗?"<br>(若选 'team' 选项,这种"老员工请求回归"场景以更高概率触发,呼应"开诚布公"的剧情奖励)</td>
+        <td>
+          <div class="opt-a"><b>欢迎回归</b><br>老张回归,全员忠诚 +20</div>
+        </td>
+        <td>
+          <div class="opt-a" style="border-left-color: var(--accent);"><b>试用期 / 降薪 1 月</b><br>老张回归但忠诚 -15,全员忠诚 +10(讲规矩)</div>
+        </td>
+        <td>
+          <div class="opt-b"><b>拒绝</b><br>全员忠诚 -10(兔死狐悲)</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="background: var(--sub); padding: 10px 14px; margin-top: 12px; border-radius: var(--ui-radius); font-size: 12px; color: var(--ink-2);">
+    <b>设计意图:</b> mass_quit 不是"分多段慢节奏 chain",而是<b>极端时刻一次性高烈度选择</b>。teamCohesion 数值在后续所有"全员忠诚"事件里影响倍率(类似 unionPower 但只有一次性获得机会)。考验玩家的领导力倾向 — 选 A 讨好型、选 B 强硬型、选 C 整合型,各有不同后续 buff。
+  </div>
+</div>
+
 <h2>调整提示 <span class="h2-sub">告诉我你想改的具体内容</span></h2>
 
 <div class="note-block">
