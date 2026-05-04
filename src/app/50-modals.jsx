@@ -356,9 +356,11 @@ function PolicyNoticeModal({ event, state, onResolve }) {
         <EventResourceSnapshot state={state} />
         {previews.length > 0 && (
           <div className="policy-effect-list" style={{padding: '12px 16px 4px'}}>
-            <div style={{fontSize: 12, color: 'var(--ink-3, #888)', marginBottom: 8, fontWeight: 500}}>
-              {isBan ? '处罚明细' : '影响明细'}
-            </div>
+            {(event.policyStage === 'verdict_ban' || event.policyStage === 'verdict_fine') && (
+              <div style={{fontSize: 12, color: 'var(--ink-3, #888)', marginBottom: 8, fontWeight: 500}}>
+                处罚清单
+              </div>
+            )}
             <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
               {previews.map((eff, i) => (
                 <div key={i} style={{
@@ -412,12 +414,12 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
 
   function renderEffects(optId) {
     if (optId === 'A') {
+      // 注意:不展示"监管检查 50% 通过 / 50% 罚 X"——这会剧透 Day 90 的剧情
       return (
         <div className="event-effect-preview">
           <span className="negative">立即扣 ¥{startupFee.toLocaleString()}</span>
           <span className="negative">月支出 ¥{complianceFirst.toLocaleString()} → ¥{complianceFloor.toLocaleString()} 衰减永久</span>
           <span className="negative">30 天内招募/购车 5 天冷却</span>
-          <span>监管检查 50% 通过 / 50% 罚 ¥{fineAmount.toLocaleString()}</span>
         </div>
       );
     }
