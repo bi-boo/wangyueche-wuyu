@@ -561,7 +561,11 @@
       // V14.9: 删除 triggeredEvents(V6 兼容字段)、lowLoyaltyDays/lowRepDays(累而不读的死字段)
       // V14.67: 删除 yesterdayLost/Earned/Completed、kpiHistory、zoneHeat(累而不读)
       eventCooldowns: {},   // V7: 事件冷却 — { [eventId]: dayUnlocked }(仅本局有效,RESET 时重置;seenStories 才跨周目)
-      eventChainCount: {},  // V7: 链式事件触发计数 — { [chainId]: count }(仅本局有效)
+      eventChainCount: {},  // V7: 链式事件触发计数(已弃用,V15.x 改用 chainChoices)
+      // V15.x: 真分支链式
+      chainChoices: {},     // { [chain]: choiceKey } — 玩家在 chain 事件里选了什么,后续段据此过滤
+      keyDriverIds: [],     // 钥匙司机 ID 列表(rival_pricing +¥3k/+¥4k 标记)
+      platformChoseSelfop: false,  // 是否已选自营(platform_pressure 永久完结标记)
       floatGains: [],
       boostUntilDay: 0,
       boostMul: 1,
@@ -639,6 +643,109 @@
       type: 'RUN_START',
       label: `车队成立,初始资金 ¥${(GAME.STARTING_FUNDS || 0).toLocaleString()}`,
       level: 'event',
+    });
+  }
+
+  function maxNumericId(items, pickId = (item) => item && item.id) {
+    return (items || []).reduce((max, item) => {
+      const id = Number(pickId(item));
+      return Number.isFinite(id) ? Math.max(max, id) : max;
+    }, 0);
+  }
+
+  function rehydrateEventOptions(savedOptions, sourceOptions) {
+    if (!Array.isArray(savedOptions)) return sourceOptions || [];
+    return savedOptions.map((savedOpt, idx) => {
+      const src = (sourceOptions || []).find((opt) => opt.label === savedOpt?.label) || (sourceOptions || [])[idx] || {};
+      return { ...savedOpt, apply: src.apply || (() => ({})) };
+    });
+  }
+
+  function rehydrateActiveEvent(savedEvent) {
+    if (!savedEvent) return null;
+    if (savedEvent.id === 'investor_pressure') {
+      return {
+        ...INVESTOR_PRESSURE,
+        ...savedEvent,
+        options: rehydrateEventOptions(savedEvent.options, INVESTOR_PRESSURE.options),
+      };
+    }
+    if (savedEvent.isPolicyEvent) {
+      return {
+        ...savedEvent,
+        options: rehydrateEventOptions(savedEvent.options, [{ label: savedEvent.options?.[0]?.label || '继续', apply: () => ({}) }]),
+      };
+    }
+    const def = EVENTS.find((event) => event.id === savedEvent.id);
+    if (!def) return null;
+    let sourceOptions = def.options;
+    if (def.chainStages && def.chainStages.length > 0) {
+      const stage = def.chainStages.find((item) =>
+        (item.title && item.title === savedEvent.title) || (item.desc && item.desc === savedEvent.desc)
+      );
+      if (stage?.options) sourceOptions = stage.options;
+    }
+    return {
+      ...def,
+      ...savedEvent,
+      options: rehydrateEventOptions(savedEvent.options, sourceOptions),
+    };
+  }
+
+  function rehydratePolicyDecision(savedDecision) {
+    if (!savedDecision) return null;
+    const eventDef = getPolicyDef(savedDecision.eventId);
+    const stageData = eventDef?.stages?.[savedDecision.stage];
+    return {
+      ...savedDecision,
+      options: savedDecision.options || stageData?.options || [],
+      params: savedDecision.params || eventDef?.params || {},
+    };
+  }
+
+  function advanceRuntimeCounters(state) {
+    driverIdCounter = Math.max(100, maxNumericId(state.drivers), maxNumericId(state.gachaCards));
+    vehicleIdCounter = Math.max(100, maxNumericId(state.vehicles));
+    orderOfferIdCounter = Math.max(0, maxNumericId(state.drivers, (d) => d?.currentOrder?.id), maxNumericId(state.floatGains));
+    logIdCounter = Math.max(0, maxNumericId(state.log), maxNumericId(state.notifications), maxNumericId(state.floatGains));
+    actionHistoryIdCounter = Math.max(0, maxNumericId(state.actionHistory));
+  }
+
+  function hydrateAutosaveState(savedState) {
+    if (!savedState || typeof savedState !== 'object') return null;
+    const base = makeInitialState();
+    const now = Date.now();
+    const hydrated = {
+      ...base,
+      ...savedState,
+      paused: true,
+      showTutorial: false,
+      gameOver: null,
+      activeEvent: rehydrateActiveEvent(savedState.activeEvent),
+      activePolicyDecision: rehydratePolicyDecision(savedState.activePolicyDecision),
+      realTime: {
+        ...(base.realTime || {}),
+        ...(savedState.realTime || {}),
+        lastUpdatedAt: now,
+        updatedBy: 'AUTOSAVE_LOAD',
+      },
+      floatGains: [],
+      notifications: savedState.notifications || [],
+      newMissionComplete: null,
+      newEndingUnlocked: null,
+    };
+    advanceRuntimeCounters(hydrated);
+    return pushActionHistory(hydrated, {
+      category: 'system',
+      type: 'AUTOSAVE_LOAD',
+      label: '已载入本地自动存档',
+      before: base,
+      details: {
+        day: hydrated.day,
+        hour: hydrated.hour,
+        funds: hydrated.funds,
+        reputation: hydrated.reputation,
+      },
     });
   }
 
@@ -1272,52 +1379,54 @@
       return s;
     }
 
-    // V10.10: 事件降频。前 10 天只抽轻事件,链式复杂事件推迟到中后期。
-    // 使用 eventCooldowns: { [eventId]: dayUnlocked },事件触发后写入解锁日
+    // V15.x: 事件触发过滤 — unlockMission 阶段化 + chainChoices 真分支 + keyDriver 状态
+    // 替代原 V10.10 chainStages 顺序触发逻辑
     const eventInterval = GAME.EVENT_INTERVAL_DAYS || 7;
     if (s.day > 1 && s.day % eventInterval === 0 && !s.activeEvent) {
       const cooldowns = s.eventCooldowns || {};
+      const completed = (s.completedMissionIds || []).length;
+      const chainChoices = s.chainChoices || {};
+      const keyDriverAlive = (s.keyDriverIds || []).length > 0
+        && (s.keyDriverIds || []).some((id) => (s.drivers || []).some((d) => d.id === id));
+
       let available = EVENTS.filter((e) => {
+        // 1. cooldown 检查
         const unlockDay = cooldowns[e.id];
-        return unlockDay === undefined || s.day >= unlockDay;
+        if (unlockDay !== undefined && s.day < unlockDay) return false;
+        // 2. unlockMission 阶段化(完成第 N 个任务后才解锁)
+        if ((e.unlockMission || 0) > completed) return false;
+        // 3. requireChainChoice — 链式后续段必须满足 chainChoices 前置条件
+        if (e.requireChainChoice) {
+          for (const key of Object.keys(e.requireChainChoice)) {
+            const expected = e.requireChainChoice[key];
+            const actual = chainChoices[key];
+            if (Array.isArray(expected)) {
+              if (!expected.includes(actual)) return false;
+            } else if (actual !== expected) return false;
+          }
+        }
+        // 4. requireKeyDriverAlive — 钥匙司机在编/离队的二选一前置
+        if (e.requireKeyDriverAlive === true && !keyDriverAlive) return false;
+        if (e.requireKeyDriverAlive === false && keyDriverAlive) return false;
+        // 5. platform_pressure 已选自营则永久不再触发
+        if (e.id === 'platform_pressure' && s.platformChoseSelfop) return false;
+        return true;
       });
+
+      // 早期事件优先(开局前 10 天只抽 EARLY_EVENT_IDS 列表内的轻事件)
       if (s.day <= (GAME.EARLY_EVENT_UNTIL_DAY || 10)) {
         const earlyIds = GAME.EARLY_EVENT_IDS || [];
         const early = available.filter((e) => earlyIds.includes(e.id));
         if (early.length > 0) available = early;
-      } else if (s.day < (GAME.CHAIN_EVENT_START_DAY || 21)) {
-        const simple = available.filter((e) => !e.chain);
-        if (simple.length > 0) available = simple;
       }
+
       if (available.length > 0) {
         const ev = pick(available);
         const cooldownDays = ev.cooldown || randInt(25, 35);
         s.eventCooldowns = { ...cooldowns, [ev.id]: s.day + cooldownDays };
-        // V7: 链式分支 — 如果事件有 chain + chainStages,按计数选 stage
-        let activeEv = ev;
-        if (ev.chain && ev.chainStages && ev.chainStages.length > 0) {
-          const chainCount = (s.eventChainCount && s.eventChainCount[ev.chain]) || 0;
-          const totalStages = ev.chainStages.length + 1;  // stage 0 = ev 本身
-          const cycleStep = chainCount % totalStages;
-          if (cycleStep > 0) {
-            const stage = ev.chainStages[cycleStep - 1];
-            activeEv = {
-              ...ev,
-              title: stage.title || ev.title,
-              desc: stage.desc || ev.desc,
-              options: stage.options || ev.options,
-            };
-          }
-        }
-        if (GAME.FOCUSED_EVENT_CHOICES !== false
-          && s.day < (GAME.CHAIN_EVENT_START_DAY || 21)
-          && activeEv.options
-          && activeEv.options.length > 2) {
-          activeEv = { ...activeEv, options: activeEv.options.slice(0, 2) };
-        }
-        s.activeEvent = activeEv;
+        s.activeEvent = ev;
         s.paused = true;
-        s = pushLog(s, `事件出现: ${activeEv.title}`, 'event');
+        s = pushLog(s, `事件出现: ${ev.title}`, 'event');
         return s;
       }
     }
@@ -2023,7 +2132,10 @@
     const opt = ev.options[optionIdx];
     let eff = {};
     try {
-      eff = scaleEventEffect(opt.apply(state) || {}, state);
+      const raw = opt.apply(state) || {};
+      // V15.x: 政策事件 / 标了 skipScale 的事件不走规模缩放(避免 platform_pressure
+      // 的 -¥180k 自营成本被放大成 -¥1M+,破坏"固定门槛长线攒钱"设计)
+      eff = (ev.skipScale || raw.skipScale) ? raw : scaleEventEffect(raw, state);
     } catch (err) {
       let failed = { ...state, activeEvent: null, paused: false };
       failed = pushLog(failed, `事件「${ev.title}」选项异常: ${opt?.label || '未知选项'}`, 'warn');
@@ -2036,11 +2148,20 @@
     if (eff.funds !== undefined) s.funds += eff.funds;
     if (eff.reputation !== undefined) s.reputation = Math.max(0, s.reputation + eff.reputation);
     if (eff.commissionRate !== undefined) s.commissionRate = eff.commissionRate;
+    // V15.x: 钥匙司机忠诚衰减永久减半 — 仅在负向 delta 时生效
+    function applyAllLoyaltyWithKeyHalf(drivers, delta, opts) {
+      const keySet = new Set(s.keyDriverIds || []);
+      return (drivers || []).map((d) => {
+        const isKey = keySet.has(d.id);
+        const finalDelta = (isKey && delta < 0) ? Math.ceil(delta / 2) : delta;  // 减半向 0 取整
+        return applyDriverLoyaltyDelta(d, finalDelta, opts || {});
+      });
+    }
     if (eff.allLoyalty !== undefined) {
-      s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, eff.allLoyalty));
+      s.drivers = applyAllLoyaltyWithKeyHalf(s.drivers, eff.allLoyalty);
     }
     if (eff.trustLoyalty !== undefined) {
-      s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, eff.trustLoyalty, { trustBreakthrough: true }));
+      s.drivers = applyAllLoyaltyWithKeyHalf(s.drivers, eff.trustLoyalty, { trustBreakthrough: true });
     }
     if (eff.orderBoost && eff.boostDuration) {
       s.boostUntilDay = s.day + eff.boostDuration;
@@ -2071,25 +2192,59 @@
         s = pushLog(s, eventDetail, 'info');
       }
     }
+    // V15.x: 钥匙司机挖走免疫 — keepBest/loseBest 优先排除钥匙司机
+    // 只有当所有非钥匙司机都没了的极端情况才会动钥匙司机
+    function pickBestExcludingKey(drivers, keyIds) {
+      const keySet = new Set(keyIds || []);
+      const candidates = (drivers || []).filter((d) => !keySet.has(d.id));
+      const pool = candidates.length > 0 ? candidates : (drivers || []);
+      return [...pool].sort((a, b) => sumStats(b.stats) - sumStats(a.stats))[0];
+    }
     if (eff.salaryRaise && eff.keepBest) {
-      const best = [...s.drivers].sort((a, b) => sumStats(b.stats) - sumStats(a.stats))[0];
+      const best = pickBestExcludingKey(s.drivers, s.keyDriverIds);
       if (best) {
         const nextSalary = best.salary + eff.salaryRaise;
+        const isMarkKey = !!eff.markKeyDriver;
         s.drivers = s.drivers.map((d) =>
           d.id === best.id
             ? { ...applyDriverLoyaltyDelta(d, 30), salary: nextSalary }
             : d
         );
+        if (isMarkKey && !(s.keyDriverIds || []).includes(best.id)) {
+          s.keyDriverIds = [...(s.keyDriverIds || []), best.id];
+          s = pushLog(s, `${best.name} 成为钥匙司机 — 后续忠诚衰减永久减半,且不会被竞品挖走`, 'success');
+        }
         s = pushLog(s, `加薪挽留: ${best.name} 月薪 ¥${best.salary} → ¥${nextSalary},忠诚 +30`, 'success');
         s = pushNotif(s, `${best.name} 留队,月薪 +¥${eff.salaryRaise}`, 'success');
       }
     }
     if (eff.loseBest) {
-      const best = [...s.drivers].sort((a, b) => sumStats(b.stats) - sumStats(a.stats))[0];
+      const best = pickBestExcludingKey(s.drivers, s.keyDriverIds);
       if (best && s.drivers.length > 1) {
         s.drivers = s.drivers.filter((d) => d.id !== best.id);
         s = pushLog(s, `${best.name} 被竞品挖走了!`, 'warn');
       }
+    }
+    // V15.x: rival_friends_join_success 钥匙事件奖励 — 给玩家送 N 个司机 + N 辆车
+    if (eff.addDrivers || eff.addVehicles) {
+      const count = eff.addDrivers || eff.addVehicles || 0;
+      const vehicleType = eff.vehicleType || 'camry';
+      const vTpl = VEHICLES.find((v) => v.id === vehicleType);
+      for (let i = 0; i < count; i++) {
+        const newVehicle = vTpl ? genVehicle(vTpl) : null;
+        if (newVehicle) s.vehicles = [...s.vehicles, newVehicle];
+        const newDriver = genDriver({ background: BACKGROUNDS[0] });
+        if (newVehicle) newDriver.vehicleId = newVehicle.id;
+        s.drivers = [...s.drivers, newDriver];
+      }
+      const vtName = vTpl ? vTpl.name : vehicleType;
+      s = pushLog(s, `朋友车队加入:${count} 名专车司机 + ${count} 辆${vtName}入队`, 'success');
+      s = pushNotif(s, `+${count} 司机 / +${count} ${vtName}`, 'success');
+    }
+    // V15.x: platform_pressure 选自营 — 永久标记完结
+    if (eff.platformDone) {
+      s.platformChoseSelfop = true;
+      s = pushLog(s, '自营小程序上线,平台抽成压力事件永久解除', 'success');
     }
     // V14.67: 删除 promoteBest / fireMostExpensive / sellMostExpensive 三个 effect 处理分支。
     //         投资人压力的裁员/卖车走 resolveInvestorPressure,events 数据已无任何选项使用这些字段。
@@ -2101,6 +2256,11 @@
     }
     s = pushLog(s, `事件「${ev.title}」: ${opt.label}`, 'event');
     // V7: 链式事件触发计数累加 — 让下次触发同一 chain 时进入下一 stage
+    // V15.x: 真分支链式 — 把玩家的 choiceKey 写入 chainChoices,后续段过滤用
+    if (ev.chain && opt.choiceKey !== undefined) {
+      s.chainChoices = { ...(s.chainChoices || {}), [ev.chain]: opt.choiceKey };
+    }
+    // 兼容字段:旧 eventChainCount 仍然 +1(给 V7 时期数据用,V15.x 不依赖)
     if (ev.chain) {
       const prev = (s.eventChainCount && s.eventChainCount[ev.chain]) || 0;
       s.eventChainCount = { ...(s.eventChainCount || {}), [ev.chain]: prev + 1 };
@@ -2309,6 +2469,7 @@
       case 'ASSIGN_VEHICLE': return assignVehicle(state, action.driverId, action.vehicleId);
       case 'FIRE_DRIVER': return fireDriver(state, action.driverId);
       case 'SELL_VEHICLE': return sellVehicle(state, action.vehicleId);
+      case 'LOAD_AUTOSAVE': return hydrateAutosaveState(action.state) || state;
       case 'RESET': return makeInitialState();
       case 'CLEAR_FLOAT_GAIN': return { ...state, floatGains: state.floatGains.filter((g) => g.id !== action.id) };
       case 'CLEAR_NOTIF': return { ...state, notifications: state.notifications.filter((n) => n.id !== action.id) };
@@ -2423,6 +2584,6 @@
     computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,
     getTrainingCost,
     buildHourlySupply,
-    gameReducer, makeInitialState,
+    gameReducer, makeInitialState, hydrateAutosaveState,
   };
 })();

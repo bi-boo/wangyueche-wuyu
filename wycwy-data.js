@@ -12,7 +12,8 @@
     EVENT_INTERVAL_DAYS: 7,
     EARLY_EVENT_UNTIL_DAY: 10,
     CHAIN_EVENT_START_DAY: 21,
-    EARLY_EVENT_IDS: ['oil_price', 'ride_cancel_chain', 'celeb'],
+    // V15.x:开局前 10 天只抽 unlockMission=0 的事件白名单
+    EARLY_EVENT_IDS: ['oil_price', 'back_pain', 'rain_base', 'newyear_base', 'borrow_seed'],
     FOCUSED_EVENT_CHOICES: true,
     // V14.67: FATIGUE_REST_THRESHOLD / FATIGUE_RECOVERY_PER_DAY 已删,疲劳机制整套移除。
     // 死亡阈值
@@ -832,7 +833,8 @@
     {
       id: 'platform_pressure', title: '平台抽成又涨了', tag: '行业', emoji: 'biz', chain: 'platform', cooldown: 35,
       unlockMission: 8,
-      // customGuard 在引擎层判断:已选自营则不再触发
+      skipScale: true,  // 自营 ¥180k 是固定门槛,不被规模缩放放大
+      // 引擎层判断 platformChoseSelfop:已选自营则不再触发
       desc: '滴答出行又涨抽成了。法务说要么忍,要么自建小程序甩开它。但是自建成本不低。',
       options: [
         { label: '硬扛新抽成', detail: '抽成 +5%(封顶 40%)', choiceKey: 'fight', apply: (s) => ({ commissionRate: Math.min(0.40, ((s && s.commissionRate) || 0.20) + 0.05) }) },
