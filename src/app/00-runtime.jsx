@@ -8,12 +8,27 @@ const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let __audioCtx = null;
 let __muted = localStorage.getItem('wycwy-muted') === '1';
 let __audioUnlocked = false;
+const SFX_FILES = { coin: 'assets/audio/coin-pickup.wav' };
+const __sfxAudio = {};
+let __lastCoinSfxAt = 0;
 function getAudio() { if (!AudioCtx) return null; if (!__audioCtx) __audioCtx = new AudioCtx(); return __audioCtx; }
+function getSfxAudio(name) {
+  if (!SFX_FILES[name]) return null;
+  if (!__sfxAudio[name]) {
+    const audio = new Audio(SFX_FILES[name]);
+    audio.preload = 'auto';
+    __sfxAudio[name] = audio;
+  }
+  return __sfxAudio[name];
+}
 function unlockAudio() {
   if (__muted) return;
   const ctx = getAudio();
   if (!ctx) return;
-  const markReady = () => { __audioUnlocked = true; };
+  const markReady = () => {
+    __audioUnlocked = true;
+    Object.keys(SFX_FILES).forEach((name) => getSfxAudio(name)?.load());
+  };
   if (ctx.state === 'suspended') {
     ctx.resume().then(markReady).catch(() => {});
   } else {
@@ -40,12 +55,37 @@ function beep({ freq = 440, duration = 0.08, type = 'square', volume = 0.04 }) {
     osc.stop(now + duration);
   } catch (e) {}
 }
+function playSfxFile(name, { volume = 0.42, cooldown = 0 } = {}) {
+  if (__muted || !__audioUnlocked) return false;
+  try {
+    const now = performance.now();
+    if (cooldown && name === 'coin' && now - __lastCoinSfxAt < cooldown) return true;
+    const base = getSfxAudio(name);
+    if (!base) return false;
+    const audio = base.cloneNode(true);
+    audio.volume = volume;
+    audio.currentTime = 0;
+    const playing = audio.play();
+    if (playing?.catch) playing.catch(() => {});
+    if (name === 'coin') __lastCoinSfxAt = now;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 const SFX = {
   click: () => beep({ freq: 660, duration: 0.04, volume: 0.03 }),
   takeOrder: () => beep({ freq: 880, duration: 0.06, volume: 0.04 }),
-  complete: () => {
-    beep({ freq: 880, duration: 0.05 });
-    setTimeout(() => beep({ freq: 1320, duration: 0.08 }), 50);
+  complete: ({ speed = 1 } = {}) => {
+    const fast = speed >= 8;
+    const volume = fast ? 0.18 : speed >= 4 ? 0.26 : 0.34;
+    const cooldown = fast ? 560 : speed >= 4 ? 440 : 260;
+    if (playSfxFile('coin', { volume, cooldown })) return;
+    if (performance.now() - __lastCoinSfxAt < cooldown) return;
+    __lastCoinSfxAt = performance.now();
+    beep({ freq: 1047, duration: 0.035, type: 'triangle', volume: fast ? 0.018 : 0.032 });
+    setTimeout(() => beep({ freq: 1568, duration: 0.035, type: 'triangle', volume: fast ? 0.016 : 0.028 }), 36);
+    setTimeout(() => beep({ freq: 2093, duration: 0.045, type: 'square', volume: fast ? 0.012 : 0.02 }), 76);
   },
   train: () => {
     beep({ freq: 660, duration: 0.05 });
@@ -70,6 +110,16 @@ function setMuted(v) {
   if (!v) unlockAudio();
 }
 function isMuted() { return __muted; }
+
+function getDriverRoleLabel(driver) {
+  return driver?.bgName || '';
+}
+function getDriverTierLabel(driver) {
+  return RARITY_META[driver?.rarity]?.name || '';
+}
+function getDriverMetaLine(driver, extra = '') {
+  return [getDriverTierLabel(driver), getDriverRoleLabel(driver), extra].filter(Boolean).join(' · ');
+}
 
 /* ============== 数字滚动 hook ============== */
 function useCountUp(target, duration = 400) {
@@ -96,4 +146,3 @@ const E = window.WYCWY_ENGINE;
 const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, MISSIONS, ENDINGS, RECRUIT_TICKETS, RARITY_META, RARITY_STAT_CAPS } = D;
 
 /* ============== 占位元素(后续可替换为图片素材) ============== */
-

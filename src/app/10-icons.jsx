@@ -31,14 +31,26 @@ function VehicleIcon({ template, size = 60 }) {
   );
 }
 
-function OrderIcon({ orderId, color, size = 14 }) {
-  return <span className="ph-order-dot" data-asset={`order-${orderId}`}
-    style={{ width: size, height: size, background: color || '#FF6B35' }} />;
-}
+const ORDER_ICON_META = {
+  short: { label: '惠', cls: 'short' },
+  business: { label: '快', cls: 'business' },
+  airport: { label: '专', cls: 'airport' },
+  luxury: { label: '豪', cls: 'luxury' },
+};
 
-function StatIcon({ stat, color, size = 12 }) {
-  return <span className="ph-stat" data-asset={`stat-${stat}`}
-    style={{ width: size, height: size, background: color || '#FF6B35' }} />;
+function OrderIcon({ orderId, color, size = 14 }) {
+  const meta = ORDER_ICON_META[orderId] || ORDER_ICON_META.short;
+  const badgeSize = Math.max(16, size);
+  return (
+    <span
+      className={`ph-order-dot order-${meta.cls}`}
+      data-asset={`order-${orderId}`}
+      style={{ width: badgeSize, height: badgeSize }}
+      aria-hidden="true"
+    >
+      {meta.label}
+    </span>
+  );
 }
 
 /* ============== 通用组件 ============== */
@@ -46,14 +58,16 @@ function StatIcon({ stat, color, size = 12 }) {
 function StatBars({ stats, compact, caps }) {
   // V14: 属性砍到 2 项,driving 决定订单解锁,service 影响好评率
   const items = [
-    { key: 'driving', label: '车技', short: '技', color: '#FF6B35' },
-    { key: 'service', label: '服务', short: '服', color: '#0EA5E9' },
+    { key: 'driving', label: '车技', color: '#FF6B35' },
+    { key: 'service', label: '服务', color: '#0EA5E9' },
   ];
   return (
     <div className={`stat-bars ${compact ? 'compact' : ''}`}>
       {items.map((it) => (
         <div key={it.key} className={`stat-bar-row ${caps ? 'with-cap' : ''}`}>
-          <span className="stat-bar-label" style={{color: it.color}}>{compact ? it.short : it.label}</span>
+          <span className="stat-bar-label" style={{color: it.color}}>
+            <span>{it.label}</span>
+          </span>
           <div className="stat-bar-track">
             <div className="stat-bar-fill" style={{transform: `scaleX(${Math.min(100, stats[it.key]) / 100})`, background: it.color}} />
             {caps && <span className="stat-cap-marker" style={{left: `${Math.min(100, caps[it.key] || 99)}%`}} />}
@@ -185,9 +199,24 @@ function CityMap({ zones, drivers, state, selectedZoneId, onSelectZone }) {
         const x = Math.max(9, Math.min(91, zone.x + jitter));
         const y = Math.max(11, Math.min(86, zone.y - 9 - (idx % 3) * 2.8));
         const text = `+¥${gain.amount}`;
+        const coinX = Math.min(94, x + Math.min(8.2, text.length * 1.1 + 1.6));
         return (
-          <g key={gain.id} className="city-income-pop">
-            <text x={x} y={y - 0.4} fontSize="3.2" textAnchor="middle">{text}</text>
+          <g key={`${gain.id}-${idx}`} className="city-income-pop">
+            <text x={x} y={y} fontSize="2.55" textAnchor="middle">{text}</text>
+            <g className="city-income-coin-anchor" transform={`translate(${coinX} ${y - 0.75})`}>
+              <g className="city-income-coin">
+                <circle r="1.18" />
+                <path d="M -0.38 -0.66 L 0.46 -0.66 L 0.18 0.66 L -0.66 0.66 Z" />
+                <rect x="-0.16" y="-0.78" width="0.24" height="1.56" />
+              </g>
+            </g>
+            <g className="city-income-sparkles-anchor" transform={`translate(${coinX} ${y - 0.75})`}>
+              <g className="city-income-sparkles">
+                <circle className="sparkle s1" cx="-1.5" cy="-1.35" r="0.26" />
+                <circle className="sparkle s2" cx="1.52" cy="-1.1" r="0.22" />
+                <circle className="sparkle s3" cx="1.2" cy="1.35" r="0.2" />
+              </g>
+            </g>
           </g>
         );
       })}
@@ -198,4 +227,3 @@ function CityMap({ zones, drivers, state, selectedZoneId, onSelectZone }) {
 /* V14.9: CityOrderLayer 已删除 — 永远 return null,带着整套 dispatchOffers 一起死代码清理 */
 
 /* ============== V10.6: 左侧目标板 ============== */
-

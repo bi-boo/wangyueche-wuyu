@@ -284,9 +284,12 @@
     flex-shrink: 0;
     white-space: nowrap;
     line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
   }
   .stat-bars.compact .stat-bar-label {
-    width: 16px;
+    width: 34px;
   }
   .stat-bar-track {
     flex: 1;
@@ -395,22 +398,64 @@
     letter-spacing: 0;
   }
   .city-income-pop text {
-    fill: var(--accent);
+    fill: var(--gold);
     stroke: rgba(42,35,32,0.84);
-    stroke-width: 0.58;
+    stroke-width: 0.42;
     paint-order: stroke;
     font-weight: 900;
     letter-spacing: 0;
   }
+  .city-income-coin circle {
+    fill: var(--gold);
+    stroke: rgba(42,35,32,0.90);
+    stroke-width: 0.32;
+  }
+  .city-income-coin path {
+    fill: rgba(255,248,231,0.62);
+  }
+  .city-income-coin rect {
+    fill: rgba(42,35,32,0.32);
+  }
+  .city-income-sparkles .sparkle {
+    fill: var(--gold);
+    stroke: rgba(42,35,32,0.60);
+    stroke-width: 0.12;
+  }
   .city-income-pop {
     animation: cityIncomePop 1.65s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
-    filter: drop-shadow(0.8px 0.8px 0 rgba(42,35,32,0.28));
+    filter: drop-shadow(0.55px 0.55px 0 rgba(42,35,32,0.24));
   }
+  .city-income-coin-anchor,
+  .city-income-sparkles-anchor {
+    transform-box: view-box;
+    transform-origin: 0 0;
+  }
+  .city-income-coin {
+    animation: cityCoinPop 1.65s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .city-income-sparkles .sparkle {
+    animation: cityCoinSparkle 1.05s cubic-bezier(0.18, 0.76, 0.22, 1) forwards;
+  }
+  .city-income-sparkles .s2 { animation-delay: 0.05s; }
+  .city-income-sparkles .s3 { animation-delay: 0.1s; }
   @keyframes cityIncomePop {
-    0% { opacity: 0; transform: translateY(0) scale(0.76); }
-    14% { opacity: 1; transform: translateY(-1.2px) scale(1); }
-    78% { opacity: 1; transform: translateY(-7px) scale(1); }
-    100% { opacity: 0; transform: translateY(-11px) scale(0.92); }
+    0% { opacity: 0; transform: translateY(0) scale(0.66); }
+    14% { opacity: 1; transform: translateY(-0.9px) scale(0.94); }
+    78% { opacity: 1; transform: translateY(-5.8px) scale(0.94); }
+    100% { opacity: 0; transform: translateY(-8.5px) scale(0.86); }
+  }
+  @keyframes cityCoinPop {
+    0% { opacity: 0; transform: scale(0.4) rotate(-14deg); }
+    18% { opacity: 1; transform: scale(1.05) rotate(8deg); }
+    64% { opacity: 1; transform: scale(0.92) rotate(-5deg); }
+    100% { opacity: 0; transform: scale(0.58) rotate(12deg); }
+  }
+  @keyframes cityCoinSparkle {
+    0% { opacity: 0; transform: translate(0, 0) scale(0.35); }
+    20% { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(0, -2px) scale(0.45); }
   }  .order-ticket.selected {
     background: var(--gold);
     border-color: var(--ink) !important;

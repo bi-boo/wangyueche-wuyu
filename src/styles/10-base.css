@@ -58,15 +58,24 @@
     border-radius: 3px 3px 0 0;
   }  /* V14.9: .vehicle-han_ev / .vehicle-odyssey 已删除 — V13 砍掉了汉EV/奥德赛 */
   .ph-order-dot {
-    display: inline-block;
-    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+    vertical-align: -3px;
+    border: 1px solid var(--ink);
+    color: #FFF8E7;
+    background: var(--ink);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0;
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.20);
   }
-  .ph-stat {
-    display: inline-block;
-    border-radius: 3px;
-    flex-shrink: 0;
-  }
+  .ph-order-dot.order-short { background: #D4621F; }
+  .ph-order-dot.order-business { background: #2E7D6A; }
+  .ph-order-dot.order-airport { background: #335C81; }
+  .ph-order-dot.order-luxury { background: #2A2320; color: var(--gold); }
   .ph-clock {
     width: 92px;
     height: 36px;
