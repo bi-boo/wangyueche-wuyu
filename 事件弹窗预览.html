@@ -2,18 +2,22 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>事件弹窗预览(全事件 Storybook)</title>
-<link rel="stylesheet" href="src/styles/00-tokens.css">
-<link rel="stylesheet" href="src/styles/10-base.css">
-<link rel="stylesheet" href="src/styles/20-topbar.css">
-<link rel="stylesheet" href="src/styles/30-modals.css">
-<link rel="stylesheet" href="src/styles/40-tasks-list.css">
-<link rel="stylesheet" href="src/styles/50-feedback.css">
-<link rel="stylesheet" href="src/styles/60-inspector.css">
-<link rel="stylesheet" href="src/styles/70-pixel-flytext.css">
-<link rel="stylesheet" href="src/styles/80-map-hud.css">
-<link rel="stylesheet" href="src/styles/90-toggles-recruit.css">
-<link rel="stylesheet" href="src/styles/99-overrides.css">
+<!-- V15.4: 所有资源加 ?v=15.4 强制 cache-bust,避免浏览器缓存旧 jsx -->
+<link rel="stylesheet" href="src/styles/00-tokens.css?v=15.4">
+<link rel="stylesheet" href="src/styles/10-base.css?v=15.4">
+<link rel="stylesheet" href="src/styles/20-topbar.css?v=15.4">
+<link rel="stylesheet" href="src/styles/30-modals.css?v=15.4">
+<link rel="stylesheet" href="src/styles/40-tasks-list.css?v=15.4">
+<link rel="stylesheet" href="src/styles/50-feedback.css?v=15.4">
+<link rel="stylesheet" href="src/styles/60-inspector.css?v=15.4">
+<link rel="stylesheet" href="src/styles/70-pixel-flytext.css?v=15.4">
+<link rel="stylesheet" href="src/styles/80-map-hud.css?v=15.4">
+<link rel="stylesheet" href="src/styles/90-toggles-recruit.css?v=15.4">
+<link rel="stylesheet" href="src/styles/99-overrides.css?v=15.4">
 <style>
   html, body { height: 100%; margin: 0; padding: 0; background: #f3eedb; }
   #root { height: 100vh; display: flex; flex-direction: row; overflow: hidden; }
@@ -105,18 +109,43 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
 
-<script src="wycwy-data.js"></script>
-<script src="wycwy-engine.js"></script>
+<script src="wycwy-data.js?v=15.4"></script>
+<script src="wycwy-engine.js?v=15.4"></script>
 
-<script type="text/babel" src="src/app/00-runtime.jsx"></script>
-<script type="text/babel" src="src/app/10-icons.jsx"></script>
-<script type="text/babel" src="src/app/20-topbar.jsx"></script>
-<script type="text/babel" src="src/app/30-fleet.jsx"></script>
-<script type="text/babel" src="src/app/40-inspector.jsx"></script>
-<script type="text/babel" src="src/app/50-modals.jsx"></script>
+<script type="text/babel" src="src/app/00-runtime.jsx?v=15.4"></script>
+<script type="text/babel" src="src/app/10-icons.jsx?v=15.4"></script>
+<script type="text/babel" src="src/app/20-topbar.jsx?v=15.4"></script>
+<script type="text/babel" src="src/app/30-fleet.jsx?v=15.4"></script>
+<script type="text/babel" src="src/app/40-inspector.jsx?v=15.4"></script>
+<script type="text/babel" src="src/app/50-modals.jsx?v=15.4"></script>
 
 <script type="text/babel">
   const { useState, useMemo } = React;
+
+  // 组件未加载时的明确提示(替代空白)
+  function ComponentMissingError({ name }) {
+    return (
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 40,
+      }}>
+        <div style={{
+          maxWidth: 520, padding: 24,
+          background: '#fff3cd', border: '2px solid #ffc107', borderRadius: 8,
+          color: '#664d03', fontSize: 14, lineHeight: 1.6,
+        }}>
+          <div style={{fontSize: 16, fontWeight: 600, marginBottom: 12}}>⚠ 组件 <code>{name}</code> 未定义</div>
+          <div>这通常是浏览器缓存了旧版 <code>50-modals.jsx</code> 导致的。请按以下方式强制刷新:</div>
+          <ul style={{marginTop: 8, paddingLeft: 20}}>
+            <li><b>Mac Chrome / Safari</b>:右键页面"刷新"按钮 → 选"清空缓存并硬性重新加载"</li>
+            <li><b>快捷键</b>:Cmd + Shift + R(或 Cmd + Option + E 清缓存后再刷)</li>
+            <li><b>实在不行</b>:开 DevTools(F12) → Network → 勾选 "Disable cache" → 刷新</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
 
   // -------- 数据准备 --------
   const D = window.WYCWY_DATA;
@@ -362,20 +391,28 @@
         <div className="sb-stage">
           {!built && <div className="sb-stage-empty">请从左侧选一个事件预览</div>}
           {built && built.type === 'policyDecision' && (
-            <PolicyDecisionModal
-              key={`pd_${activeId}_${r0}`}
-              decision={built.decision}
-              state={MOCK_STATE}
-              onResolve={(c, t) => console.log('选了', c, t)}
-            />
+            typeof PolicyDecisionModal === 'function' ? (
+              <PolicyDecisionModal
+                key={`pd_${activeId}_${r0}`}
+                decision={built.decision}
+                state={MOCK_STATE}
+                onResolve={(c, t) => console.log('选了', c, t)}
+              />
+            ) : (
+              <ComponentMissingError name="PolicyDecisionModal" />
+            )
           )}
           {built && built.type === 'policyNotice' && (
-            <PolicyNoticeModal
-              key={`pn_${activeId}_${r0}`}
-              event={built.event}
-              state={MOCK_STATE}
-              onResolve={(idx) => console.log('点击关闭', idx)}
-            />
+            typeof PolicyNoticeModal === 'function' ? (
+              <PolicyNoticeModal
+                key={`pn_${activeId}_${r0}`}
+                event={built.event}
+                state={MOCK_STATE}
+                onResolve={(idx) => console.log('点击关闭', idx)}
+              />
+            ) : (
+              <ComponentMissingError name="PolicyNoticeModal" />
+            )
           )}
           {built && built.type === 'event' && (
             <EventModal
