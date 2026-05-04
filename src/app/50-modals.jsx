@@ -355,33 +355,37 @@ function PolicyNoticeModal({ event, state, onResolve }) {
         </div>
         <EventResourceSnapshot state={state} />
         {previews.length > 0 && (
-          <div className="policy-effect-list" style={{padding: '12px 16px 4px'}}>
+          <div className="policy-effect-list" style={{margin: '0 0 12px', display: 'flex', flexDirection: 'column', gap: 6}}>
             {(event.policyStage === 'verdict_ban' || event.policyStage === 'verdict_fine') && (
-              <div style={{fontSize: 12, color: 'var(--ink-3, #888)', marginBottom: 8, fontWeight: 500}}>
+              <div style={{fontSize: 14, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2}}>
                 处罚清单
               </div>
             )}
-            <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-              {previews.map((eff, i) => (
+            {previews.map((eff, i) => {
+              const sideColor = eff.tone === 'negative' ? 'var(--warn)' : eff.tone === 'positive' ? 'var(--green)' : 'var(--ink-3)';
+              const valueColor = eff.tone === 'negative' ? 'var(--warn)' : eff.tone === 'positive' ? 'var(--green)' : 'var(--ink)';
+              return (
                 <div key={i} style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  gap: 12,
                   padding: '10px 14px',
-                  background: '#fff',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  borderLeft: `3px solid ${eff.tone === 'negative' ? '#d44' : eff.tone === 'positive' ? '#3a3' : '#888'}`,
-                  borderRadius: 6,
+                  background: 'var(--sub)',
+                  border: '1.5px solid var(--border-soft)',
+                  borderLeft: `4px solid ${sideColor}`,
+                  borderRadius: 'var(--ui-radius)',
+                  fontSize: 14,
                 }}>
-                  <span style={{fontWeight: 500, fontSize: 14}}>{eff.label}</span>
-                  <strong className={eff.tone || ''} style={{fontSize: 14}}>{eff.value}</strong>
+                  <span style={{fontWeight: 700, color: 'var(--ink)'}}>{eff.label}</span>
+                  <strong style={{fontWeight: 800, color: valueColor, whiteSpace: 'nowrap'}}>{eff.value}</strong>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
         {footerNote && (
-          <div style={{padding: '8px 16px 0', fontSize: 12, color: 'var(--ink-3, #888)', whiteSpace: 'pre-line'}}>
+          <div style={{margin: '4px 0 12px', padding: '10px 12px', fontSize: 14, color: 'var(--ink-2)', background: 'var(--accent-soft)', borderLeft: '3px solid var(--accent)', borderRadius: 'var(--ui-radius)', whiteSpace: 'pre-line', lineHeight: 1.55}}>
             {footerNote}
           </div>
         )}
