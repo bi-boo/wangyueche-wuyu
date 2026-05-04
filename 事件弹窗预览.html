@@ -6,18 +6,18 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>事件弹窗预览(全事件 Storybook)</title>
-<!-- V15.4: 所有资源加 ?v=15.6 强制 cache-bust,避免浏览器缓存旧 jsx -->
-<link rel="stylesheet" href="src/styles/00-tokens.css?v=15.6">
-<link rel="stylesheet" href="src/styles/10-base.css?v=15.6">
-<link rel="stylesheet" href="src/styles/20-topbar.css?v=15.6">
-<link rel="stylesheet" href="src/styles/30-modals.css?v=15.6">
-<link rel="stylesheet" href="src/styles/40-tasks-list.css?v=15.6">
-<link rel="stylesheet" href="src/styles/50-feedback.css?v=15.6">
-<link rel="stylesheet" href="src/styles/60-inspector.css?v=15.6">
-<link rel="stylesheet" href="src/styles/70-pixel-flytext.css?v=15.6">
-<link rel="stylesheet" href="src/styles/80-map-hud.css?v=15.6">
-<link rel="stylesheet" href="src/styles/90-toggles-recruit.css?v=15.6">
-<link rel="stylesheet" href="src/styles/99-overrides.css?v=15.6">
+<!-- V15.4: 所有资源加 ?v=15.9 强制 cache-bust,避免浏览器缓存旧 jsx -->
+<link rel="stylesheet" href="src/styles/00-tokens.css?v=15.9">
+<link rel="stylesheet" href="src/styles/10-base.css?v=15.9">
+<link rel="stylesheet" href="src/styles/20-topbar.css?v=15.9">
+<link rel="stylesheet" href="src/styles/30-modals.css?v=15.9">
+<link rel="stylesheet" href="src/styles/40-tasks-list.css?v=15.9">
+<link rel="stylesheet" href="src/styles/50-feedback.css?v=15.9">
+<link rel="stylesheet" href="src/styles/60-inspector.css?v=15.9">
+<link rel="stylesheet" href="src/styles/70-pixel-flytext.css?v=15.9">
+<link rel="stylesheet" href="src/styles/80-map-hud.css?v=15.9">
+<link rel="stylesheet" href="src/styles/90-toggles-recruit.css?v=15.9">
+<link rel="stylesheet" href="src/styles/99-overrides.css?v=15.9">
 <style>
   html, body { height: 100%; margin: 0; padding: 0; background: #f3eedb; }
   #root { height: 100vh; display: flex; flex-direction: row; overflow: hidden; }
@@ -99,6 +99,30 @@
     position: absolute !important;
     inset: 0;
     z-index: 50;
+    padding-top: 56px !important;
+  }
+  .sb-meta-banner {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 200;
+    background: #1d1a18;
+    color: #ffb74d;
+    padding: 10px 16px;
+    font-size: 12px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .sb-meta-banner b { color: #888; font-weight: 500; margin-right: 4px; }
+  .sb-meta-banner code {
+    color: #fff;
+    background: rgba(255,255,255,0.08);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-family: "JetBrains Mono", "Menlo", monospace;
+    font-size: 11px;
   }
 </style>
 </head>
@@ -109,15 +133,15 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
 
-<script src="wycwy-data.js?v=15.6"></script>
-<script src="wycwy-engine.js?v=15.6"></script>
+<script src="wycwy-data.js?v=15.9"></script>
+<script src="wycwy-engine.js?v=15.9"></script>
 
-<script type="text/babel" src="src/app/00-runtime.jsx?v=15.6"></script>
-<script type="text/babel" src="src/app/10-icons.jsx?v=15.6"></script>
-<script type="text/babel" src="src/app/20-topbar.jsx?v=15.6"></script>
-<script type="text/babel" src="src/app/30-fleet.jsx?v=15.6"></script>
-<script type="text/babel" src="src/app/40-inspector.jsx?v=15.6"></script>
-<script type="text/babel" src="src/app/50-modals.jsx?v=15.6"></script>
+<script type="text/babel" src="src/app/00-runtime.jsx?v=15.9"></script>
+<script type="text/babel" src="src/app/10-icons.jsx?v=15.9"></script>
+<script type="text/babel" src="src/app/20-topbar.jsx?v=15.9"></script>
+<script type="text/babel" src="src/app/30-fleet.jsx?v=15.9"></script>
+<script type="text/babel" src="src/app/40-inspector.jsx?v=15.9"></script>
+<script type="text/babel" src="src/app/50-modals.jsx?v=15.9"></script>
 
 <script type="text/babel">
   const { useState, useMemo } = React;
@@ -182,37 +206,44 @@
     return map[stageKey] || stageKey;
   }
 
-  // 随机事件:每个 base + chainStages 一个左侧栏项
+  // V15.x:按 id 前缀分组 — 4 个真分支链式归"链式"组,其他归"单段"组
+  const TRUE_CHAINS = ['borrow', 'platform', 'rival', 'accident'];
+  function getChainGroup(eventId) {
+    for (const chain of TRUE_CHAINS) {
+      if (eventId === chain || eventId.startsWith(chain + '_')) return chain;
+    }
+    return null;
+  }
+
   function buildRandomEventSidebarItems() {
     const allEvents = D.EVENTS || [];
-    const chained = []; // 含 chainStages 的
-    const single = [];  // 单段事件
+    const chainGroups = {};   // { borrow: [...], platform: [...], rival: [...], accident: [...] }
+    const single = [];
+    const sortByMission = (a, b) => {
+      const ea = allEvents.find(e => e.id === a.eventId);
+      const eb = allEvents.find(e => e.id === b.eventId);
+      return (ea.unlockMission || 0) - (eb.unlockMission || 0);
+    };
     allEvents.forEach((ev) => {
       const baseItem = {
-        id: `event_${ev.id}_0`,
+        id: `event_${ev.id}`,
         title: ev.title,
-        stageTag: ev.tag,
+        stageTag: `m${ev.unlockMission || 0} · ${ev.tag}`,
         kind: 'event',
         eventId: ev.id,
         stageIdx: 0,
       };
-      if (ev.chainStages && ev.chainStages.length > 0) {
-        chained.push(baseItem);
-        ev.chainStages.forEach((stg, i) => {
-          chained.push({
-            id: `event_${ev.id}_${i + 1}`,
-            title: stg.title || `${ev.title} 阶段 ${i + 1}`,
-            stageTag: `${ev.tag} · 阶段 ${i + 1}`,
-            kind: 'event',
-            eventId: ev.id,
-            stageIdx: i + 1,
-          });
-        });
+      const group = getChainGroup(ev.id);
+      if (group) {
+        if (!chainGroups[group]) chainGroups[group] = [];
+        chainGroups[group].push(baseItem);
       } else {
         single.push(baseItem);
       }
     });
-    return { chained, single };
+    Object.values(chainGroups).forEach(arr => arr.sort(sortByMission));
+    single.sort(sortByMission);
+    return { chainGroups, single };
   }
 
   function buildInvestorSidebarItem() {
@@ -326,12 +357,14 @@
     const [activeId, setActiveId] = useState('policy_gov_ban_decision');
 
     const policyItems = useMemo(buildPolicySidebarItems, []);
-    const { chained: chainedItems, single: singleItems } = useMemo(buildRandomEventSidebarItems, []);
+    const { chainGroups, single: singleItems } = useMemo(buildRandomEventSidebarItems, []);
     const investorItem = useMemo(buildInvestorSidebarItem, []);
 
+    // 把所有 chainGroups 的事件平铺一份用于查找
+    const chainItemsFlat = Object.values(chainGroups).flat();
     const allItems = [
       ...policyItems,
-      ...chainedItems,
+      ...chainItemsFlat,
       ...singleItems,
       investorItem,
     ];
@@ -383,12 +416,33 @@
             />
           </div>
           {renderSidebarGroup('政策事件 (V15)', policyItems)}
-          {renderSidebarGroup('随机事件 - 链式', chainedItems)}
+          {chainGroups.borrow && renderSidebarGroup('链式 · borrow 老张借钱', chainGroups.borrow)}
+          {chainGroups.platform && renderSidebarGroup('链式 · platform 平台抽成', chainGroups.platform)}
+          {chainGroups.rival && renderSidebarGroup('链式 · rival 竞品挖人(钥匙司机)', chainGroups.rival)}
+          {chainGroups.accident && renderSidebarGroup('链式 · accident 司机事故', chainGroups.accident)}
           {renderSidebarGroup('随机事件 - 单段', singleItems)}
           {renderSidebarGroup('投资人危机', [investorItem])}
         </div>
 
         <div className="sb-stage">
+          {activeItem && activeItem.kind === 'event' && (() => {
+            const ev = D.EVENTS.find(e => e.id === activeItem.eventId);
+            if (!ev) return null;
+            return (
+              <div className="sb-meta-banner">
+                <span><b>id</b><code>{ev.id}</code></span>
+                <span><b>unlockMission</b><code>{ev.unlockMission || 0}</code></span>
+                {ev.chain && <span><b>chain</b><code>{ev.chain}</code></span>}
+                {ev.requireChainChoice && (
+                  <span><b>requireChainChoice</b><code>{JSON.stringify(ev.requireChainChoice)}</code></span>
+                )}
+                {ev.requireKeyDriverAlive !== undefined && (
+                  <span><b>requireKeyDriverAlive</b><code>{String(ev.requireKeyDriverAlive)}</code></span>
+                )}
+                {ev.cooldown && <span><b>cooldown</b><code>{ev.cooldown}天</code></span>}
+              </div>
+            );
+          })()}
           {!built && <div className="sb-stage-empty">请从左侧选一个事件预览</div>}
           {built && built.type === 'policyDecision' && (
             typeof PolicyDecisionModal === 'function' ? (

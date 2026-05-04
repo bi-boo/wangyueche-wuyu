@@ -289,7 +289,7 @@
     },
     // ===== SR 史诗 (2) =====
     {
-      id: 'ex_didi_gold', name: '滴答前金牌',
+      id: 'ex_didi_gold', name: '平台金牌司机',
       desc: '前金牌司机,服务稳定,口碑增长快',
       rarity: 'SR',
       boosts: { driving: 60, service: 70 },
@@ -321,7 +321,7 @@
       },
     },
     {
-      id: 'soe_manager', name: '国企转岗经理',
+      id: 'soe_manager', name: '管理型骨干',
       desc: '转行司机的前国企管理者,稳如老狗',
       rarity: 'SR',
       boosts: { driving: 50, service: 65 },
@@ -353,7 +353,7 @@
     },
     // ===== SSR 传说 (2) — 满级司机 =====
     {
-      id: 'driving_master', name: '舒马赫亲传弟子',
+      id: 'driving_master', name: '赛车系王牌',
       desc: '车技满级,起步即专车老炮,夜行神龙双修',
       rarity: 'SSR',
       boosts: { driving: 95, service: 80 },
@@ -385,7 +385,7 @@
       },
     },
     {
-      id: 'service_master', name: '服务大师傅金鹏',
+      id: 'service_master', name: '五星服务车神',
       desc: '服务满级,客户回头率高,口碑增长快',
       rarity: 'SSR',
       boosts: { driving: 80, service: 99 },
@@ -418,31 +418,31 @@
   ];
 
   // V11: 招募概率简化为每档券一个固定 [N, R, SR, SSR] 表,不再按玩家阶段动态调整。
-  // 玩家心智:普通券抽 N、VIP 抽 R+、猎头抽 SR+,清晰可预期。
+  // 界面文案不展示内部枚举,只展示「新手/熟手/骨干/王牌」。
   const RECRUIT_TICKETS = [
     {
       id: 'normal', name: '普通招募券', cost: 500,
-      desc: '主要出 N/R 司机,起步阶段够用',
+      desc: '便宜补人,主要招到新手和熟手司机',
       probs: [0.70, 0.30, 0.00, 0.00],
     },
     {
       id: 'vip', name: 'VIP 招募券', cost: 2000,
-      desc: '主要出 R/SR,中期主力',
+      desc: '中期主力券,更容易招到熟手和骨干',
       probs: [0.30, 0.50, 0.20, 0.00],
     },
     {
       id: 'headhunter', name: '猎头券', cost: 10000,
-      desc: '后期挖人,可能抽到 SSR',
+      desc: '后期挖人用,有机会招到王牌司机',
       probs: [0.00, 0.30, 0.50, 0.20],
     },
   ];
 
   // 稀有度颜色 + 视觉
   const RARITY_META = {
-    N:  { name: '普通', color: '#9A8C7E', bg: '#F4EFE5', stars: 1 },
-    R:  { name: '稀有', color: '#4A90E2', bg: '#E0EAF8', stars: 2 },
-    SR: { name: '史诗', color: '#8B5CF6', bg: '#EDE5F8', stars: 3 },
-    SSR:{ name: '传说', color: '#E84545', bg: '#FFE5E5', stars: 4 },
+    N:  { name: '新手', color: '#9A8C7E', bg: '#F4EFE5', stars: 1 },
+    R:  { name: '熟手', color: '#4A90E2', bg: '#E0EAF8', stars: 2 },
+    SR: { name: '骨干', color: '#8B5CF6', bg: '#EDE5F8', stars: 3 },
+    SSR:{ name: '王牌', color: '#E84545', bg: '#FFE5E5', stars: 4 },
   };
 
   // V9: 稀有度决定培养天花板。普通司机可以变强,但不会被培训成 SSR。
@@ -570,243 +570,20 @@
       ] },
   ];
 
-  // 随机事件
+  // 随机事件 V15.x — 重构后的事件池(去 chain 容器,加 unlockMission 阶段化,4 条真分支链式)
+  // 详见根目录「事件设计大表.html」
+  // 字段:
+  //   - unlockMission:完成第 N 个任务后才进入抽签池(缺省 0 = 开局即可)
+  //   - chain:分支链式标识符,用于 resolveEvent 写入 chainChoices
+  //   - requireChainChoice:此事件必须满足的 chainChoices 前置条件
+  //   - requireKeyDriverAlive:钥匙司机必须在编(true) / 已离队(false)
+  //   - options[i].choiceKey:玩家选此项时写入 chainChoices[chain] 的值
+  //   - options[i].apply 返回 effect 中可包含:markKeyDriver / platformDone / addDrivers / addVehicles
   const EVENTS = [
-    {
-      id: 'rain', title: '暴雨天来了', tag: '天气', emoji: 'rain', chain: 'rain',
-      desc: '今天下大雨,平台订单需求暴涨。要让司机出车吗?',
-      options: [
-        { label: '全员出车抢单', detail: '订单 +60%。30% 概率事故 → 修车 −¥1,500,全员忠诚 −20', apply: () => ({ orderBoost: 1.6, accidentRisk: { chance: 0.30, funds: -1500, allLoyalty: -20, log: '暴雨抢单发生剐蹭事故,司机受惊,车队垫付维修费' } }) },
-        { label: '全员休息保人', detail: '今天放假,口碑 +5,所有司机忠诚 +10', apply: () => ({ reputation: 5, allLoyalty: 10 }) },
-      ],
-      chainStages: [
-        // stage 1
-        {
-          title: '暴雨夜地铁停运',
-          desc: '红色暴雨预警,地铁全线停运。打车需求是平时三倍,但路况危险,司机们也累。',
-          options: [
-            { label: '全员死撑抢单', detail: '订单 +80%,基础全员忠诚 −15。40% 概率事故 → 修车 −¥2,500,再扣全员忠诚 −30', apply: () => ({ orderBoost: 1.8, allLoyalty: -15, accidentRisk: { chance: 0.40, funds: -2500, allLoyalty: -30, log: '暴雨夜死撑抢单发生事故,司机受伤,车队垫付医药费,人心散了' } }) },
-            { label: '车队组团送社区免费车', detail: '−¥1,500,口碑 +20,所有司机忠诚 +15', apply: () => ({ funds: -1500, reputation: 20, allLoyalty: 15 }) },
-          ],
-        },
-        // stage 2
-        {
-          title: '50 年一遇红色预警',
-          desc: '气象台发布 50 年一遇极端暴雨预警,部分路段已经积水到腰。这是该让车队完全停运的程度了。',
-          options: [
-            { label: '加入应急救援队送医送药', detail: '−¥2,000,口碑 +25,所有司机忠诚 +20', apply: () => ({ funds: -2000, reputation: 25, allLoyalty: 20 }) },
-            { label: '闷声继续抢单', detail: '+¥4,000,口碑 −25。55% 概率严重事故 → 修车 −¥4,000,全员忠诚 −50', apply: () => ({ funds: 4000, reputation: -25, accidentRisk: { chance: 0.55, funds: -4000, allLoyalty: -50, log: '50 年一遇红色预警还硬抢,司机受伤,直接想离开车队' } }) },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'platform', title: '平台抽成调整', tag: '行业', emoji: 'biz', chain: 'platform',
-      desc: '滴答出行宣布抽成从 20% 涨到 25%。你的应对策略?',
-      options: [
-        { label: '硬扛 25% 抽成', detail: '抽成 25%,所有司机忠诚 −15(司机也被压榨)', apply: () => ({ commissionRate: 0.25, allLoyalty: -15 }) },
-        { label: '搞自营小程序', detail: '−¥5,000,抽成永久 0%,口碑 +5', apply: () => ({ commissionRate: 0, funds: -5000, reputation: 5 }) },
-      ],
-      chainStages: [
-        // stage 1
-        {
-          title: '平台抽成又涨了',
-          desc: '半年没到,平台又涨抽成。这次从 25% 涨到 30%。司机们群里炸了,有人提议罢工。',
-          options: [
-            { label: '硬接受 30% 抽成', detail: '抽成 30%,所有司机忠诚 −25', apply: () => ({ commissionRate: 0.30, allLoyalty: -25 }) },
-            { label: '组织车队罢工三天', detail: '−¥3,000(三天没收入),抽成回到 20%,所有司机忠诚 +30,口碑 +10', apply: () => ({ funds: -3000, commissionRate: 0.20, allLoyalty: 30, reputation: 10 }) },
-          ],
-        },
-        // stage 2
-        {
-          title: '监管入场,平台被点名',
-          desc: '终于,反垄断部门点名滴答出行,要求降低抽成。一夜之间抽成从 30% 强制降到 15%。',
-          options: [
-            { label: '降的成本公司全留', detail: '抽成 15%,资金省下,口碑 +10', apply: () => ({ commissionRate: 0.15, reputation: 10 }) },
-            { label: '把降的成本分给司机', detail: '抽成 15%,所有司机忠诚 +30,口碑 +5', apply: () => ({ commissionRate: 0.15, allLoyalty: 30, reputation: 5 }) },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'borrow', title: '老张找你借钱', tag: '人事', emoji: 'people', chain: 'borrow',
-      desc: '老张儿子要交学费,缺 ¥2,000,来找你借。',
-      options: [
-        { label: '借给他', detail: '−¥2,000,所有司机忠诚 +30', apply: () => ({ funds: -2000, allLoyalty: 30 }) },
-        { label: '装作没看见', detail: '钱保住,所有司机忠诚 −20', apply: () => ({ allLoyalty: -20 }) },
-      ],
-      chainStages: [
-        // stage 1
-        {
-          title: '老张儿子要结婚',
-          desc: '老张儿子终于要结婚了。婚礼办在老家,缺 ¥8,000 份子礼。老张抹不开面子,在车里吭哧了半天才开口。',
-          options: [
-            { label: '借给他', detail: '−¥8,000,所有司机忠诚 +25', apply: () => ({ funds: -8000, allLoyalty: 25 }) },
-            { label: '婉拒,让他自己想办法', detail: '钱保住,所有司机忠诚 −15', apply: () => ({ allLoyalty: -15 }) },
-          ],
-        },
-        // stage 2
-        {
-          title: '老张老家盖房',
-          desc: '老张老家批了宅基地,要盖房养老。缺 ¥20,000。这次他没张口,是他老婆在群里发来的语音。',
-          options: [
-            { label: '借给他,慢慢还', detail: '−¥20,000,全员信任 +30', apply: () => ({ funds: -20000, trustLoyalty: 30 }) },
-            { label: '婉拒,介绍他银行信用贷', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'celeb', title: '明星打到你家车', tag: '运气', emoji: 'star', chain: 'celeb',
-      desc: '一名歌手打到了你的车,司机服务很到位。',
-      options: [
-        { label: '配合宣传', detail: '+15 口碑,但司机被偷拍隐私', apply: () => ({ reputation: 15, allLoyalty: -10 }) },
-        { label: '低调处理', detail: '+8 口碑,司机赞', apply: () => ({ reputation: 8, allLoyalty: 5 }) },
-      ],
-      chainStages: [
-        // stage 1
-        {
-          title: '明星经纪公司想包车',
-          desc: '上次那位歌手的经纪公司打电话来,想长期签约车队做艺人接送。一个月 ¥15,000 包月,但要求 24 小时待命。',
-          options: [
-            { label: '签下来全力服务', detail: '+¥15,000 签约费,所有司机忠诚 −15(24h 待命强度大)', apply: () => ({ funds: 15000, allLoyalty: -15 }) },
-            { label: '婉拒,保持普通业务', detail: '所有司机忠诚 +10,口碑 +5', apply: () => ({ allLoyalty: 10, reputation: 5 }) },
-          ],
-        },
-        // stage 2
-        {
-          title: '八卦记者跟拍司机',
-          desc: '上次那位歌手的私生活被狗仔盯上,你的司机被多次跟拍。狗仔出价 ¥5,000 让司机透露行程。',
-          options: [
-            { label: '严令司机闭口 + 送签保密协议', detail: '−¥1,500,口碑 +15,所有司机忠诚 +10(讲规矩)', apply: () => ({ funds: -1500, reputation: 15, allLoyalty: 10 }) },
-            { label: '默许司机收钱', detail: '+¥5,000(分成),口碑 −25(业内骂走灰)', apply: () => ({ funds: 5000, reputation: -25 }) },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'newpolicy', title: '网约车新政', tag: '监管', emoji: 'gov', chain: 'newpolicy',
-      desc: '当地颁布新政,3 年以上车龄车辆将被限制接单。',
-      options: [
-        { label: '主动更新车队', detail: '按车辆数花 ¥1,200/辆,全车合规升级,口碑 +10', apply: (s) => ({ funds: -((s.vehicles?.length || 0) * 1200), reputation: 10, certifyFleet: true }) },
-        { label: '观望', detail: '短期接单收入 ×0.85(3 天),口碑 -6', apply: () => ({ reputation: -6, orderBoost: 0.85, boostDuration: 3 }) },
-      ],
-      chainStages: [
-        // stage 1
-        {
-          title: '网约车司机年审',
-          desc: '当地新规要求所有司机每年参加 3 天集中培训 + 笔试。每个司机要花 ¥500 报名费,这 3 天还没收入。',
-          options: [
-            { label: '车队全额承担', detail: '−¥3,000(报名 + 闲置补贴),所有司机忠诚 +25', apply: () => ({ funds: -3000, allLoyalty: 25 }) },
-            { label: '让司机自己出', detail: '钱保住,所有司机忠诚 −15', apply: () => ({ allLoyalty: -15 }) },
-          ],
-        },
-        // stage 2
-        {
-          title: '平台被点名整改',
-          desc: '滴答出行因合规问题被监管点名,要求 30 天内整改派单算法 + 司机准入。整改期间订单减少。',
-          options: [
-            { label: '快速申请合规认证', detail: '−¥3,000,口碑 +20(率先合规)', apply: () => ({ funds: -3000, reputation: 20 }) },
-            { label: '观望,看政策反复', detail: '订单 −20%(2 天),口碑 −5', apply: () => ({ orderBoost: 0.8, boostDuration: 2, reputation: -5 }) },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'newyear', title: '春节将至', tag: '节日', emoji: 'festival', chain: 'newyear',
-      desc: '春节快到了,司机们想回家。',
-      options: [
-        { label: '春节红包', detail: '−¥3,000,所有司机忠诚 +40', apply: () => ({ funds: -3000, allLoyalty: 40 }) },
-        { label: '正常过节', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
-      ],
-      chainStages: [
-        // stage 1
-        {
-          title: '春运抢票热点',
-          desc: '今年春运抢票特别难。几个司机在车队群里说,如果回不去家就接着跑。',
-          options: [
-            { label: '车队帮买回家票', detail: '−¥4,000,所有司机忠诚 +35', apply: () => ({ funds: -4000, allLoyalty: 35 }) },
-            { label: '让司机自己想办法', detail: '钱保住,所有司机忠诚 −15', apply: () => ({ allLoyalty: -15 }) },
-          ],
-        },
-        // stage 2
-        {
-          title: '突发返乡限制',
-          desc: '春节前一周,周边省份突然要求"红码不准下高速 + 隔离 14 天"。多个司机想提前撤回,但你订单正好接到爆。',
-          options: [
-            { label: '准司机们提前回家', detail: '−¥4,000(闲置 + 补贴),所有司机忠诚 +40', apply: () => ({ funds: -4000, allLoyalty: 40 }) },
-            { label: '强制留人补一笔留岗费', detail: '−¥1,500,订单 +50%(7天),所有司机忠诚 −20', apply: () => ({ funds: -1500, orderBoost: 1.5, boostDuration: 7, allLoyalty: -20 }) },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'rival', title: '竞品挖人', tag: '竞争', emoji: 'rival', chain: 'rival',
-      desc: '隔壁滴答车队想用月薪 +¥1,500 挖你最强的司机。',
-      options: [
-        { label: '加薪挽留', detail: '月薪 +¥1,500,司机留下且忠诚 +30', apply: () => ({ keepBest: true, salaryRaise: 1500 }) },
-        { label: '放走', detail: '钱保住,失去最强司机,口碑 −10', apply: () => ({ loseBest: true, reputation: -10 }) },
-      ],
-      chainStages: [
-        // stage 1
-        {
-          title: '竞品再次开高价挖人',
-          desc: '隔壁车队这次出价更狠:月薪翻倍 + 一次性签约费 ¥10,000。盯的是你 SR 级以上司机。',
-          options: [
-            { label: '咬牙加薪到对方水平', detail: '月薪 +¥3,000,司机留下且忠诚 +30', apply: () => ({ keepBest: true, salaryRaise: 3000 }) },
-            { label: '放走 + 追讨培训费', detail: '+¥3,000,失去最强司机,口碑 −8', apply: () => ({ funds: 3000, loseBest: true, reputation: -8 }) },
-          ],
-        },
-        // stage 2
-        {
-          title: '竞品要整队挖角',
-          desc: '隔壁车队这次不挖单个,要整建制挖你的 N 级 R 级司机集体跳槽,开价"留岗费 + 老板亲自请吃饭"。',
-          options: [
-            { label: '组织车队聚餐 + 留岗补贴', detail: '−¥5,000,所有司机忠诚 +35', apply: () => ({ funds: -5000, allLoyalty: 35 }) },
-            { label: '不留,愿意走的走', detail: '钱保住,失去最强司机,所有司机忠诚 −20,口碑 −10', apply: () => ({ loseBest: true, allLoyalty: -20, reputation: -10 }) },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'accident', title: '小李出小事故', tag: '人事', emoji: 'crash', chain: 'accident',
-      desc: '小李剐蹭了一辆豪车,对方索赔 ¥3,000。',
-      options: [
-        { label: '公司全付', detail: '−¥3,000,所有司机忠诚 +20', apply: () => ({ funds: -3000, allLoyalty: 20 }) },
-        { label: '让司机自付', detail: '钱保住,所有司机忠诚 −30', apply: () => ({ allLoyalty: -30 }) },
-      ],
-      chainStages: [
-        // stage 1
-        {
-          title: '小李撞了行人',
-          desc: '小李路口转弯撞了一位骑电瓶车的大妈。大妈腿骨折,要住院。这次不是剐蹭,是真事故。',
-          options: [
-            { label: '车队全担医疗费 + 误工费', detail: '−¥15,000,全员信任 +25,口碑 +10', apply: () => ({ funds: -15000, trustLoyalty: 25, reputation: 10 }) },
-            { label: '让司机一人负责到底', detail: '钱保住,所有司机忠诚 −35,口碑 −10', apply: () => ({ allLoyalty: -35, reputation: -10 }) },
-          ],
-        },
-        // stage 2
-        {
-          title: '保险公司拒赔',
-          desc: '上次撞行人的事故,保险公司因小李"违规变道"判定拒赔。¥15,000 全要车队自己出。',
-          options: [
-            { label: '公司咬牙担下来', detail: '−¥15,000,全员信任 +30', apply: () => ({ funds: -15000, trustLoyalty: 30 }) },
-            { label: '让小李分期偿还', detail: '钱保住,所有司机忠诚 −25', apply: () => ({ allLoyalty: -25 }) },
-          ],
-        },
-      ],
-    },
-    // ===== V7: 12 个写实事件 — 让玩家感受网约车司机的真实困境 =====
-    {
-      id: 'back_pain', title: '小李的腰又犯了', tag: '人事', emoji: 'people', cooldown: 35,
-      desc: '小李这周连跑了 14 个夜班,腰椎间盘突出又犯了。今天发动车的时候,他从座椅上起不来。',
-      options: [
-        { label: '强制让他休息一周', detail: '车闲置 −¥800,所有司机忠诚 +25', apply: () => ({ funds: -800, allLoyalty: 25 }) },
-        { label: '建议他考虑别的工作', detail: '钱保住,所有司机忠诚 −20,口碑 −5(兔死狐悲)', apply: () => ({ allLoyalty: -20, reputation: -5 }) },
-      ],
-    },
+    // ============ V7 单段事件(unlockMission 阶段化) ============
     {
       id: 'oil_price', title: '油价又涨了', tag: '行业', emoji: 'biz', cooldown: 30,
+      unlockMission: 0,
       desc: '92 号汽油又涨了 0.4 元/升。燃油司机的成本被压得越来越薄。',
       options: [
         { label: '车队补贴', detail: '−¥1,500,所有司机忠诚 +15', apply: () => ({ funds: -1500, allLoyalty: 15 }) },
@@ -814,63 +591,17 @@
       ],
     },
     {
-      id: 'account_freeze', title: '平台账号被冻结', tag: '监管', emoji: 'gov', cooldown: 35,
-      desc: '老张的平台账号被无故冻结,平台说要审查 7 天。他这一周没有收入。',
+      id: 'back_pain', title: '小李的腰又犯了', tag: '人事', emoji: 'people', cooldown: 35,
+      unlockMission: 0,
+      desc: '小李这周连跑了 14 个夜班,腰椎间盘突出又犯了。今天发动车的时候,他从座椅上起不来。',
       options: [
-        { label: '让他正常申诉等结果', detail: '−¥2,000(车闲置),所有司机忠诚 +15(讲规矩)', apply: () => ({ funds: -2000, allLoyalty: 15 }) },
-        { label: '让他用别的号继续跑', detail: '钱保住,口碑 −10,所有司机忠诚 −10(违规风险)', apply: () => ({ reputation: -10, allLoyalty: -10 }) },
-      ],
-    },
-    {
-      id: 'night_robbery', title: '司机半夜被抢', tag: '危机', emoji: 'crash', cooldown: 40,
-      desc: '凌晨两点,小李在城郊接了一单,被乘客持刀抢走当天现金。人没事,钱没了。',
-      options: [
-        { label: '报警 + 公司补偿损失', detail: '−¥1,000,全员信任 +25', apply: () => ({ funds: -1000, trustLoyalty: 25 }) },
-        { label: '自认倒霉,劝他下次别接深夜', detail: '钱保住,所有司机忠诚 −25(寒心)', apply: () => ({ allLoyalty: -25 }) },
-      ],
-    },
-    {
-      id: 'complaint_harass', title: '司机被投诉骚扰女乘客', tag: '危机', emoji: 'people', cooldown: 35,
-      desc: '一位女乘客投诉小张言语骚扰。小张说自己只是问了路况,他坚决否认。平台让你拿决定。',
-      options: [
-        { label: '相信司机,让平台彻查', detail: '口碑 −8,全员信任 +25', apply: () => ({ reputation: -8, trustLoyalty: 25 }) },
-        { label: '相信乘客,公开道歉 + 处罚司机', detail: '口碑 +5,所有司机忠诚 −20', apply: () => ({ reputation: 5, allLoyalty: -20 }) },
-      ],
-    },
-    {
-      id: 'social_lapse', title: '司机社保断缴了', tag: '人事', emoji: 'biz', cooldown: 35,
-      desc: '车队成立至今没给司机交社保,司机们最近开始议论。老周老婆怀孕了,他直接问你能不能帮缴。',
-      options: [
-        { label: '给全员补缴 + 以后正常缴', detail: '−¥3,500,所有司机忠诚 +30', apply: () => ({ funds: -3500, allLoyalty: 30 }) },
-        { label: '装作没听见,继续跑车', detail: '钱保住,所有司机忠诚 −25,口碑 −3', apply: () => ({ allLoyalty: -25, reputation: -3 }) },
-      ],
-    },
-    {
-      id: 'aging_test', title: '网约车司机年龄新规', tag: '监管', emoji: 'gov', cooldown: 40,
-      desc: '当地新规:60 岁以上司机不得继续注册接单。车队里老王 58,老周 56,都快踩线。',
-      options: [
-        { label: '内部转岗做调度', detail: '−¥1,500(转岗培训),所有司机忠诚 +15', apply: () => ({ funds: -1500, allLoyalty: 15 }) },
-        { label: '到时候直接劝退', detail: '钱保住,失去最强司机,所有司机忠诚 −15,口碑 −5', apply: () => ({ loseBest: true, allLoyalty: -15, reputation: -5 }) },
-      ],
-    },
-    {
-      id: 'rain_trapped', title: '暴雨夜被困一整夜', tag: '天气', emoji: 'rain', cooldown: 30,
-      desc: '红色暴雨预警 + 地铁停运 + 多条主干道积水,司机们困在路上。是让他们继续跑还是撤?',
-      options: [
-        { label: '全员撤回保安全', detail: '−¥1,500(损失订单),所有司机忠诚 +20', apply: () => ({ funds: -1500, allLoyalty: 20 }) },
-        { label: '默许涨价 2 倍硬抢单', detail: '+¥3,000,口碑 −15(违规),所有司机忠诚 −20', apply: () => ({ funds: 3000, reputation: -15, allLoyalty: -20 }) },
-      ],
-    },
-    {
-      id: 'cheating_data', title: '平台诱导刷单冲业绩', tag: '行业', emoji: 'biz', cooldown: 35,
-      desc: '滴答平台月底冲数,暗示愿意配合"循环跑"刷单的司机有额外补贴。这是违规但很普遍。',
-      options: [
-        { label: '配合冲一下业绩', detail: '+¥2,500,口碑 −10(被发现就完了)', apply: () => ({ funds: 2500, reputation: -10 }) },
-        { label: '严令车队不许参与', detail: '钱不变,所有司机忠诚 +10,口碑 +10', apply: () => ({ allLoyalty: 10, reputation: 10 }) },
+        { label: '强制让他休息一周', detail: '车闲置 −¥800,所有司机忠诚 +25', apply: () => ({ funds: -800, allLoyalty: 25 }) },
+        { label: '建议他考虑别的工作', detail: '钱保住,所有司机忠诚 −20,口碑 −5(兔死狐悲)', apply: () => ({ allLoyalty: -20, reputation: -5 }) },
       ],
     },
     {
       id: 'ride_cancel_chain', title: '司机被连续取消单罚款', tag: '行业', emoji: 'biz', cooldown: 30,
+      unlockMission: 3,
       desc: '小张这周被乘客连续取消 5 单,平台扣了 ¥1,200。每单都是他到了乘客就取消,平台不分原因。',
       options: [
         { label: '车队全额承担罚款', detail: '−¥1,200,所有司机忠诚 +20', apply: () => ({ funds: -1200, allLoyalty: 20 }) },
@@ -878,7 +609,71 @@
       ],
     },
     {
+      id: 'complaint_harass', title: '司机被投诉骚扰女乘客', tag: '危机', emoji: 'people', cooldown: 35,
+      unlockMission: 5,
+      desc: '一位女乘客投诉小张言语骚扰。小张说自己只是问了路况,他坚决否认。平台让你拿决定。',
+      options: [
+        { label: '相信司机,让平台彻查', detail: '口碑 −8,全员信任 +25', apply: () => ({ reputation: -8, trustLoyalty: 25 }) },
+        { label: '相信乘客,公开道歉 + 处罚司机', detail: '口碑 +5,所有司机忠诚 −20', apply: () => ({ reputation: 5, allLoyalty: -20 }) },
+      ],
+    },
+    {
+      id: 'aging_test', title: '网约车司机年龄新规', tag: '监管', emoji: 'gov', cooldown: 40,
+      unlockMission: 6,
+      desc: '当地新规:60 岁以上司机不得继续注册接单。车队里老王 58,老周 56,都快踩线。',
+      options: [
+        { label: '内部转岗做调度', detail: '−¥1,500(转岗培训),所有司机忠诚 +15', apply: () => ({ funds: -1500, allLoyalty: 15 }) },
+        { label: '到时候直接劝退', detail: '钱保住,失去最强司机,所有司机忠诚 −15,口碑 −5', apply: () => ({ loseBest: true, allLoyalty: -15, reputation: -5 }) },
+      ],
+    },
+    {
+      id: 'account_freeze', title: '平台账号被冻结', tag: '监管', emoji: 'gov', cooldown: 35,
+      unlockMission: 8,
+      desc: '老张的平台账号被无故冻结,平台说要审查 7 天。他这一周没有收入。',
+      options: [
+        { label: '让他正常申诉等结果', detail: '−¥2,000(车闲置),所有司机忠诚 +15(讲规矩)', apply: () => ({ funds: -2000, allLoyalty: 15 }) },
+        { label: '让他用别的号继续跑', detail: '钱保住,口碑 −10,所有司机忠诚 −10(违规风险)', apply: () => ({ reputation: -10, allLoyalty: -10 }) },
+      ],
+    },
+    {
+      id: 'social_lapse', title: '司机社保断缴了', tag: '人事', emoji: 'biz', cooldown: 35,
+      unlockMission: 8,
+      desc: '车队成立至今没给司机交社保,司机们最近开始议论。老周老婆怀孕了,他直接问你能不能帮缴。',
+      options: [
+        { label: '给全员补缴 + 以后正常缴', detail: '−¥3,500,所有司机忠诚 +30', apply: () => ({ funds: -3500, allLoyalty: 30 }) },
+        { label: '装作没听见,继续跑车', detail: '钱保住,所有司机忠诚 −25,口碑 −3', apply: () => ({ allLoyalty: -25, reputation: -3 }) },
+      ],
+    },
+    {
+      id: 'cheating_data', title: '平台诱导刷单冲业绩', tag: '行业', emoji: 'biz', cooldown: 35,
+      unlockMission: 9,
+      desc: '滴答平台月底冲数,暗示愿意配合"循环跑"刷单的司机有额外补贴。这是违规但很普遍。',
+      options: [
+        { label: '配合冲一下业绩', detail: '+¥2,500,口碑 −10(被发现就完了)', apply: () => ({ funds: 2500, reputation: -10 }) },
+        { label: '严令车队不许参与', detail: '钱不变,所有司机忠诚 +10,口碑 +10', apply: () => ({ allLoyalty: 10, reputation: 10 }) },
+      ],
+    },
+    {
+      id: 'rain_trapped', title: '暴雨夜被困一整夜', tag: '天气', emoji: 'rain', cooldown: 30,
+      unlockMission: 11,
+      desc: '红色暴雨预警 + 地铁停运 + 多条主干道积水,司机们困在路上。是让他们继续跑还是撤?',
+      options: [
+        { label: '全员撤回保安全', detail: '−¥1,500(损失订单),所有司机忠诚 +20', apply: () => ({ funds: -1500, allLoyalty: 20 }) },
+        { label: '默许涨价 2 倍硬抢单', detail: '+¥3,000,口碑 −15(违规),所有司机忠诚 −20', apply: () => ({ funds: 3000, reputation: -15, allLoyalty: -20 }) },
+      ],
+    },
+    {
+      id: 'night_robbery', title: '司机半夜被抢', tag: '危机', emoji: 'crash', cooldown: 40,
+      unlockMission: 11,
+      desc: '凌晨两点,小李在城郊接了一单,被乘客持刀抢走当天现金。人没事,钱没了。',
+      options: [
+        { label: '报警 + 公司补偿损失', detail: '−¥1,000,全员信任 +25', apply: () => ({ funds: -1000, trustLoyalty: 25 }) },
+        { label: '自认倒霉,劝他下次别接深夜', detail: '钱保住,所有司机忠诚 −25(寒心)', apply: () => ({ allLoyalty: -25 }) },
+      ],
+    },
+    {
       id: 'family_emergency', title: '老周父亲住院', tag: '人事', emoji: 'people', cooldown: 35,
+      unlockMission: 12,
       desc: '老周父亲深夜突发脑梗送医院。他来请假,说至少要七天陪护。',
       options: [
         { label: '全薪准假 + 慰问金', detail: '−¥2,000,全员信任 +30', apply: () => ({ funds: -2000, trustLoyalty: 30 }) },
@@ -887,10 +682,251 @@
     },
     {
       id: 'quit_temptation', title: '司机想转行送外卖', tag: '人事', emoji: 'people', cooldown: 30,
+      unlockMission: 14,
       desc: '小张说送外卖比开网约车多挣两千,而且不用伺候人。他来跟你打招呼准备走。',
       options: [
         { label: '加薪挽留', detail: '月薪 +¥1,200,司机留下且忠诚 +30', apply: () => ({ keepBest: true, salaryRaise: 1200 }) },
         { label: '放他走', detail: '钱保住,失去最强司机,口碑 −3', apply: () => ({ loseBest: true, reputation: -3 }) },
+      ],
+    },
+
+    // ============ rain chain 拆段(独立单段) ============
+    {
+      id: 'rain_base', title: '暴雨天来了', tag: '天气', emoji: 'rain', cooldown: 30,
+      unlockMission: 0,
+      desc: '今天下大雨,平台订单需求暴涨。要让司机出车吗?',
+      options: [
+        { label: '全员出车抢单', detail: '订单 +60%。30% 概率事故 → 修车 −¥1,500,全员忠诚 −20', apply: () => ({ orderBoost: 1.6, accidentRisk: { chance: 0.30, funds: -1500, allLoyalty: -20, log: '暴雨抢单发生剐蹭事故,司机受惊,车队垫付维修费' } }) },
+        { label: '全员休息保人', detail: '今天放假,口碑 +5,所有司机忠诚 +10', apply: () => ({ reputation: 5, allLoyalty: 10 }) },
+      ],
+    },
+    {
+      id: 'rain_storm_metro', title: '暴雨夜地铁停运', tag: '天气', emoji: 'rain', cooldown: 30,
+      unlockMission: 10,
+      desc: '红色暴雨预警,地铁全线停运。打车需求是平时三倍,但路况危险,司机们也累。',
+      options: [
+        { label: '全员死撑抢单', detail: '订单 +80%,基础全员忠诚 −15。40% 概率事故 → 修车 −¥2,500,再扣全员忠诚 −30', apply: () => ({ orderBoost: 1.8, allLoyalty: -15, accidentRisk: { chance: 0.40, funds: -2500, allLoyalty: -30, log: '暴雨夜死撑抢单发生事故,司机受伤,车队垫付医药费,人心散了' } }) },
+        { label: '车队组团送社区免费车', detail: '−¥1,500,口碑 +20,所有司机忠诚 +15', apply: () => ({ funds: -1500, reputation: 20, allLoyalty: 15 }) },
+      ],
+    },
+    {
+      id: 'rain_red_alert', title: '50 年一遇红色预警', tag: '天气', emoji: 'rain', cooldown: 30,
+      unlockMission: 14,
+      desc: '气象台发布 50 年一遇极端暴雨预警,部分路段已经积水到腰。这是该让车队完全停运的程度了。',
+      options: [
+        { label: '加入应急救援队送医送药', detail: '−¥2,000,口碑 +25,所有司机忠诚 +20', apply: () => ({ funds: -2000, reputation: 25, allLoyalty: 20 }) },
+        { label: '闷声继续抢单', detail: '+¥4,000,口碑 −25。55% 概率严重事故 → 修车 −¥4,000,全员忠诚 −50', apply: () => ({ funds: 4000, reputation: -25, accidentRisk: { chance: 0.55, funds: -4000, allLoyalty: -50, log: '50 年一遇红色预警还硬抢,司机受伤,直接想离开车队' } }) },
+      ],
+    },
+
+    // ============ celeb chain 拆段 ============
+    {
+      id: 'celeb_base', title: '明星打到你家车', tag: '运气', emoji: 'star', cooldown: 35,
+      unlockMission: 3,
+      desc: '一名歌手打到了你的车,司机服务很到位。',
+      options: [
+        { label: '配合宣传', detail: '+15 口碑,但司机被偷拍隐私', apply: () => ({ reputation: 15, allLoyalty: -10 }) },
+        { label: '低调处理', detail: '+8 口碑,司机赞', apply: () => ({ reputation: 8, allLoyalty: 5 }) },
+      ],
+    },
+    {
+      id: 'celeb_pack', title: '明星经纪公司想包车', tag: '运气', emoji: 'star', cooldown: 35,
+      unlockMission: 9,
+      desc: '上次那位歌手的经纪公司打电话来,想长期签约车队做艺人接送。一个月 ¥15,000 包月,但要求 24 小时待命。',
+      options: [
+        { label: '签下来全力服务', detail: '+¥15,000 签约费,所有司机忠诚 −15(24h 待命强度大)', apply: () => ({ funds: 15000, allLoyalty: -15 }) },
+        { label: '婉拒,保持普通业务', detail: '所有司机忠诚 +10,口碑 +5', apply: () => ({ allLoyalty: 10, reputation: 5 }) },
+      ],
+    },
+    {
+      id: 'celeb_paparazzi', title: '八卦记者跟拍司机', tag: '运气', emoji: 'star', cooldown: 35,
+      unlockMission: 13,
+      desc: '上次那位歌手的私生活被狗仔盯上,你的司机被多次跟拍。狗仔出价 ¥5,000 让司机透露行程。',
+      options: [
+        { label: '严令司机闭口 + 送签保密协议', detail: '−¥1,500,口碑 +15,所有司机忠诚 +10(讲规矩)', apply: () => ({ funds: -1500, reputation: 15, allLoyalty: 10 }) },
+        { label: '默许司机收钱', detail: '+¥5,000(分成),口碑 −25(业内骂走灰)', apply: () => ({ funds: 5000, reputation: -25 }) },
+      ],
+    },
+
+    // ============ newyear chain 拆段 ============
+    {
+      id: 'newyear_base', title: '春节将至', tag: '节日', emoji: 'festival', cooldown: 60,
+      unlockMission: 0,
+      desc: '春节快到了,司机们想回家。',
+      options: [
+        { label: '春节红包', detail: '−¥3,000,所有司机忠诚 +40', apply: () => ({ funds: -3000, allLoyalty: 40 }) },
+        { label: '正常过节', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
+      ],
+    },
+    {
+      id: 'newyear_spring_rush', title: '春运抢票热点', tag: '节日', emoji: 'festival', cooldown: 60,
+      unlockMission: 6,
+      desc: '今年春运抢票特别难。几个司机在车队群里说,如果回不去家就接着跑。',
+      options: [
+        { label: '车队帮买回家票', detail: '−¥4,000,所有司机忠诚 +35', apply: () => ({ funds: -4000, allLoyalty: 35 }) },
+        { label: '让司机自己想办法', detail: '钱保住,所有司机忠诚 −15', apply: () => ({ allLoyalty: -15 }) },
+      ],
+    },
+    {
+      id: 'newyear_return_block', title: '突发返乡限制', tag: '节日', emoji: 'festival', cooldown: 60,
+      unlockMission: 12,
+      desc: '春节前一周,周边省份突然要求"红码不准下高速 + 隔离 14 天"。多个司机想提前撤回,但你订单正好接到爆。',
+      options: [
+        { label: '准司机们提前回家', detail: '−¥4,000(闲置 + 补贴),所有司机忠诚 +40', apply: () => ({ funds: -4000, allLoyalty: 40 }) },
+        { label: '强制留人补一笔留岗费', detail: '−¥1,500,订单 +50%(7天),所有司机忠诚 −20', apply: () => ({ funds: -1500, orderBoost: 1.5, boostDuration: 7, allLoyalty: -20 }) },
+      ],
+    },
+
+    // ============ borrow chain 真分支(关系信任轴) ============
+    {
+      id: 'borrow_seed', title: '老张找你借钱', tag: '人事', emoji: 'people', chain: 'borrow', cooldown: 999,
+      unlockMission: 0,
+      desc: '老张儿子要交学费,缺 ¥2,000,来找你借。',
+      options: [
+        { label: '借给他', detail: '−¥2,000,所有司机忠诚 +30', choiceKey: 'help', apply: () => ({ funds: -2000, allLoyalty: 30 }) },
+        { label: '装作没看见', detail: '钱保住,所有司机忠诚 −20', choiceKey: 'refuse', apply: () => ({ allLoyalty: -20 }) },
+      ],
+    },
+    {
+      id: 'borrow_close', title: '老张儿子要结婚', tag: '人事', emoji: 'people', chain: 'borrow_close', cooldown: 999,
+      unlockMission: 5,
+      requireChainChoice: { borrow: 'help' },
+      desc: '老张儿子终于要结婚了。婚礼办在老家,缺 ¥8,000 份子礼。老张抹不开面子,在车里吭哧了半天才开口。',
+      options: [
+        { label: '借给他', detail: '−¥8,000,所有司机忠诚 +25', choiceKey: 'help', apply: () => ({ funds: -8000, allLoyalty: 25 }) },
+        { label: '婉拒,让他自己想办法', detail: '钱保住,所有司机忠诚 −15', choiceKey: 'refuse', apply: () => ({ allLoyalty: -15 }) },
+      ],
+    },
+    {
+      id: 'borrow_distance', title: '老张找别人借去了', tag: '人事', emoji: 'people', chain: 'borrow_distance', cooldown: 999,
+      unlockMission: 5,
+      requireChainChoice: { borrow: 'refuse' },
+      desc: '听说老张前阵子找隔壁车队的老板借了钱。最近你想跟他多聊几句,他都低头不接话。司机群里气氛冷下来了。',
+      options: [
+        { label: '主动找老张谈,送一笔慰问', detail: '−¥3,000,关系修复,所有司机忠诚 +20', choiceKey: 'mend', apply: () => ({ funds: -3000, allLoyalty: 20 }) },
+        { label: '不管,各自跑车', detail: '钱保住,失去老张(司机离队),所有司机忠诚 −15', choiceKey: 'ignore', apply: () => ({ loseBest: true, allLoyalty: -15 }) },
+      ],
+    },
+    {
+      id: 'borrow_intimate', title: '老张老家盖房', tag: '人事', emoji: 'people', chain: 'borrow_intimate', cooldown: 999,
+      unlockMission: 11,
+      requireChainChoice: { borrow_close: 'help' },
+      desc: '老张老家批了宅基地,要盖房养老。缺 ¥20,000。这次他没张口,是他老婆在群里发来的语音。',
+      options: [
+        { label: '借给他,慢慢还', detail: '−¥20,000,全员信任 +30', apply: () => ({ funds: -20000, trustLoyalty: 30 }) },
+        { label: '婉拒,介绍他银行信用贷', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
+      ],
+    },
+    {
+      id: 'borrow_cooled', title: '老张主动提辞职', tag: '人事', emoji: 'people', chain: 'borrow_cooled', cooldown: 999,
+      unlockMission: 11,
+      requireChainChoice: { borrow_close: 'refuse' },
+      desc: '老张说自己最近"想换种活法",其实你和他都明白——上次没借的那一万八,他到现在没解,所以决定走人。',
+      options: [
+        { label: '加薪挽留 + 私下补一笔', detail: '−¥4,000 + 月薪 +¥800,司机留下,全员信任 +15', apply: () => ({ funds: -4000, keepBest: true, salaryRaise: 800, trustLoyalty: 15 }) },
+        { label: '同意离队', detail: '钱保住,失去老张,所有司机忠诚 −15', apply: () => ({ loseBest: true, allLoyalty: -15 }) },
+      ],
+    },
+
+    // ============ platform_pressure 单事件重复触发(长线引导攒钱) ============
+    {
+      id: 'platform_pressure', title: '平台抽成又涨了', tag: '行业', emoji: 'biz', chain: 'platform', cooldown: 35,
+      unlockMission: 8,
+      // customGuard 在引擎层判断:已选自营则不再触发
+      desc: '滴答出行又涨抽成了。法务说要么忍,要么自建小程序甩开它。但是自建成本不低。',
+      options: [
+        { label: '硬扛新抽成', detail: '抽成 +5%(封顶 40%)', choiceKey: 'fight', apply: (s) => ({ commissionRate: Math.min(0.40, ((s && s.commissionRate) || 0.20) + 0.05) }) },
+        { label: '搞自营小程序 −¥180,000', detail: '资金 −¥180,000(资金不足时禁用),抽成永久 0%,事件不再触发', choiceKey: 'selfop', apply: () => ({ funds: -180000, commissionRate: 0, platformDone: true }) },
+      ],
+    },
+
+    // ============ rival chain 钥匙司机机制 ============
+    {
+      id: 'rival_seed', title: '滴答挖你最强司机', tag: '竞争', emoji: 'rival', chain: 'rival', cooldown: 999,
+      unlockMission: 13,
+      desc: '隔壁滴答车队想用月薪 +¥1,500 挖你最强的司机。',
+      options: [
+        { label: '加薪挽留', detail: '月薪 +¥1,500,司机留下且忠诚 +30', choiceKey: 'keep', apply: () => ({ keepBest: true, salaryRaise: 1500 }) },
+        { label: '放走', detail: '钱保住,失去最强司机,口碑 −10', choiceKey: 'release', apply: () => ({ loseBest: true, reputation: -10 }) },
+      ],
+    },
+    {
+      id: 'rival_pricing', title: '滴答出价更狠了', tag: '竞争', emoji: 'rival', chain: 'rival_pricing', cooldown: 999,
+      unlockMission: 14,
+      requireChainChoice: { rival: 'keep' },
+      blindOptions: true,
+      desc: '滴答这次出价翻倍 + ¥10,000 签约费。法务说"你给多少他才肯留"。这次给多少,你自己拿主意。',
+      // 4 选项盲选(blindOptions=true):玩家选之前看不到具体后果,选完才揭晓
+      options: [
+        { label: '+¥1,000', detail: '试探性加价', choiceKey: 1000, apply: () => ({ loseBest: true, allLoyalty: -10 }) },
+        { label: '+¥2,000', detail: '中规中矩加薪', choiceKey: 2000, apply: () => ({ loseBest: true, allLoyalty: -5 }) },
+        { label: '+¥3,000', detail: '诚意加价', choiceKey: 3000, apply: () => ({ keepBest: true, salaryRaise: 3000, markKeyDriver: true }) },
+        { label: '+¥4,000', detail: '豪赌加价', choiceKey: 4000, apply: () => ({ keepBest: true, salaryRaise: 4000, markKeyDriver: true }) },
+      ],
+    },
+    {
+      id: 'rival_friends_join_success', title: '老兄弟们想加入', tag: '竞争', emoji: 'rival', cooldown: 999,
+      unlockMission: 15,
+      requireChainChoice: { rival_pricing: [3000, 4000] },
+      requireKeyDriverAlive: true,
+      desc: '钥匙司机找上你:"我以前在滴答的老兄弟想跳槽,他们自带专车,问你这边靠不靠谱"',
+      options: [
+        { label: '欢迎加入', detail: '+¥3k 选项 → 0 成本获得 3 司机 + 3 凯美瑞;+¥4k 选项 → 5 司机 + 5 凯美瑞', apply: (s) => {
+          const choice = (s && s.chainChoices && s.chainChoices.rival_pricing) || 3000;
+          const count = choice === 4000 ? 5 : 3;
+          return { addDrivers: count, addVehicles: count, vehicleType: 'camry' };
+        } },
+      ],
+    },
+    {
+      id: 'rival_friends_join_lost', title: '错失老兄弟们', tag: '竞争', emoji: 'rival', cooldown: 999,
+      unlockMission: 15,
+      requireChainChoice: { rival_pricing: [3000, 4000] },
+      requireKeyDriverAlive: false,
+      desc: '听说滴答 3 个专车司机想跳槽,要找熟人引荐。可你这边没合适人脉——上次没留住他,这条路也断了。',
+      options: [
+        { label: '知道了', detail: '机会流失,无奖励', apply: () => ({}) },
+      ],
+    },
+
+    // ============ accident chain 信任责任轴 ============
+    {
+      id: 'accident_seed', title: '小李剐蹭豪车', tag: '人事', emoji: 'crash', chain: 'accident', cooldown: 999,
+      unlockMission: 5,
+      desc: '小李剐蹭了一辆豪车,对方索赔 ¥3,000。',
+      options: [
+        { label: '公司全付', detail: '−¥3,000,所有司机忠诚 +20', choiceKey: 'cover', apply: () => ({ funds: -3000, allLoyalty: 20 }) },
+        { label: '让司机自付', detail: '钱保住,所有司机忠诚 −30', choiceKey: 'shift', apply: () => ({ allLoyalty: -30 }) },
+      ],
+    },
+    {
+      id: 'accident_trust', title: '小李撞了行人', tag: '人事', emoji: 'crash', chain: 'accident_trust', cooldown: 999,
+      unlockMission: 10,
+      requireChainChoice: { accident: 'cover' },
+      desc: '小李路口转弯撞了一位骑电瓶车的大妈。大妈腿骨折,要住院。这次不是剐蹭,是真事故。',
+      options: [
+        { label: '车队全担医疗费 + 误工费', detail: '−¥15,000,全员信任 +25,口碑 +10', choiceKey: 'cover', apply: () => ({ funds: -15000, trustLoyalty: 25, reputation: 10 }) },
+        { label: '让司机一人负责到底', detail: '钱保住,所有司机忠诚 −35,口碑 −10', choiceKey: 'shift', apply: () => ({ allLoyalty: -35, reputation: -10 }) },
+      ],
+    },
+    {
+      id: 'accident_breach', title: '保险公司拒赔', tag: '人事', emoji: 'crash', chain: 'accident_breach', cooldown: 999,
+      unlockMission: 10,
+      requireChainChoice: { accident: 'shift' },
+      desc: '上次让小李自付剐蹭费的事还没消化,这次他撞了行人保险又拒赔——保险公司说当时车队没担责导致维修流程不规范,赔不下来,¥15,000 全要车队出。',
+      options: [
+        { label: '公司咬牙担下来', detail: '−¥15,000,全员信任 +30', apply: () => ({ funds: -15000, trustLoyalty: 30 }) },
+        { label: '让小李分期偿还', detail: '钱保住,所有司机忠诚 −25', apply: () => ({ allLoyalty: -25 }) },
+      ],
+    },
+    {
+      id: 'accident_loyalty', title: '小李主动提"我留下还您"', tag: '人事', emoji: 'people', cooldown: 999,
+      unlockMission: 13,
+      requireChainChoice: { accident_trust: 'cover' },
+      desc: '上次撞行人那一万五,小李心里记着。今天他单独找你,说"老板,这辈子跟着您干,慢慢还"。',
+      options: [
+        { label: '加薪留下', detail: '月薪 +¥600,全员忠诚 +20', apply: () => ({ keepBest: true, salaryRaise: 600, allLoyalty: 20 }) },
+        { label: '平淡处理', detail: '不变,司机继续跑', apply: () => ({}) },
       ],
     },
   ];

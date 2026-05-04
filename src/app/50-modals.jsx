@@ -271,6 +271,15 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
             const optionDetail = getEventOptionDetail(o, eff);
             const showNoImmediateEffect = !hasImmediateEffect && !detailLooksLikeNumericEffect(optionDetail);
             const orderBoostText = formatOrderBoostText(eff);
+            // V15.x: blindOptions 事件(如 rival_pricing 4 选项盲选)隐藏 effect chips,选完才揭晓
+            if (event.blindOptions) {
+              return (
+                <button key={i} className="modal-option" onClick={() => onResolve(i)}>
+                  <div className="modal-option-label">{o.label}</div>
+                  {optionDetail && <div className="modal-option-effect">{optionDetail}</div>}
+                </button>
+              );
+            }
             return (
               <button key={i} className="modal-option" onClick={() => onResolve(i)}>
                 <div className="modal-option-label">{o.label}</div>
@@ -536,10 +545,22 @@ function GameFeedbackCard({
   children,
   className = '',
 }) {
+  const feedbackAssetMap = {
+    achievement: 'feedback-achievement',
+    mission: 'feedback-mission',
+    reward: 'feedback-reward',
+    story: 'feedback-story',
+    warning: 'feedback-warning',
+  };
+  const iconAsset = feedbackAssetMap[asset] || asset || (tone === 'gold' ? 'feedback-reward' : 'feedback-mission');
   return (
     <div className={`game-feedback-card tone-${tone} ${modal ? 'modal-card' : ''} ${className}`} onClick={(e) => modal && e.stopPropagation()}>
       <div className="game-feedback-media">
-        {media || <div className="game-feedback-icon" data-asset={asset}>{iconLabel}</div>}
+        {media || (
+          <div className="game-feedback-icon" data-asset={iconAsset}>
+            <img src={`assets/pixel/icons/${iconAsset}.png`} alt={iconLabel} draggable="false" />
+          </div>
+        )}
       </div>
       <div className="game-feedback-main">
         <div className="game-feedback-tag">{tag}</div>
@@ -733,6 +754,25 @@ function StoryModal({ story, drivers, onClose }) {
 }
 
 // V6: 抽卡式招募 — 选券 → 抽 3 张 → 挑 1 张
+const TICKET_STAGE_TEXT = {
+  normal: '起步补人',
+  vip: '中期主力',
+  headhunter: '后期挖人',
+};
+const RARITY_ORDER = ['N', 'R', 'SR', 'SSR'];
+
+function formatTicketRate(prob) {
+  return `${Math.round((prob || 0) * 100)}%`;
+}
+
+function getTicketProbRows(ticket) {
+  return RARITY_ORDER.map((rarity, idx) => ({
+    rarity,
+    meta: RARITY_META[rarity],
+    prob: ticket.probs?.[idx] || 0,
+  })).filter((row) => row.prob > 0);
+}
+
 function RecruitModal({ state, dispatch, onClose }) {
   const cards = state.gachaCards;
   const funds = state.funds;
@@ -741,19 +781,35 @@ function RecruitModal({ state, dispatch, onClose }) {
   if (!cards) {
     return (
       <div className="modal-overlay" onClick={onClose}>
-        <div className="modal recruit-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: 820}}>
+        <div className="modal recruit-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: 980}}>
           <div className="modal-title">招募新司机</div>
-          <div className="modal-desc">选一张招募券抽卡 — 每抽出 3 张候选,可挑 1 张加入车队。</div>
+          <div className="modal-desc">选一张招募券 — 每次出 3 名候选,挑 1 名加入车队。概率按每名候选单独计算。</div>
           <div className="ticket-list">
             {RECRUIT_TICKETS.map((t) => {
               const enough = funds >= t.cost;
+              const probRows = getTicketProbRows(t);
               return (
                 <div key={t.id} className={`ticket-card ${t.id}`}>
-                  <div className="ticket-head">
-                    <span className="ticket-name">{t.name}</span>
+                  <div className="ticket-top">
+                    <img className="ticket-icon" src={`assets/pixel/icons/ticket-${t.id}.png`} alt="" draggable="false" />
+                    <div className="ticket-top-copy">
+                      <span className="ticket-stage">{TICKET_STAGE_TEXT[t.id]}</span>
+                      <span className="ticket-name">{t.name}</span>
+                    </div>
                     <span className="ticket-cost">¥{t.cost.toLocaleString()}</span>
                   </div>
                   <div className="ticket-desc">{t.desc}</div>
+                  <div className="ticket-prob-card">
+                    <div className="ticket-prob-title">单名候选概率</div>
+                    <div className="ticket-prob-list">
+                      {probRows.map((row) => (
+                        <span key={row.rarity} className="ticket-prob-chip" style={{ '--prob-color': row.meta.color }}>
+                          <span>{row.meta.name}</span>
+                          <strong>{formatTicketRate(row.prob)}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                   <button
                     className="btn btn-primary btn-sm btn-block"
                     disabled={!enough}
@@ -792,7 +848,7 @@ function RecruitModal({ state, dispatch, onClose }) {
                 </div>
                 <div className="gacha-profile">
                   <div className="gacha-name">{card.name}</div>
-                  <div className="gacha-bg">{card.bgName}</div>
+                  <div className="gacha-bg">{getDriverRoleLabel(card)}</div>
                   <div className="gacha-salary">月薪 ¥{card.salary.toLocaleString()}</div>
                 </div>
                 <div className="gacha-stats-block">
@@ -838,7 +894,7 @@ function ShopModal({ onClose, onBuyVehicle, state }) {
             const cantAfford = state.funds < v.price;
             return (
               <div key={v.id} className="shop-item">
-                <div className="shop-image"><VehicleIcon template={v} size={70} /></div>
+                <div className="shop-image"><VehicleIcon template={v} size={84} /></div>
                 <div className="shop-info">
                   <div className="shop-name-row">
                     <span className="shop-name">{v.name}</span>
@@ -978,4 +1034,3 @@ function getMissionRouteRows(state, orderStatusById) {
     return { mission, idx, orderStatus, stateClass, stateLabel };
   });
 }
-
