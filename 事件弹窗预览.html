@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>事件弹窗预览(全事件 Storybook)</title>
+<link rel="stylesheet" href="src/styles/00-tokens.css">
+<link rel="stylesheet" href="src/styles/10-base.css">
+<link rel="stylesheet" href="src/styles/20-topbar.css">
+<link rel="stylesheet" href="src/styles/30-modals.css">
+<link rel="stylesheet" href="src/styles/40-tasks-list.css">
+<link rel="stylesheet" href="src/styles/50-feedback.css">
+<link rel="stylesheet" href="src/styles/60-inspector.css">
+<link rel="stylesheet" href="src/styles/70-pixel-flytext.css">
+<link rel="stylesheet" href="src/styles/80-map-hud.css">
+<link rel="stylesheet" href="src/styles/90-toggles-recruit.css">
+<link rel="stylesheet" href="src/styles/99-overrides.css">
+<style>
+  html, body { height: 100%; margin: 0; padding: 0; background: #f3eedb; }
+  #root { height: 100vh; display: flex; flex-direction: row; overflow: hidden; }
+
+  /* 左侧栏 */
+  .sb-sidebar {
+    width: 300px; flex-shrink: 0;
+    background: #1d1a18; color: #ddd;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+  }
+  .sb-sidebar-header {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    position: sticky; top: 0;
+    background: #1d1a18;
+    z-index: 1;
+  }
+  .sb-sidebar-header h1 { font-size: 14px; margin: 0 0 4px; color: #ffb74d; font-weight: 600; }
+  .sb-sidebar-header .sub { font-size: 11px; color: #999; }
+  .sb-controls {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 12px; color: #bbb;
+  }
+  .sb-controls input {
+    width: 100%; padding: 4px 8px; margin-top: 4px;
+    border-radius: 3px; border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06); color: #fff; font-family: inherit;
+    font-size: 12px;
+  }
+  .sb-group { padding: 12px 0 6px; }
+  .sb-group-title {
+    padding: 4px 16px; font-size: 11px; font-weight: 600;
+    color: #ff6b35; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .sb-item {
+    display: block; width: 100%;
+    padding: 7px 16px 7px 24px;
+    background: transparent; border: none;
+    color: #ccc; font-size: 12px; text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    border-left: 3px solid transparent;
+    line-height: 1.45;
+  }
+  .sb-item:hover { background: rgba(255,255,255,0.04); color: #fff; }
+  .sb-item.active {
+    background: rgba(255,107,53,0.18);
+    color: #fff;
+    border-left-color: #ff6b35;
+    font-weight: 500;
+  }
+  .sb-item .stage-tag {
+    display: inline-block;
+    padding: 1px 6px; margin-left: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    font-size: 10px; color: #aaa;
+  }
+  .sb-item.active .stage-tag {
+    background: rgba(255,255,255,0.18); color: #fff;
+  }
+
+  /* 主区 - modal 限制在这里显示 */
+  .sb-stage {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #f3eedb;
+  }
+  .sb-stage-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; color: #888; font-size: 14px;
+  }
+  /* 关键:让 modal-overlay 在 storybook 里限制在主区 */
+  .sb-stage .modal-overlay {
+    position: absolute !important;
+    inset: 0;
+    z-index: 50;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+
+<script src="wycwy-data.js"></script>
+<script src="wycwy-engine.js"></script>
+
+<script type="text/babel" src="src/app/00-runtime.jsx"></script>
+<script type="text/babel" src="src/app/10-icons.jsx"></script>
+<script type="text/babel" src="src/app/20-topbar.jsx"></script>
+<script type="text/babel" src="src/app/30-fleet.jsx"></script>
+<script type="text/babel" src="src/app/40-inspector.jsx"></script>
+<script type="text/babel" src="src/app/50-modals.jsx"></script>
+
+<script type="text/babel">
+  const { useState, useMemo } = React;
+
+  // -------- 数据准备 --------
+  const D = window.WYCWY_DATA;
+  const E = window.WYCWY_ENGINE;
+
+  // 政策事件:每个 stage 一个左侧栏项
+  function buildPolicySidebarItems() {
+    const out = [];
+    (D.POLICY_EVENTS || []).forEach((ev) => {
+      const stages = ev.stages || {};
+      Object.keys(stages).forEach((stageKey) => {
+        out.push({
+          id: `policy_${ev.id}_${stageKey}`,
+          title: stages[stageKey].title,
+          stageTag: stageKeyToShortLabel(ev, stageKey),
+          kind: 'policy',
+          policyEventId: ev.id,
+          policyStage: stageKey,
+        });
+      });
+    });
+    return out;
+  }
+  function stageKeyToShortLabel(ev, stageKey) {
+    if (ev.id !== 'gov_ban') return stageKey;
+    const map = {
+      notice_1: 'Day 30',
+      decision: 'Day 60 决策',
+      verdict_pass: 'Day 90 通过',
+      verdict_fine: 'Day 90 轻罚',
+      verdict_ban: 'Day 90 整改',
+      resume: 'Day 150 解禁',
+    };
+    return map[stageKey] || stageKey;
+  }
+
+  // 随机事件:每个 base + chainStages 一个左侧栏项
+  function buildRandomEventSidebarItems() {
+    const allEvents = D.EVENTS || [];
+    const chained = []; // 含 chainStages 的
+    const single = [];  // 单段事件
+    allEvents.forEach((ev) => {
+      const baseItem = {
+        id: `event_${ev.id}_0`,
+        title: ev.title,
+        stageTag: ev.tag,
+        kind: 'event',
+        eventId: ev.id,
+        stageIdx: 0,
+      };
+      if (ev.chainStages && ev.chainStages.length > 0) {
+        chained.push(baseItem);
+        ev.chainStages.forEach((stg, i) => {
+          chained.push({
+            id: `event_${ev.id}_${i + 1}`,
+            title: stg.title || `${ev.title} 阶段 ${i + 1}`,
+            stageTag: `${ev.tag} · 阶段 ${i + 1}`,
+            kind: 'event',
+            eventId: ev.id,
+            stageIdx: i + 1,
+          });
+        });
+      } else {
+        single.push(baseItem);
+      }
+    });
+    return { chained, single };
+  }
+
+  function buildInvestorSidebarItem() {
+    return {
+      id: 'investor_pressure',
+      title: '投资人压力',
+      stageTag: '危机',
+      kind: 'investor',
+    };
+  }
+
+  // -------- mock state --------
+  const baseInitial = E.makeInitialState();
+  const MOCK_STATE = {
+    ...baseInitial,
+    funds: 75695,
+    reputation: 401,
+    todayEarned: 144,
+    day: 60,
+    hour: 14,
+  };
+  // 投资人事件需要资金负 + 可裁的司机/可卖的车
+  const INVESTOR_MOCK_STATE = {
+    ...baseInitial,
+    funds: -3500,
+    reputation: 280,
+    day: 50,
+    hour: 6,
+  };
+
+  // -------- render helpers --------
+  function buildPolicyEventForStage(eventId, stageKey, r0) {
+    const ev = D.POLICY_EVENTS.find((e) => e.id === eventId);
+    if (!ev) return null;
+    const stageData = ev.stages[stageKey];
+    if (!stageData) return null;
+    const params = ev.params;
+
+    if (stageKey === 'decision') {
+      return {
+        type: 'policyDecision',
+        decision: {
+          eventId, stage: stageKey,
+          title: stageData.title, tag: stageData.tag, desc: stageData.desc,
+          options: stageData.options,
+          refMonthlyRevenue: r0,
+          params,
+        },
+      };
+    }
+
+    let previews = [];
+    let footerNote = '';
+    if (stageKey === 'verdict_fine') {
+      previews = [
+        { label: '象征性罚款', value: `-¥${Math.round(r0 * params.A_VERDICT_FINE_PCT).toLocaleString()}`, tone: 'negative' },
+      ];
+    } else if (stageKey === 'verdict_ban') {
+      previews = [
+        { label: '立即罚款', value: `-¥${Math.round(r0 * params.B_FINE_PCT).toLocaleString()}`, tone: 'negative' },
+        { label: '60 天禁运 · 订单量', value: `降至 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}%(60 天)`, tone: 'negative' },
+        { label: '强制启动月合规支出', value: `首月 ¥${Math.round(r0 * 0.25).toLocaleString()} → 稳定后 ¥${Math.round(r0 * 0.10).toLocaleString()}/月`, tone: 'negative' },
+      ];
+      footerNote = '整改期间运营成本需照常承担。如需止损,可在车队管理界面卖车或裁员。';
+    } else if (stageKey === 'resume') {
+      previews = [
+        { label: '禁运解除 · 订单量', value: '恢复至 100%', tone: 'positive' },
+      ];
+    }
+
+    return {
+      type: 'policyNotice',
+      event: {
+        id: `policy_${eventId}_${stageKey}`,
+        title: stageData.title, tag: stageData.tag, desc: stageData.desc,
+        isPolicyEvent: true,
+        policyEventId: eventId,
+        policyStage: stageKey,
+        policyEffectPreview: previews,
+        policyFooterNote: footerNote,
+        options: [{ label: stageData.buttonLabel || '知道了', detail: '', apply: () => ({}) }],
+      },
+    };
+  }
+
+  function buildRandomEventModal(eventId, stageIdx) {
+    const ev = D.EVENTS.find((e) => e.id === eventId);
+    if (!ev) return null;
+    let evCopy = { ...ev };
+    if (stageIdx > 0 && ev.chainStages && ev.chainStages[stageIdx - 1]) {
+      const stage = ev.chainStages[stageIdx - 1];
+      evCopy = {
+        ...ev,
+        title: stage.title || ev.title,
+        desc: stage.desc || ev.desc,
+        options: stage.options || ev.options,
+      };
+    }
+    return { type: 'event', event: evCopy };
+  }
+
+  function buildInvestorModal() {
+    return {
+      type: 'investor',
+      event: D.INVESTOR_PRESSURE,
+    };
+  }
+
+  function StorybookApp() {
+    const [r0, setR0] = useState(87684);
+    const [activeId, setActiveId] = useState('policy_gov_ban_decision');
+
+    const policyItems = useMemo(buildPolicySidebarItems, []);
+    const { chained: chainedItems, single: singleItems } = useMemo(buildRandomEventSidebarItems, []);
+    const investorItem = useMemo(buildInvestorSidebarItem, []);
+
+    const allItems = [
+      ...policyItems,
+      ...chainedItems,
+      ...singleItems,
+      investorItem,
+    ];
+
+    const activeItem = allItems.find((it) => it.id === activeId);
+
+    let built = null;
+    if (activeItem) {
+      if (activeItem.kind === 'policy') {
+        built = buildPolicyEventForStage(activeItem.policyEventId, activeItem.policyStage, r0);
+      } else if (activeItem.kind === 'event') {
+        built = buildRandomEventModal(activeItem.eventId, activeItem.stageIdx);
+      } else if (activeItem.kind === 'investor') {
+        built = buildInvestorModal();
+      }
+    }
+
+    function renderSidebarGroup(title, items) {
+      return (
+        <div className="sb-group">
+          <div className="sb-group-title">{title}</div>
+          {items.map((it) => (
+            <button
+              key={it.id}
+              className={`sb-item ${activeId === it.id ? 'active' : ''}`}
+              onClick={() => setActiveId(it.id)}
+            >
+              {it.title}
+              {it.stageTag && <span className="stage-tag">{it.stageTag}</span>}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="sb-sidebar">
+          <div className="sb-sidebar-header">
+            <h1>事件弹窗预览</h1>
+            <div className="sub">所有事件 · {allItems.length} 项</div>
+          </div>
+          <div className="sb-controls">
+            R₀ 基准月营收(¥)
+            <input
+              type="number"
+              value={r0}
+              onChange={(e) => setR0(parseInt(e.target.value, 10) || 0)}
+            />
+          </div>
+          {renderSidebarGroup('政策事件 (V15)', policyItems)}
+          {renderSidebarGroup('随机事件 - 链式', chainedItems)}
+          {renderSidebarGroup('随机事件 - 单段', singleItems)}
+          {renderSidebarGroup('投资人危机', [investorItem])}
+        </div>
+
+        <div className="sb-stage">
+          {!built && <div className="sb-stage-empty">请从左侧选一个事件预览</div>}
+          {built && built.type === 'policyDecision' && (
+            <PolicyDecisionModal
+              key={`pd_${activeId}_${r0}`}
+              decision={built.decision}
+              state={MOCK_STATE}
+              onResolve={(c, t) => console.log('选了', c, t)}
+            />
+          )}
+          {built && built.type === 'policyNotice' && (
+            <PolicyNoticeModal
+              key={`pn_${activeId}_${r0}`}
+              event={built.event}
+              state={MOCK_STATE}
+              onResolve={(idx) => console.log('点击关闭', idx)}
+            />
+          )}
+          {built && built.type === 'event' && (
+            <EventModal
+              key={`ev_${activeId}`}
+              event={built.event}
+              state={MOCK_STATE}
+              onResolve={(idx) => console.log('选项', idx)}
+              onResolveInvestor={() => {}}
+            />
+          )}
+          {built && built.type === 'investor' && (
+            <EventModal
+              key={`inv_${activeId}`}
+              event={built.event}
+              state={INVESTOR_MOCK_STATE}
+              onResolve={() => {}}
+              onResolveInvestor={(choices) => console.log('投资人决策', choices)}
+            />
+          )}
+        </div>
+      </>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<StorybookApp />);
+</script>
+</body>
+</html>

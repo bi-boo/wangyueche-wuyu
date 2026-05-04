@@ -247,6 +247,10 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
   if (event.multiChoice) {
     return <InvestorPressureModal event={event} state={state} onResolve={onResolveInvestor} />;
   }
+  // V15: 政策事件(notice / verdict / resume)走专属布局,处罚项结构化展示
+  if (event.isPolicyEvent) {
+    return <PolicyNoticeModal event={event} state={state} onResolve={onResolve} />;
+  }
   return (
     <div className="modal-overlay">
       <div className="modal event-modal">
@@ -334,9 +338,101 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
 
 // V15: 政策决策弹窗(用于监管整改 Day 60 决策点等)
 // 与 EventModal 区别:支持选项的 extraToggle(子勾选)
+// V15: 政策事件通知/结果/解禁弹窗(单按钮关闭,处罚项结构化展示)
+// 用于 notice_1 / verdict_pass / verdict_fine / verdict_ban / resume 五种阶段
+function PolicyNoticeModal({ event, state, onResolve }) {
+  const previews = event.policyEffectPreview || [];
+  const footerNote = event.policyFooterNote || '';
+  const buttonLabel = event.options?.[0]?.label || '知道了';
+  const isBan = event.policyStage === 'verdict_ban';
+  return (
+    <div className="modal-overlay">
+      <div className={`modal event-modal policy-notice-modal ${isBan ? 'policy-notice-ban' : ''}`}>
+        <div className="event-modal-header">
+          <div className="modal-tag">{event.tag || '政策事件'}</div>
+          <div className="modal-title">{event.title}</div>
+          <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{event.desc}</div>
+        </div>
+        <EventResourceSnapshot state={state} />
+        {previews.length > 0 && (
+          <div className="policy-effect-list" style={{padding: '12px 16px 4px'}}>
+            <div style={{fontSize: 12, color: 'var(--ink-3, #888)', marginBottom: 8, fontWeight: 500}}>
+              {isBan ? '处罚明细' : '影响明细'}
+            </div>
+            <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
+              {previews.map((eff, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 14px',
+                  background: '#fff',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  borderLeft: `3px solid ${eff.tone === 'negative' ? '#d44' : eff.tone === 'positive' ? '#3a3' : '#888'}`,
+                  borderRadius: 6,
+                }}>
+                  <span style={{fontWeight: 500, fontSize: 14}}>{eff.label}</span>
+                  <strong className={eff.tone || ''} style={{fontSize: 14}}>{eff.value}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {footerNote && (
+          <div style={{padding: '8px 16px 0', fontSize: 12, color: 'var(--ink-3, #888)', whiteSpace: 'pre-line'}}>
+            {footerNote}
+          </div>
+        )}
+        <div className="modal-options">
+          <button
+            className="modal-option"
+            onClick={() => onResolve(0)}
+          >
+            <div className="modal-option-label">{buttonLabel}</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PolicyDecisionModal({ decision, state, onResolve }) {
   const [extraToggles, setExtraToggles] = React.useState({});
   const r0 = decision.refMonthlyRevenue || 0;
+  const params = decision.params || {};
+
+  // 基于 R₀ 预算各档具体金额(玩家看到具体数字,不展示 R₀ 概念)
+  const startupFee = Math.round(r0 * (params.A_STARTUP_FEE_PCT || 0.40));
+  const fineAmount = Math.round(r0 * (params.A_VERDICT_FINE_PCT || 0.10));
+  const complianceFirst = Math.round(r0 * 0.25);
+  const complianceFloor = Math.round(r0 * 0.10);
+  const loanAmount = Math.round(r0 * (params.B_LOAN_PCT || 1.00));
+  const loanInterest = Math.round(loanAmount * (params.B_LOAN_RATE || 0.10) * ((params.B_LOAN_DUE_DAYS || 90) / 365));
+  const loanRepay = loanAmount + loanInterest;
+
+  function renderEffects(optId) {
+    if (optId === 'A') {
+      return (
+        <div className="event-effect-preview">
+          <span className="negative">立即扣 ¥{startupFee.toLocaleString()}</span>
+          <span className="negative">月支出 ¥{complianceFirst.toLocaleString()} → ¥{complianceFloor.toLocaleString()} 衰减永久</span>
+          <span className="negative">30 天内招募/购车 5 天冷却</span>
+          <span>监管检查 50% 通过 / 50% 罚 ¥{fineAmount.toLocaleString()}</span>
+        </div>
+      );
+    }
+    if (optId === 'B') {
+      return (
+        <div className="event-effect-preview">
+          <span className="positive">订单量 +25%</span>
+          <span className="positive">单均利润 +15%</span>
+          <span>持续 30 天</span>
+        </div>
+      );
+    }
+    return null;
+  }
+
   return (
     <div className="modal-overlay">
       <div className="modal event-modal policy-decision-modal">
@@ -346,52 +442,67 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
           <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{decision.desc}</div>
         </div>
         <EventResourceSnapshot state={state} />
-        {r0 > 0 && (
-          <div className="policy-decision-baseline" style={{padding: '8px 16px', fontSize: 12, color: 'var(--ink-3, #888)'}}>
-            基准月营收 R₀ ≈ ¥{r0.toLocaleString()} (后续百分比按此基准计算)
-          </div>
-        )}
         <div className="modal-options">
           {decision.options.map((opt) => {
             const toggleVal = extraToggles[opt.id] || {};
+            const hasExtra = !!opt.extraToggle;
             return (
-              <div key={opt.id} className="modal-option-wrapper" style={{display: 'flex', flexDirection: 'column', marginBottom: 12}}>
+              <div
+                key={opt.id}
+                className="policy-decision-card"
+                style={{
+                  marginBottom: 12,
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  background: '#fff',
+                }}
+              >
                 <button
                   className="modal-option"
                   onClick={() => onResolve(opt.id, toggleVal)}
+                  style={{
+                    width: '100%',
+                    margin: 0,
+                    border: 'none',
+                    borderRadius: 0,
+                    background: 'transparent',
+                    textAlign: 'left',
+                  }}
                 >
                   <div className="modal-option-label">{opt.label}</div>
                   {opt.detail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{opt.detail}</div>}
+                  {renderEffects(opt.id)}
                 </button>
-                {opt.extraToggle && (
+                {hasExtra && (
                   <label
                     className="policy-decision-toggle"
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
-                      gap: 8,
-                      marginTop: 6,
-                      padding: '8px 12px',
-                      background: 'rgba(255, 200, 100, 0.08)',
-                      border: '1px dashed rgba(255, 200, 100, 0.4)',
-                      borderRadius: 6,
+                      gap: 10,
+                      padding: '10px 16px',
                       cursor: 'pointer',
                       fontSize: 13,
+                      background: 'rgba(255, 180, 70, 0.10)',
+                      borderTop: '1px dashed rgba(0,0,0,0.12)',
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <input
                       type="checkbox"
-                      checked={!!(extraToggles[opt.id] && extraToggles[opt.id][opt.extraToggle.id])}
+                      checked={!!toggleVal[opt.extraToggle.id]}
                       onChange={(e) => setExtraToggles({
                         ...extraToggles,
                         [opt.id]: { ...(extraToggles[opt.id] || {}), [opt.extraToggle.id]: e.target.checked },
                       })}
                       style={{marginTop: 3}}
                     />
-                    <span style={{flex: 1}}>
+                    <span style={{flex: 1, display: 'flex', flexDirection: 'column', gap: 3}}>
                       <strong>{opt.extraToggle.label}</strong>
-                      {opt.extraToggle.detail && <div style={{marginTop: 2, fontSize: 12, color: 'var(--ink-3, #888)'}}>{opt.extraToggle.detail}</div>}
+                      <span style={{fontSize: 12, color: 'var(--ink-3, #888)'}}>
+                        一次性 <span className="positive">+¥{loanAmount.toLocaleString()}</span> · 90 天后一次还本付息 <span className="negative">¥{loanRepay.toLocaleString()}</span>
+                      </span>
                     </span>
                   </label>
                 )}

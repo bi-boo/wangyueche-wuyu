@@ -1399,6 +1399,8 @@
       isPolicyEvent: true,
       policyEventId: eventDef.id,
       policyStage: stage,
+      policyEffectPreview: [],
+      policyFooterNote: '',
       options: [
         { label: stageData.buttonLabel || '知道了', detail: '', apply: () => ({}) },
       ],
@@ -1442,14 +1444,32 @@
     if (eventDef.id !== 'gov_ban') return s;
     const ps = s.policyState.govBan;
     if (!ps.decisionFired || !ps.decision) return s;
+    const params = eventDef.params;
+    const r0 = ps.refMonthlyRevenue || 1;
     let stageKey;
     if (ps.decision === 'A') {
-      stageKey = Math.random() < eventDef.params.A_VERDICT_GOOD_PCT ? 'verdict_pass' : 'verdict_fine';
+      stageKey = Math.random() < params.A_VERDICT_GOOD_PCT ? 'verdict_pass' : 'verdict_fine';
     } else {
       stageKey = 'verdict_ban';
     }
     const stageData = eventDef.stages[stageKey];
     const verdictResult = stageKey === 'verdict_pass' ? 'pass' : (stageKey === 'verdict_fine' ? 'fine' : 'ban');
+
+    // V15: 政策结果按钮的"具体处罚项"预览,UI 端 PolicyNoticeModal 渲染
+    let policyEffectPreview = [];
+    if (stageKey === 'verdict_fine') {
+      policyEffectPreview = [
+        { label: '象征性罚款', value: `-¥${Math.round(r0 * params.A_VERDICT_FINE_PCT).toLocaleString()}`, tone: 'negative' },
+      ];
+    } else if (stageKey === 'verdict_ban') {
+      policyEffectPreview = [
+        { label: '立即罚款', value: `-¥${Math.round(r0 * params.B_FINE_PCT).toLocaleString()}`, tone: 'negative' },
+        { label: '60 天禁运 · 订单量', value: `降至 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}%(60 天)`, tone: 'negative' },
+        { label: '强制启动月合规支出', value: `首月 ¥${Math.round(r0 * 0.25).toLocaleString()} → 稳定后 ¥${Math.round(r0 * 0.10).toLocaleString()}/月`, tone: 'negative' },
+      ];
+    }
+    // verdict_pass / notice / resume 默认空数组(无副作用)
+
     s.policyState = {
       ...s.policyState,
       govBan: {
@@ -1466,6 +1486,8 @@
       isPolicyEvent: true,
       policyEventId: eventDef.id,
       policyStage: stageKey,
+      policyEffectPreview,
+      policyFooterNote: stageKey === 'verdict_ban' ? '整改期间运营成本需照常承担。如需止损,可在车队管理界面卖车或裁员。' : '',
       options: [{ label: stageData.buttonLabel || '接受', detail: '', apply: () => ({}) }],
     };
     s.paused = true;
@@ -1490,6 +1512,10 @@
       isPolicyEvent: true,
       policyEventId: eventDef.id,
       policyStage: 'resume',
+      policyEffectPreview: [
+        { label: '禁运解除 · 订单量', value: '恢复至 100%', tone: 'positive' },
+      ],
+      policyFooterNote: '',
       options: [{ label: stageData.buttonLabel || '继续', detail: '', apply: () => ({}) }],
     };
     s.paused = true;
