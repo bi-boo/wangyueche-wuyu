@@ -66,27 +66,88 @@
     background: var(--sub);
     border: 2px solid var(--border);
     border-radius: 3px;
-    padding: 22px 18px 18px;
+    padding: 18px;
     box-shadow: 2px 2px 0 var(--border-soft);
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 12px;
     min-width: 0;
-    min-height: 248px;
+    min-height: 310px;
+  }
+  .ticket-top {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .ticket-icon {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    margin: 0;
+    align-self: flex-start;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
   }
   /* V14.92: 去 side-stripe + 去 linear-gradient,改全硬边框 + 实色（DESIGN.md 既反对 side-stripe 也反对糖色渐变）*/
   .ticket-card.normal { border: 2px solid var(--ink-3); background: var(--card); }
   .ticket-card.vip { border: 2px solid var(--purple); background: var(--card); }
   .ticket-card.headhunter { border: 2px solid var(--accent); background: var(--card); }
-  .ticket-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 18px;
+  .ticket-top-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
   }
-  .ticket-name { font-weight: 700; font-size: 18px; }
+  .ticket-stage {
+    color: var(--ink-2);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .ticket-name { font-weight: 900; font-size: 18px; line-height: 1.15; }
   .ticket-cost { font-weight: 700; color: var(--accent-deep); font-size: 18px; }
-  .ticket-desc { font-size: 14px; color: var(--ink-2); margin-bottom: 20px; line-height: 1.55; flex: 1; }
-  .ticket-card .btn-block { margin-top: auto; }
+  .ticket-desc {
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.45;
+    min-height: 42px;
+  }
+  .ticket-prob-card {
+    align-self: stretch;
+    border-top: 1px dashed var(--ink-1);
+    border-bottom: 1px dashed var(--ink-1);
+    padding: 10px 0;
+  }
+  .ticket-prob-title {
+    color: var(--ink-2);
+    font-size: 14px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  .ticket-prob-list {
+    display: grid;
+    gap: 6px;
+  }
+  .ticket-prob-chip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    padding: 4px 8px;
+    border-left: 4px solid var(--prob-color, var(--accent));
+    background: rgba(255,248,231,0.62);
+    font-size: 14px;
+    font-weight: 800;
+  }
+  .ticket-prob-chip strong {
+    color: var(--accent-deep);
+    font-size: 14px;
+  }
+  .ticket-card .btn-block { margin-top: 0; align-self: end; }
   .gacha-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -137,7 +198,23 @@
     min-width: 0;
   }
   .gacha-name { font-size: 18px; font-weight: 800; line-height: 1.15; }
-  .gacha-bg { font-size: 14px; color: var(--ink-2); font-weight: 700; margin-top: 2px; }  .gacha-salary { font-size: 14px; color: var(--accent-deep); font-weight: 800; margin-top: 6px; }
+  .gacha-bg {
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 6px;
+    padding: 2px 6px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.42);
+    color: var(--ink-3);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .gacha-salary { font-size: 14px; color: var(--accent-deep); font-weight: 800; margin-top: 6px; }
   .gacha-stats-block {
     min-width: 0;
   }
@@ -220,4 +297,3 @@
       line-height: 1.2;
     }
   }
-

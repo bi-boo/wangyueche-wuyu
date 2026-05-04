@@ -360,7 +360,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                   <DriverAvatar avatar={driver.avatar} size={34} name={driver.name} />
                   <div className="crew-entity-copy">
                     <strong>{driver.name}</strong>
-                    <span>{driver.bgName} · 月薪 ¥{driver.salary}</span>
+                    <span>{getDriverMetaLine(driver, `月薪 ¥${driver.salary.toLocaleString()}`)}</span>
                   </div>
                 </div>
                 <div className={`crew-entity crew-vehicle ${vd ? '' : 'empty'}`}>
@@ -425,7 +425,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                     <DriverAvatar avatar={d.avatar} size={34} name={d.name} />
                     <div className="link-row-info">
                       <div className="link-row-name">{d.name}</div>
-                      <div className="link-row-sub">{d.bgName} · {ownVehicle}</div>
+                      <div className="link-row-sub">{getDriverMetaLine(d, ownVehicle)}</div>
                     </div>
                     {current ? (
                       <button className="btn btn-primary btn-xs" onClick={() => onSelectDriver(d.id)}>查看</button>
@@ -505,40 +505,42 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
         {(canFireDriver || canSellVehicle) && (
           <details className="inspector-section inspector-danger-actions">
             <summary className="inspector-section-title">风险操作</summary>
-            {canFireDriver && (
-              <button className="btn btn-ghost btn-danger"
-                onClick={() => {
-                  const severance = driver.salary * 2;
-                  requestConfirm({
-                    tag: '风险操作',
-                    title: `确认解雇 ${driver.name}？`,
-                    message: `需支付 2 个月补偿 ¥${severance.toLocaleString()}。${driverBusy ? '\n注意：当前正在跑单，订单会中断。' : ''}`,
-                    confirmLabel: '解雇',
-                    danger: true,
-                    onConfirm: () => dispatch({ type: 'FIRE_DRIVER', driverId: driver.id }),
-                  });
-                }}>
-                解雇 {driver.name}(补偿 ¥{(driver.salary * 2).toLocaleString()})
-              </button>
-            )}
-            {canSellVehicle && (() => {
-              const refund = Math.round(vd.price * 0.6);
-              return (
+            <div className="inspector-danger-action-list">
+              {canFireDriver && (
                 <button className="btn btn-ghost btn-danger"
                   onClick={() => {
+                    const severance = driver.salary * 2;
                     requestConfirm({
                       tag: '风险操作',
-                      title: `卖出 ${vd.name}？`,
-                      message: `回收 ¥${refund.toLocaleString()}（60% 残值）。${vehicleBusy ? '\n注意：当前正在跑单，订单会中断。' : ''}`,
-                      confirmLabel: '卖车',
+                      title: `确认解雇 ${driver.name}？`,
+                      message: `需支付 2 个月补偿 ¥${severance.toLocaleString()}。${driverBusy ? '\n注意：当前正在跑单，订单会中断。' : ''}`,
+                      confirmLabel: '解雇',
                       danger: true,
-                      onConfirm: () => dispatch({ type: 'SELL_VEHICLE', vehicleId: vehicle.id }),
+                      onConfirm: () => dispatch({ type: 'FIRE_DRIVER', driverId: driver.id }),
                     });
                   }}>
-                  卖车 {vd.name}(回收 ¥{refund.toLocaleString()})
+                  解雇 {driver.name}(补偿 ¥{(driver.salary * 2).toLocaleString()})
                 </button>
-              );
-            })()}
+              )}
+              {canSellVehicle && (() => {
+                const refund = Math.round(vd.price * 0.6);
+                return (
+                  <button className="btn btn-ghost btn-danger"
+                    onClick={() => {
+                      requestConfirm({
+                        tag: '风险操作',
+                        title: `卖出 ${vd.name}？`,
+                        message: `回收 ¥${refund.toLocaleString()}（60% 残值）。${vehicleBusy ? '\n注意：当前正在跑单，订单会中断。' : ''}`,
+                        confirmLabel: '卖车',
+                        danger: true,
+                        onConfirm: () => dispatch({ type: 'SELL_VEHICLE', vehicleId: vehicle.id }),
+                      });
+                    }}>
+                    卖车 {vd.name}(回收 ¥{refund.toLocaleString()})
+                  </button>
+                );
+              })()}
+            </div>
           </details>
         )}
       </div>
@@ -557,4 +559,3 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
 }
 
 /* ============== 弹窗 ============== */
-
