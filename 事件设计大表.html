@@ -330,12 +330,12 @@
     </tr>
     <tr>
       <td class="num">12</td>
-      <td class="id-col">platform_seed</td>
-      <td><b>平台抽成 25→30%</b></td>
+      <td class="id-col">platform_pressure</td>
+      <td><b>平台抽成压力(可重复)</b></td>
       <td><span class="tag tag-hangye">行业</span></td>
       <td><span class="deal deal-chain">保留链式</span></td>
       <td class="unlock">8 <span class="delta-up">↑3</span></td>
-      <td><b>你说要晚一点,从原 m5 推迟到 m8</b>。真分支:硬扛/搞自营(详见表 B2)</td>
+      <td><b>长线引导玩家攒钱</b>:重复触发,每次抽成 +5%,直到玩家攒够自营成本永久解决。<b>仅影响抽成,不影响忠诚/口碑</b>(详见表 B2)</td>
     </tr>
     <tr>
       <td class="num">13</td>
@@ -416,7 +416,7 @@
       <td><span class="tag tag-jingzheng">竞争</span></td>
       <td><span class="deal deal-chain">保留链式</span></td>
       <td class="unlock">13 <span class="delta-up">↑2</span></td>
-      <td><b>你说要晚,从原 m11 推迟到 m13</b>(玩家进入豪华车业务后)。真分支:挽留/放走(详见表 B3)</td>
+      <td><b>钥匙司机机制</b>:m14 stage 用 4 选项盲选加薪,后两个档位才能留人 + 解锁钥匙事件,带朋友车队加入(详见表 B3)</td>
     </tr>
     <tr>
       <td class="num">22</td>
@@ -548,55 +548,65 @@
 </div>
 
 <div class="chain-block">
-  <div class="chain-title">B2. platform · 平台抽成</div>
-  <div class="chain-axis">商业策略轴 · 经营路线决策 · 决定行业格局</div>
+  <div class="chain-title">B2. platform_pressure · 平台抽成压力</div>
+  <div class="chain-axis">长线引导轴 · 单一事件重复触发 · 玩家看见门槛 → 攒钱 → 解锁 · <b>仅影响抽成,不影响忠诚/口碑</b></div>
+
+  <div style="background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 10px 14px; margin-bottom: 14px; border-radius: var(--ui-radius); font-size: 13px;">
+    <b>设计意图</b>:不再是 chain 的 3 段顺序触发,而是同一事件按冷却重复触发。每次玩家看到自营门槛(¥180k)但攒不够,只能选硬扛——这构成了"看见门槛 → 攒钱 → 第 N 次终于能解锁"的长线节奏。一旦玩家选了"自营",事件永久完结,抽成归 0。
+    <br><br>
+    <b>抽成阶梯</b>:首次 20% → 选硬扛后 25% → 第 2 次硬扛 30% → 第 3 次硬扛 35% → 第 4 次硬扛 40%(封顶)。玩家拖得越久压力越大。
+    <br><br>
+    <b>触发频率建议</b>:每 30-40 天 cooldown,unlockMission ≥ 8 后开始计时。
+  </div>
+
   <table>
     <thead>
       <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A(对抗)</th>
-        <th>选项 B(转型)</th>
+        <th style="width:160px">段 ID</th>
+        <th style="width:240px">触发条件</th>
+        <th style="width:240px">场景文案模板</th>
+        <th>选项 A(硬扛)</th>
+        <th>选项 B(自营,完结)</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><span class="stage-id">platform_seed</span></td>
-        <td>unlockMission ≥ 8</td>
-        <td class="scene">滴答出行抽成 20→25%</td>
-        <td><div class="opt-a"><b>硬扛 25% 抽成</b><br>抽成 25%,司机忠诚 -15<div class="next">→ 解锁 <code>platform_fight</code></div></div></td>
-        <td><div class="opt-b"><b>搞自营小程序</b><br>-¥5k,抽成永久 0%,口碑 +5<div class="next">→ 解锁 <code>platform_selfop</code></div></div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">platform_fight</span></td>
-        <td>mission ≥ 12 + chainChoices.platform == 'fight'</td>
-        <td class="scene">滴答又涨到 30%,司机要罢工</td>
-        <td><div class="opt-a"><b>接受 30% 抽成</b><br>司机忠诚 -25</div></td>
-        <td><div class="opt-b"><b>组织罢工三天</b><br>-¥3k,抽成回 20%,忠诚 +30</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">platform_selfop</span></td>
-        <td>mission ≥ 12 + chainChoices.platform == 'selfop'</td>
-        <td class="scene">自营平台运维成本上升,日活下滑</td>
-        <td><div class="opt-a"><b>加大投入</b><br>-¥8k,维持自营优势</div></td>
-        <td><div class="opt-b"><b>回退到滴答</b><br>抽成回 20%,口碑 -5</div></td>
+        <td><span class="stage-id">platform_pressure</span></td>
+        <td>
+          unlockMission ≥ 8<br>
+          + 距上次触发 ≥ 30 天<br>
+          + 玩家未选过自营
+        </td>
+        <td class="scene">"滴答出行宣布抽成从 X% 涨到 Y%。你的法务说要么忍,要么自建小程序甩开它。"</td>
+        <td><div class="opt-a"><b>硬扛新抽成</b><br>抽成 +5%(封顶 40%)<br>事件下次仍会触发<div class="next">无忠诚/口碑变化</div></div></td>
+        <td><div class="opt-b"><b>搞自营小程序 -¥180k</b><br>资金 -¥180k(资金不足时禁用)<br>抽成永久 0%<div class="next">→ 该事件永不再触发</div></div></td>
       </tr>
     </tbody>
   </table>
 </div>
 
 <div class="chain-block">
-  <div class="chain-title">B3. rival · 竞品挖人</div>
-  <div class="chain-axis">留人压力轴 · 人才战 · 决定司机去留</div>
+  <div class="chain-title">B3. rival · 竞品挖人(钥匙司机机制)</div>
+  <div class="chain-axis">留人压力轴 · 4 选项盲选 + 钥匙事件 · 月薪 = 给个人的钱,不影响全员忠诚</div>
+
+  <div style="background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 10px 14px; margin-bottom: 14px; border-radius: var(--ui-radius); font-size: 13px;">
+    <b>核心机制</b>:玩家在 stage 1 用月薪买"钥匙司机"标签,stage 2 用钥匙司机解锁高额奖励事件(零成本获得专车队)。
+    <br><br>
+    <b>盲选设计</b>:rival_pricing 4 个选项的代价/结果在玩家选择前都不可见(detail 文案不暴露后果),让玩家凭直觉押注。
+    <br><br>
+    <b>钥匙司机 buff</b>:被加薪 ¥3k/¥4k 留下的司机,后续所有"全员忠诚衰减"事件(裁员/事故等)对他效果减半。
+  </div>
+
   <table>
     <thead>
       <tr>
         <th style="width:140px">段 ID</th>
         <th style="width:200px">触发条件</th>
         <th style="width:240px">场景</th>
-        <th>选项 A(挽留)</th>
-        <th>选项 B(放手)</th>
+        <th>选项 A</th>
+        <th>选项 B</th>
+        <th>选项 C</th>
+        <th>选项 D</th>
       </tr>
     </thead>
     <tbody>
@@ -604,25 +614,69 @@
         <td><span class="stage-id">rival_seed</span></td>
         <td>unlockMission ≥ 13</td>
         <td class="scene">滴答挖你最强司机,月薪 +¥1.5k</td>
-        <td><div class="opt-a"><b>加薪挽留</b><br>月薪 +¥1.5k,忠诚 +30<div class="next">→ 解锁 <code>rival_loyal</code></div></div></td>
-        <td><div class="opt-b"><b>放走</b><br>失去最强司机,口碑 -10<div class="next">→ 解锁 <code>rival_bleed</code></div></div></td>
+        <td colspan="2"><div class="opt-a"><b>加薪挽留</b><br>月薪 +¥1.5k<div class="next">→ 解锁 <code>rival_pricing</code></div></div></td>
+        <td colspan="2"><div class="opt-b"><b>放走</b><br>失去最强司机,口碑 -10<div class="next">→ chain 完结</div></div></td>
       </tr>
       <tr>
-        <td><span class="stage-id">rival_loyal</span></td>
-        <td>mission ≥ 14 + chainChoices.rival == 'keep'</td>
-        <td class="scene">滴答这次出价翻倍 + ¥10k 签约费</td>
-        <td><div class="opt-a"><b>咬牙再加薪 +¥3k</b><br>司机留下,工资压力上升</div></td>
-        <td><div class="opt-b"><b>放走 + 追讨培训费</b><br>+¥3k,失去最强司机</div></td>
+        <td><span class="stage-id">rival_pricing</span><br><span style="font-size:10px;color:var(--ink-3)">(4 选项盲选)</span></td>
+        <td>mission ≥ 14<br>+ chainChoices.rival_seed == 'keep'</td>
+        <td class="scene">滴答出价更狠了:翻倍 + ¥10k 签约费。法务说"你给多少他才肯留"</td>
+        <td>
+          <div class="opt-b" style="border-left-color: var(--warn);">
+            <b>+¥1,000</b><br>
+            <span style="color:var(--ink-3);font-size:11px">(玩家看到的描述:"试探性加价")</span>
+            <div class="next" style="color:var(--warn)">实际:司机走 + 全员忠诚 -10<br>→ chain 完结</div>
+          </div>
+        </td>
+        <td>
+          <div class="opt-b" style="border-left-color: var(--warn);">
+            <b>+¥2,000</b><br>
+            <span style="color:var(--ink-3);font-size:11px">(玩家看到:"中规中矩加薪")</span>
+            <div class="next" style="color:var(--warn)">实际:司机走 + 全员忠诚 -5<br>→ chain 完结</div>
+          </div>
+        </td>
+        <td>
+          <div class="opt-a">
+            <b>+¥3,000</b><br>
+            <span style="color:var(--ink-3);font-size:11px">(玩家看到:"诚意加价")</span>
+            <div class="next" style="color:var(--green)">司机留下 · 月薪永久 +¥3k<br>+ 钥匙司机标签 · 衰减减半<br>→ 解锁 <code>rival_friends_join</code>(3 人)</div>
+          </div>
+        </td>
+        <td>
+          <div class="opt-a">
+            <b>+¥4,000</b><br>
+            <span style="color:var(--ink-3);font-size:11px">(玩家看到:"豪赌加价")</span>
+            <div class="next" style="color:var(--green)">司机留下 · 月薪永久 +¥4k<br>+ 钥匙司机标签 · 衰减减半<br>→ 解锁 <code>rival_friends_join</code>(<b>5 人</b>)</div>
+          </div>
+        </td>
       </tr>
       <tr>
-        <td><span class="stage-id">rival_bleed</span></td>
-        <td>mission ≥ 14 + chainChoices.rival == 'release'</td>
-        <td class="scene">滴答整队来挖,要带走 N 级 R 级集体</td>
-        <td><div class="opt-a"><b>聚餐 + 留岗补贴</b><br>-¥5k,全员忠诚 +35</div></td>
-        <td><div class="opt-b"><b>不留,愿走的走</b><br>失去最强,全员忠诚 -20</div></td>
+        <td><span class="stage-id">rival_friends_join</span><br><span style="font-size:10px;color:var(--ink-3)">(钥匙事件)</span></td>
+        <td>mission ≥ 15<br>+ chainChoices.rival_pricing ∈ {3000, 4000}<br>(无论钥匙司机是否仍在编)</td>
+        <td class="scene">[钥匙司机名] 找上你:"我以前在滴答的老兄弟想跳槽,他们自带专车,问我你这边靠不靠谱"</td>
+        <td colspan="3">
+          <div class="opt-a">
+            <b>[钥匙司机仍在] 欢迎加入</b><br>
+            +¥3k 选项 → 0 成本获得 <b>3 名专车司机 + 3 辆凯美瑞</b><br>
+            +¥4k 选项 → 0 成本获得 <b>5 名专车司机 + 5 辆凯美瑞</b>
+            <div class="next">价值评估:相当于免费送 3-5 个完整车组(每组 ¥30k+)</div>
+          </div>
+        </td>
+        <td>
+          <div class="opt-b" style="border-left-color: var(--warn);">
+            <b>[钥匙司机已离队]</b><br>
+            "听说他们要找熟人引荐,你这边没合适人脉"<br>
+            <button style="margin-top: 4px; padding: 2px 8px; font-size: 11px; background: var(--sub); border: 1px solid var(--border-soft);">知道了</button>
+            <div class="next" style="color:var(--warn)">无法获得任何人/车<br>玩家会反思:当初留下他就好了</div>
+          </div>
+        </td>
       </tr>
     </tbody>
   </table>
+
+  <div style="background: var(--sub); padding: 10px 14px; margin-top: 12px; border-radius: var(--ui-radius); font-size: 12px; color: var(--ink-2);">
+    <b>"钥匙司机离队"判定</b>:rival_friends_join 触发时检查 <code>state.drivers.find(d =&gt; d.id === keyDriverId)</code>。如果司机因后续事件(投资人压力裁员/玩家主动解雇/忠诚过低离队)不在编,则走"机会流失"分支——这种情况下事件依然要弹窗展示给玩家,目的是制造反思感。
+  </div>
 </div>
 
 <div class="chain-block">
