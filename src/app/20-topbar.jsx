@@ -37,7 +37,7 @@ function MissionBar({ state, onOpenRoadmap }) {
 
 /* ============== V3: 顶栏 ============== */
 
-const APP_VERSION = 'V15.7';
+const APP_VERSION = 'V15.15';
 const RUN_HISTORY_KEY = 'wycwy-run-history-v1';
 const CURRENT_RUN_KEY = 'wycwy-current-run-v1';
 const AUTOSAVE_KEY = 'wycwy-autosave-v1';
@@ -58,6 +58,7 @@ function isRealTimeRunningForState(state) {
     && !state.activeStory
     && !state.showTutorial
     && !state.showMonthlyReport
+    && !state.debtCrisis
     && !state.gameOver;
 }
 
@@ -111,8 +112,10 @@ function buildGameDiagnosticsPayload(state, extra = {}) {
       completedMissionIds: state.completedMissionIds || [],
       unlockedEndingTier: state.unlockedEndingTier,
       gameOver: state.gameOver,
-      debtAmount: state.debtAmount,
-      debtDueDay: state.debtDueDay,
+      debtAmount: E.getDebtSummary ? E.getDebtSummary(state).totalRepay : state.debtAmount,
+      debtDueDay: E.getDebtSummary ? E.getDebtSummary(state).nextDueDay : state.debtDueDay,
+      debts: E.getDebtSummary ? E.getDebtSummary(state).debts : (state.debts || []),
+      debtCrisis: state.debtCrisis || null,
       negFundsDays: state.negFundsDays,
       bankruptcyGraceBonus: state.bankruptcyGraceBonus,
       totalCompleted: state.totalCompleted,
@@ -321,6 +324,65 @@ function HelpRow({ label, children }) {
   );
 }
 
+// V15.16: 投资人 review KPI 单元
+// 6 种状态:默认 / Q1 警告 / 半年警告 / IPO 模式 / 等年终(boosted) / 撤资或稳着先(返回 null)
+// 详见 GAME_DESIGN.md 第七章「投资人定期 review」+ tmp/投资人KPI视觉对比-V1.html
+function InvestorReviewStat({ state }) {
+  const { day, gameOverPending, investorPath, investorMissCount, funds } = state;
+  // 状态 5:撤资 / 选稳着先 → 不显示(由父组件根据 investorReviewVisible 不渲染)
+  if (gameOverPending === 'kicked_out' || investorPath === 'fired' || investorPath === 'settle') {
+    return null;
+  }
+  // 状态 4 / 状态 6:IPO 路径(接受挑战后)
+  if (investorPath === 'ipo') {
+    if (day >= 355) {
+      // 状态 6:Q3 后未撤资,等年终 review(最后 5 天)
+      const daysToY1 = Math.max(0, 360 - day);
+      return (
+        <div className="ts-stat topbar-stat ir-stat ir-stat--boosted" aria-label={`距年终 review ${daysToY1} 天`} title="年终 review:展示一年成绩,选择继续冲 IPO 或收尾">
+          <span className="ts-label">距年终 review</span>
+          <strong className="ts-value">{daysToY1} 天</strong>
+        </div>
+      );
+    }
+    // 状态 4:IPO 模式 — 距 Tier 5(¥1,000,000)还差多少万
+    const tier5 = 1000000;
+    const remaining = Math.max(0, tier5 - (funds || 0));
+    const remainingW = (remaining / 10000).toFixed(0);
+    return (
+      <div className="ts-stat topbar-stat ir-stat ir-stat--ipo" aria-label={`距 IPO 还差 ¥${remainingW} 万`} title="Q3 已接受投资人挑战 — 冲 Tier 5 IPO 上市">
+        <span className="ts-label">距 IPO</span>
+        <strong className="ts-value">¥{remainingW} 万</strong>
+      </div>
+    );
+  }
+  // 状态 1 / 2 / 3:还没触发 Q3,根据 missCount 决定警告级别
+  const schedule = [
+    { atDay: 90,  name: 'Q1 review' },
+    { atDay: 180, name: '半年 review' },
+    { atDay: 270, name: 'Q3 review' },
+    { atDay: 360, name: '年终 review' },
+  ];
+  const next = schedule.find((r) => r.atDay > day) || schedule[schedule.length - 1];
+  const daysLeft = Math.max(0, next.atDay - day);
+  const missCount = investorMissCount || 0;
+  let cls = 'ir-stat--default';
+  let helpText = '投资人按季度评估你的经营 KPI,不达标会扣款或撤资';
+  if (missCount >= 2) {
+    cls = 'ir-stat--warn2';
+    helpText = '已累计 2 次未达标 — 下次仍不达标投资人将撤资';
+  } else if (missCount >= 1) {
+    cls = 'ir-stat--warn1';
+    helpText = '已 1 次未达标 — 下次评估前请提升 KPI';
+  }
+  return (
+    <div className={`ts-stat topbar-stat ir-stat ${cls}`} aria-label={`距${next.name} ${daysLeft} 天`} title={helpText}>
+      <span className="ts-label">距{next.name}</span>
+      <strong className="ts-value">{daysLeft} 天</strong>
+    </div>
+  );
+}
+
 function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
   const currentTier = state.unlockedEndingTier || 0;
   const tierEnding = ENDINGS.find((e) => e.tier === currentTier);
@@ -390,13 +452,28 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
     : '所有片区已解锁';
   const tickSeconds = (GAME.TICK_MS / 1000).toFixed(1).replace('.0', '');
   const commissionText = Math.round((GAME.COMMISSION || 0) * 100);
+  const debtSummary = E.getDebtSummary ? E.getDebtSummary(state) : {
+    debts: state.debtDueDay > 0 ? [{ label: '高利贷', repay: state.debtAmount, dueDay: state.debtDueDay }] : [],
+    count: state.debtDueDay > 0 ? 1 : 0,
+    totalRepay: state.debtAmount || 0,
+    nextDebt: state.debtDueDay > 0 ? { label: '高利贷', repay: state.debtAmount, dueDay: state.debtDueDay } : null,
+    nextDaysLeft: Math.max(0, (state.debtDueDay || 0) - state.day),
+  };
+  const nextDebt = debtSummary.nextDebt;
+  const debtUrgent = nextDebt && debtSummary.nextDaysLeft <= 7;
+  // V15.16: 投资人 review 单元是否显示。撤资 / 选稳着先后从顶栏移除,KPI 区从 5 列回到 4 列。
+  const investorReviewVisible = !(
+    state.gameOverPending === 'kicked_out' ||
+    state.investorPath === 'fired' ||
+    state.investorPath === 'settle'
+  );
   return (
     <div className="topbar">
       <div className="topbar-left">
         <h1>网约车物语 <span className="v">{APP_VERSION}</span></h1>
       </div>
       <div className="topbar-stats">
-        <div className="topbar-kpis" aria-label="经营状态">
+        <div className={`topbar-kpis ${investorReviewVisible ? 'has-investor-review' : ''}`} aria-label="经营状态">
           <div className="ts-stat topbar-stat time-stat has-help" tabIndex="0" aria-describedby="time-help-popover" title="时间规则">
             <span className="ts-label">时间</span>
             <strong className="ts-value time-value">第 {state.day} 日 {hourText}</strong>
@@ -417,14 +494,26 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
               const cls = daysLeft <= 1 ? 'ts-death-pulse' : daysLeft <= 2 ? 'ts-death-warn' : 'ts-death-info';
               return <span className={`ts-death-countdown ${cls}`}>距破产 {daysLeft} 天</span>;
             })()}
-            {/* V14: 高利贷到期倒计时 */}
-            {state.debtDueDay > 0 && (
-              <span className="ts-debt-countdown">高利贷剩 {Math.max(0, state.debtDueDay - state.day)} 天 · 还 ¥{state.debtAmount.toLocaleString()}</span>
+            {nextDebt && (
+              <span className={`ts-debt-countdown ${debtUrgent ? 'urgent' : ''}`}>
+                {debtSummary.nextDaysLeft} 天后 · {nextDebt.label || '债务'} ¥{(nextDebt.repay || 0).toLocaleString()}
+              </span>
             )}
             <TopbarHelp id="funds-help-popover" title="资金规则">
               <HelpRow label="收入">司机完成订单后入账,平台抽成 {commissionText}% 后剩余收入进入资金。</HelpRow>
               <HelpRow label="支出">招募司机、购买车辆、训练能力、事件选择、还债和解雇补偿都会消耗资金。</HelpRow>
               <HelpRow label="月结">司机工资按月累计,每满 30 天月报时统一扣除;月末临时扩招会带来额外工资压力。</HelpRow>
+              {debtSummary.count > 0 && (
+                <HelpRow label="债务">
+                  <span className="debt-help-list">
+                    {debtSummary.debts.map((debt) => (
+                      <span key={debt.id || `${debt.label}-${debt.dueDay}`}>
+                        第 {debt.dueDay} 日 · {debt.label || '债务'} · ¥{(debt.repay || 0).toLocaleString()}
+                      </span>
+                    ))}
+                  </span>
+                </HelpRow>
+              )}
               <HelpRow label="破产">资金为负会进入投资人压力倒计时,连续负债过久会失败。</HelpRow>
             </TopbarHelp>
           </div>
@@ -466,6 +555,7 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
               <HelpRow label="建议">不足就招司机、买合适车型或训练司机;充足就优先解锁更高价片区和订单。</HelpRow>
             </TopbarHelp>
           </div>
+          {investorReviewVisible && <InvestorReviewStat state={state} />}
         </div>
         <div className="topbar-settings" aria-label="系统菜单">
           <button

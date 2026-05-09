@@ -354,7 +354,7 @@
 
   function StorybookApp() {
     const [r0, setR0] = useState(87684);
-    const [activeId, setActiveId] = useState('policy_gov_ban_decision');
+    const [activeId, setActiveId] = useState(() => window.location.hash.replace(/^#/, '') || 'policy_gov_ban_decision');
 
     const policyItems = useMemo(buildPolicySidebarItems, []);
     const { chainGroups, single: singleItems } = useMemo(buildRandomEventSidebarItems, []);

@@ -596,6 +596,27 @@ const SECTIONS = [
     ],
   },
   {
+    id: 'EVENT_NPCS',
+    label: '链式事件立绘',
+    group: '事件终局',
+    type: 'object',
+    desc: '4 条真分支链式事件的 NPC 画像定位与本地 PNG 素材路径。internalRole / archetype 是策划内部定位,不应直接展示给玩家。',
+    fields: {
+      'borrow.name': { label: '借钱线 NPC' },
+      'borrow.internalRole': { label: '借钱线内部定位' },
+      'borrow.avatar': { label: '借钱线素材' },
+      'platform.name': { label: '平台线 NPC' },
+      'platform.internalRole': { label: '平台线内部定位' },
+      'platform.avatar': { label: '平台线素材' },
+      'rival.name': { label: '竞品线 NPC' },
+      'rival.internalRole': { label: '竞品线内部定位' },
+      'rival.avatar': { label: '竞品线素材' },
+      'accident.name': { label: '事故线 NPC' },
+      'accident.internalRole': { label: '事故线内部定位' },
+      'accident.avatar': { label: '事故线素材' },
+    },
+  },
+  {
     id: 'INVESTOR_PRESSURE',
     label: '投资人压力',
     group: '事件终局',
@@ -704,6 +725,7 @@ function exportDataJs(data) {
     'TRAININGS', 'EVENTS', 'INVESTOR_PRESSURE',
     'FIRST_NAMES', 'MISSIONS', 'ENDINGS',
     'RECRUIT_TICKETS', 'RARITY_META', 'RARITY_STAT_CAPS', 'RARITY_LOYALTY_RULES',
+    'EVENT_NPCS',
   ];
   let out = '/* 网约车物语 — 配置数据 (admin 后台导出) */\n';
   out += '(function () {\n';

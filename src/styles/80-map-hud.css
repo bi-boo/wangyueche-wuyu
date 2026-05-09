@@ -134,9 +134,9 @@
     margin-top: 4px;
     line-height: 1;
   }
-  /* V14: 破产倒计时 + 高利贷倒计时 */
+  /* V14: 破产倒计时 */
   .ts-value.danger { color: var(--warn) !important; }
-  .ts-death-countdown, .ts-debt-countdown {
+  .ts-death-countdown {
     display: block;
     margin-top: 4px;
     padding: 2px 8px;
@@ -155,10 +155,6 @@
   .ts-death-pulse {
     background: #E84545; color: #FFF8E7; border-color: #FFF8E7;
     animation: pulse 0.6s infinite;
-  }
-  .ts-debt-countdown {
-    background: rgba(120, 80, 0, 0.85); color: #FFD93D;
-    border-color: rgba(255, 217, 61, 0.5);
   }
   .topbar-settings {
     display: flex;
@@ -1160,11 +1156,118 @@
   }  .event-modal {
     max-width: 660px;
   }
+  .chain-event-modal {
+    max-width: 800px;
+    padding: 18px 18px 20px;
+    overflow: visible;
+  }
   .event-modal-header {
     margin-bottom: 12px;
   }
   .event-modal-header .modal-desc {
     margin-bottom: 0;
+  }
+  .event-dialog-shell {
+    display: grid;
+    grid-template-columns: 208px minmax(0, 1fr);
+    align-items: end;
+    min-height: 252px;
+    margin: -54px 0 0 -42px;
+  }
+  .event-npc-frame {
+    position: relative;
+    grid-column: 1;
+    align-self: end;
+    z-index: 3;
+    width: 248px;
+    height: 282px;
+    margin: 0 -22px -6px 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .event-npc-frame::before {
+    content: "";
+    position: absolute;
+    left: 48px;
+    right: 34px;
+    bottom: 8px;
+    height: 22px;
+    background: rgba(42,35,32,0.22);
+    border-radius: 50%;
+    filter: blur(1px);
+  }
+  .event-npc-frame img {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 272px;
+    height: 272px;
+    object-fit: contain;
+    object-position: center bottom;
+    filter: drop-shadow(4px 4px 0 rgba(42,35,32,0.24));
+    image-rendering: pixelated;
+  }
+  .event-dialog-card {
+    position: relative;
+    grid-column: 2;
+    align-self: start;
+    z-index: 1;
+    min-height: 126px;
+    margin-top: 78px;
+    padding: 14px 16px 16px;
+    background: #FFF8E7;
+    border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.24);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+  }
+  .event-dialog-card::before {
+    content: "";
+    position: absolute;
+    left: -12px;
+    top: 38px;
+    width: 18px;
+    height: 18px;
+    background: #FFF8E7;
+    border-left: 3px solid var(--ink);
+    border-bottom: 3px solid var(--ink);
+    transform: rotate(45deg);
+  }
+  .event-dialog-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .chain-tag {
+    margin-bottom: 0;
+    background: var(--ink);
+    color: var(--gold);
+    border: 1px solid var(--ink);
+  }
+  .event-npc-name {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 2px 8px;
+    background: var(--gold);
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.24);
+  }
+  .chain-event-borrow .event-npc-frame {
+    transform: translateY(-2px);
+  }
+  .chain-event-platform .event-npc-frame,
+  .chain-event-accident .event-npc-frame {
+    transform: translateY(0);
+  }
+  .chain-event-rival .event-npc-frame {
+    transform: translateY(-1px);
   }
   .event-resource-snapshot {
     display: flex;
@@ -1239,6 +1342,38 @@
     box-shadow: 4px 4px 0 rgba(42,35,32,0.36) !important;
     outline: none;
     transform: translateY(-1px);
+  }
+  @media (max-width: 760px) {
+    .chain-event-modal {
+      padding: 14px;
+    }
+    .event-dialog-shell {
+      grid-template-columns: 108px minmax(0, 1fr);
+      min-height: 150px;
+      margin: -22px 0 0 -8px;
+    }
+    .event-npc-frame {
+      width: 116px;
+      height: 150px;
+      margin: 0 -8px -3px 0;
+    }
+    .event-npc-frame img {
+      width: 128px;
+      height: 128px;
+    }
+    .event-dialog-card {
+      min-height: 104px;
+      margin-top: 34px;
+      padding: 10px 11px 12px 12px;
+      border-width: 2px;
+    }
+    .event-dialog-card::before {
+      left: -8px;
+      top: 32px;
+      width: 13px;
+      height: 13px;
+      border-width: 2px;
+    }
   }
   /* V14: 月度结算弹窗 */
   .monthly-report-modal {

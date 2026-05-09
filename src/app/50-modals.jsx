@@ -97,13 +97,22 @@ function Tutorial({ onClose }) {
   );
 }
 
-function previewEventEffect(option, state) {
+function previewEventEffect(event, option, state) {
   try {
     const raw = option.apply(state) || {};
+    if (event?.skipScale || raw.skipScale) return raw;
     return E.scaleEventEffect ? E.scaleEventEffect(raw, state) : raw;
   } catch (e) {
     return { previewError: true };
   }
+}
+
+function getEventOptionDisabledReason(option, state) {
+  if (!option || !state) return '';
+  if (option.requireFunds !== undefined && state.funds < option.requireFunds) {
+    return `资金不足,需要 ¥${option.requireFunds.toLocaleString()}`;
+  }
+  return '';
 }
 
 function getBestDriverForEvent(state) {
@@ -148,6 +157,69 @@ function EventResourceSnapshot({ state, thirdLabel = '今日流水', thirdValue,
           <strong className={metric.tone}>{metric.value}</strong>
         </div>
       ))}
+    </div>
+  );
+}
+
+function DebtCrisisModal({ state, crisis, onResolve }) {
+  if (!crisis) return null;
+  const debts = E.getDebtSummary ? E.getDebtSummary(state).debts : (crisis.allDebts || []);
+  const dueDebts = crisis.dueDebts || [];
+  const totalDue = crisis.totalDue || dueDebts.reduce((sum, debt) => sum + (debt.repay || 0), 0);
+  const shortfall = Math.max(0, totalDue - (state.funds || 0));
+  const totalAll = debts.reduce((sum, debt) => sum + (debt.repay || 0), 0);
+  const remainingDays = debts.reduce((sum, debt) => sum + Math.max(0, (debt.dueDay || state.day) - state.day), 0);
+  const newDays = Math.max(14, Math.min(60, remainingDays));
+  const rawNewTotal = Math.ceil(totalAll * 1.05);
+  const newStep = rawNewTotal <= 20000 ? 1000 : rawNewTotal <= 100000 ? 5000 : 10000;
+  const newTotal = Math.ceil(rawNewTotal / newStep) * newStep;
+  return (
+    <div className="modal-overlay debt-crisis-overlay">
+      <div className="modal debt-crisis-modal">
+        <div className="modal-tag">债务危机</div>
+        <div className="modal-title">今日债务到期</div>
+        <div className="modal-desc">
+          到期应还 <strong>¥{totalDue.toLocaleString()}</strong>,当前资金 <strong>¥{(state.funds || 0).toLocaleString()}</strong>,缺口 <strong className="negative">¥{shortfall.toLocaleString()}</strong>。
+        </div>
+        <EventResourceSnapshot state={state} thirdLabel="到期缺口" thirdValue={`¥${shortfall.toLocaleString()}`} thirdTone="danger" />
+        <div className="debt-crisis-section">
+          <div className="monthly-section-title">今日到期</div>
+          <div className="debt-crisis-list">
+            {dueDebts.map((debt) => (
+              <div key={debt.id} className="debt-crisis-row danger">
+                <span>第 {debt.dueDay} 日 · {debt.label || '债务'}</span>
+                <strong>¥{(debt.repay || 0).toLocaleString()}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="debt-crisis-section">
+          <div className="monthly-section-title">全部未还债务</div>
+          <div className="debt-crisis-list compact">
+            {debts.map((debt) => (
+              <div key={debt.id} className="debt-crisis-row">
+                <span>{Math.max(0, debt.dueDay - state.day)} 天后 · {debt.label || '债务'}</span>
+                <strong>¥{(debt.repay || 0).toLocaleString()}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="debt-restructure-preview">
+          <span>债务重组</span>
+          <strong>合并为 ¥{newTotal.toLocaleString()} · {newDays} 天后到期</strong>
+          <em>全部未还债务打包,+5% 手续费;期限按剩余天数累加,最少 14 天、最多 60 天。</em>
+        </div>
+        <div className="modal-options debt-crisis-actions">
+          <button className="modal-option danger-option" onClick={() => onResolve('bankrupt')}>
+            <div className="modal-option-label">放弃经营</div>
+            <div className="modal-option-effect">进入破产结算</div>
+          </button>
+          <button className="modal-option primary-option" onClick={() => onResolve('restructure')}>
+            <div className="modal-option-label">债务重组</div>
+            <div className="modal-option-effect">合并所有贷款,总待还 +5%</div>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -243,6 +315,23 @@ function InvestorPressureModal({ event, state, onResolve }) {
   );
 }
 
+function getChainEventFamily(event) {
+  const id = event?.id || '';
+  const chain = event?.chain || '';
+  if (id.startsWith('borrow_') || chain.startsWith('borrow')) return 'borrow';
+  if (id === 'platform_pressure' || chain === 'platform') return 'platform';
+  if (id.startsWith('rival_') || chain.startsWith('rival')) return 'rival';
+  if (id.startsWith('accident_') || chain.startsWith('accident')) return 'accident';
+  return null;
+}
+
+function getChainEventNpc(event) {
+  const family = getChainEventFamily(event);
+  if (!family) return null;
+  const meta = D.EVENT_NPCS?.[family];
+  return meta ? { ...meta, id: family } : null;
+}
+
 function EventModal({ event, state, onResolve, onResolveInvestor }) {
   if (event.multiChoice) {
     return <InvestorPressureModal event={event} state={state} onResolve={onResolveInvestor} />;
@@ -251,18 +340,36 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
   if (event.isPolicyEvent) {
     return <PolicyNoticeModal event={event} state={state} onResolve={onResolve} />;
   }
+  const npc = getChainEventNpc(event);
   return (
     <div className="modal-overlay">
-      <div className="modal event-modal">
+      <div className={`modal event-modal ${npc ? `chain-event-modal chain-event-${npc.id}` : ''}`}>
         <div className="event-modal-header">
-          <div className="modal-tag">{event.tag}事件</div>
-          <div className="modal-title">{event.title}</div>
-          <div className="modal-desc">{event.desc}</div>
+          {npc ? (
+            <div className="event-dialog-shell">
+              <div className="event-npc-frame">
+                <img src={npc.avatar} alt={`${npc.name} 立绘`} />
+              </div>
+              <div className="event-dialog-card">
+                <div className="event-dialog-meta">
+                  <span className="event-npc-name">{npc.name}</span>
+                </div>
+                <div className="modal-title">{event.title}</div>
+                <div className="modal-desc">{event.desc}</div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="modal-tag">{event.tag}事件</div>
+              <div className="modal-title">{event.title}</div>
+              <div className="modal-desc">{event.desc}</div>
+            </>
+          )}
         </div>
         <EventResourceSnapshot state={state} />
         <div className="modal-options">
           {event.options.map((o, i) => {
-            const eff = previewEventEffect(o, state);
+            const eff = previewEventEffect(event, o, state);
             const hasImmediateEffect = Object.keys(eff).some((key) => key !== 'eventScale' && key !== 'previewError');
             const nextFunds = eff.funds !== undefined && state ? state.funds + eff.funds : null;
             const bestDriver = getBestDriverForEvent(state);
@@ -271,20 +378,23 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
             const optionDetail = getEventOptionDetail(o, eff);
             const showNoImmediateEffect = !hasImmediateEffect && !detailLooksLikeNumericEffect(optionDetail);
             const orderBoostText = formatOrderBoostText(eff);
+            const disabledReason = getEventOptionDisabledReason(o, state);
             // V15.x: blindOptions 事件(如 rival_pricing 4 选项盲选)隐藏 effect chips,选完才揭晓
             if (event.blindOptions) {
               return (
-                <button key={i} className="modal-option" onClick={() => onResolve(i)}>
+                <button key={i} className="modal-option" disabled={!!disabledReason} onClick={() => onResolve(i)}>
                   <div className="modal-option-label">{o.label}</div>
                   {optionDetail && <div className="modal-option-effect">{optionDetail}</div>}
+                  {disabledReason && <div className="event-effect-preview"><span className="negative">{disabledReason}</span></div>}
                 </button>
               );
             }
             return (
-              <button key={i} className="modal-option" onClick={() => onResolve(i)}>
+              <button key={i} className="modal-option" disabled={!!disabledReason} onClick={() => onResolve(i)}>
                 <div className="modal-option-label">{o.label}</div>
                 {optionDetail && <div className="modal-option-effect">{optionDetail}</div>}
                 <div className="event-effect-preview">
+                  {disabledReason && <span className="negative">{disabledReason}</span>}
                   {eff.funds !== undefined && (
                     <span className={eff.funds < 0 ? 'negative' : 'positive'}>
                       资金 {eff.funds > 0 ? '+' : ''}{eff.funds.toLocaleString()} · 选后 ¥{nextFunds.toLocaleString()}
@@ -419,8 +529,9 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
   // 基于 R₀ 预算各档具体金额(玩家看到具体数字,不展示 R₀ 概念)
   const startupFee = Math.round(r0 * (params.A_STARTUP_FEE_PCT || 0.40));
   const fineAmount = Math.round(r0 * (params.A_VERDICT_FINE_PCT || 0.10));
-  const complianceFirst = Math.round(r0 * 0.25);
-  const complianceFloor = Math.round(r0 * 0.10);
+  const complianceSchedule = params.COMPLIANCE_SCHEDULE_PCT || [0.25, 0.20, 0.15, 0.10];
+  const complianceFirstPct = Math.round((complianceSchedule[0] || 0.25) * 100);
+  const complianceFloorPct = Math.round((complianceSchedule[complianceSchedule.length - 1] || 0.10) * 100);
   const loanAmount = Math.round(r0 * (params.B_LOAN_PCT || 1.00));
   const loanInterest = Math.round(loanAmount * (params.B_LOAN_RATE || 0.10) * ((params.B_LOAN_DUE_DAYS || 90) / 365));
   const loanRepay = loanAmount + loanInterest;
@@ -431,7 +542,7 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
       return (
         <div className="event-effect-preview">
           <span className="negative">立即扣 ¥{startupFee.toLocaleString()}</span>
-          <span className="negative">月支出 ¥{complianceFirst.toLocaleString()} → ¥{complianceFloor.toLocaleString()} 衰减永久</span>
+          <span className="negative">合规成本按月流水扣:首月 {complianceFirstPct}% → 稳定后 {complianceFloorPct}%</span>
           <span className="negative">30 天内招募/购车 5 天冷却</span>
         </div>
       );
@@ -629,7 +740,7 @@ function MonthlyReportModal({ report, onClose }) {
           </div>
           {report.debtPaid > 0 && (
             <div className="monthly-row danger">
-              <span>高利贷扣款</span>
+              <span>债务扣款</span>
               <strong>−{fmt(report.debtPaid)}</strong>
             </div>
           )}

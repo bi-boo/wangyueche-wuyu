@@ -1,7 +1,7 @@
 /* 网约车物语 V3 - 游戏引擎 (reducer + 工具 + 任务系统) */
 (function () {
   const D = window.WYCWY_DATA;
-  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, INVESTOR_PRESSURE, POLICY_EVENTS, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES } = D;
+  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, INVESTOR_PRESSURE, POLICY_EVENTS, INVESTOR_REVIEW, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES } = D;
 
   let driverIdCounter = 100;
   let vehicleIdCounter = 100;
@@ -25,6 +25,9 @@
   };
   const START_DAY = 1;
   const START_HOUR = 6;
+  const DEBT_RESTRUCTURE_FEE_RATE = 0.05;
+  const DEBT_RESTRUCTURE_MIN_DAYS = 14;
+  const DEBT_RESTRUCTURE_MAX_DAYS = 60;
 
   function isRealTimeRunning(state) {
     return !!state.hasStarted
@@ -34,6 +37,7 @@
       && !state.activeStory
       && !state.showTutorial
       && !state.showMonthlyReport
+      && !state.debtCrisis
       && !state.gameOver;
   }
 
@@ -67,6 +71,109 @@
         updatedBy: actionType || 'UNKNOWN',
       },
     };
+  }
+
+  function getDebtDisplayName(debt) {
+    if (debt?.label) return debt.label;
+    if (debt?.type === 'expansion_loan') return '扩张贷款';
+    if (debt?.type === 'restructured') return '重组债务';
+    if (debt?.type === 'event_loan') return '事件贷款';
+    return '高利贷';
+  }
+
+  function getDebtSourceText(debt) {
+    if (debt?.source) return debt.source;
+    if (debt?.type === 'expansion_loan') return '监管扩张';
+    if (debt?.type === 'restructured') return '债务重组';
+    if (debt?.type === 'event_loan') return '事件选择';
+    return '投资人压力';
+  }
+
+  function normalizeDebts(state) {
+    const rawDebts = Array.isArray(state?.debts) ? state.debts : [];
+    let debts = rawDebts
+      .map((debt, idx) => {
+        const dueDay = Math.max(0, Math.round(debt?.dueDay || 0));
+        const repay = Math.max(0, Math.round(debt?.repay ?? debt?.amount ?? 0));
+        if (!dueDay || !repay) return null;
+        const type = debt?.type || 'high_interest';
+        return {
+          id: debt?.id || `${type}-${dueDay}-${idx + 1}`,
+          type,
+          label: debt?.label || getDebtDisplayName({ type }),
+          source: debt?.source || getDebtSourceText({ type }),
+          principal: Math.max(0, Math.round(debt?.principal ?? repay)),
+          repay,
+          dueDay,
+          createdDay: Math.max(1, Math.round(debt?.createdDay || state?.day || 1)),
+          interestRate: Number.isFinite(debt?.interestRate) ? debt.interestRate : null,
+        };
+      })
+      .filter(Boolean);
+
+    // 旧存档兼容:老版本只有 debtAmount/debtDueDay,没有债务明细。
+    if (debts.length === 0 && state?.debtAmount > 0 && state?.debtDueDay > 0) {
+      debts = [{
+        id: `legacy-debt-${state.debtDueDay}`,
+        type: 'high_interest',
+        label: '历史债务',
+        source: '旧存档',
+        principal: Math.round(state.debtAmount),
+        repay: Math.round(state.debtAmount),
+        dueDay: Math.round(state.debtDueDay),
+        createdDay: Math.max(1, Math.round(state.day || 1)),
+        interestRate: null,
+      }];
+    }
+
+    return debts.sort((a, b) => (a.dueDay - b.dueDay) || (a.repay - b.repay));
+  }
+
+  function getDebtSummary(state) {
+    const debts = normalizeDebts(state);
+    const totalRepay = debts.reduce((sum, debt) => sum + debt.repay, 0);
+    const nextDebt = debts[0] || null;
+    return {
+      debts,
+      count: debts.length,
+      totalRepay,
+      nextDebt,
+      nextDueDay: nextDebt ? nextDebt.dueDay : 0,
+      nextDaysLeft: nextDebt ? Math.max(0, nextDebt.dueDay - (state?.day || 1)) : 0,
+    };
+  }
+
+  function syncDebtLegacyFields(state) {
+    const debts = normalizeDebts(state);
+    const summary = getDebtSummary({ ...state, debts, debtAmount: 0, debtDueDay: 0 });
+    return {
+      ...state,
+      debts,
+      debtAmount: summary.totalRepay,
+      debtDueDay: summary.nextDueDay,
+    };
+  }
+
+  function makeDebtId(state, type) {
+    const prefix = type || 'debt';
+    const existing = normalizeDebts(state).filter((debt) => String(debt.id || '').startsWith(`${prefix}-`)).length;
+    return `${prefix}-${state.day || 1}-${state.hour || 0}-${existing + 1}`;
+  }
+
+  function addDebt(state, debt) {
+    const nextDebt = {
+      id: debt.id || makeDebtId(state, debt.type),
+      createdDay: state.day || 1,
+      ...debt,
+    };
+    return syncDebtLegacyFields({
+      ...state,
+      debts: [...normalizeDebts(state), nextDebt],
+    });
+  }
+
+  function describeDebt(debt) {
+    return `${getDebtDisplayName(debt)} ¥${(debt?.repay || 0).toLocaleString()}(第 ${debt?.dueDay || 0} 日)`;
   }
 
   // V14.67: 删除疲劳机制 — fatigue 字段、isDriverResting、FATIGUE_* 常量整套移除。
@@ -578,10 +685,20 @@
       negFundsDays: 0,
       // V5: 投资人压力事件队列
       investorPressureFired: false,
+      // V15.16: 投资人定期 review 机制 — 按绝对时间触发(day 90/180/270/360)
+      reviewCounter: 0,           // 已触发评估次数(0-4),仅用于调试 / 月报回顾
+      investorMissCount: 0,       // 累计未达标次数,Q3 撤资判定使用(>= 2 触发撤资)
+      lastReviewDay: 0,           // 最近一次评估的 day,防止重复触发
+      investorBoosted: false,     // Q3 是否触发过(达标接受/达标稳着/撤资任一选项后置 true)
+      investorPath: null,         // 'ipo' | 'settle' | 'fired' | null,Q3 玩家选择的路径(用于顶栏 KPI 渲染区分)
+      gameOverPending: null,      // 'kicked_out' | null,撤资事件触发后标记,死亡时归因使用
       // V5: 已解锁的最高结局 tier(从 0 开始,达成才更新)
       unlockedEndingTier: 0,
       newEndingUnlocked: null,
-      // V14: 高利贷一次性还款 — 借时立刻 +¥10000,debtDueDay 当日扣 debtAmount(默认 ¥12000)
+      // V16: 多笔债务明细。debtAmount/debtDueDay 保留为最近债务汇总兼容字段。
+      debts: [],
+      debtCrisis: null,
+      debtRestructureCount: 0,
       debtAmount: 0,
       debtDueDay: 0,
       // V14: 投资人事件里勾选解雇,获得 +10 天破产宽容期(累加到 DEATH_FUNDS_DAYS 上)
@@ -591,7 +708,7 @@
       monthlyEarnedGross: 0,        // 乘客支付总额(含抽成)
       monthlyCommission: 0,         // 平台抽成
       monthlySalary: 0,             // 本月累计应付工资(月结时一次性扣款)
-      monthlyDebtPaid: 0,           // 高利贷扣款
+      monthlyDebtPaid: 0,           // 债务扣款
       monthlySeverance: 0,          // 主动解雇补偿
       monthlyEventImpact: 0,        // 事件资金影响合计(signed)
       monthlyEventItems: [],         // 月报里的事件资金明细: [{ day, title, label, amount, detail }]
@@ -676,6 +793,18 @@
         options: rehydrateEventOptions(savedEvent.options, [{ label: savedEvent.options?.[0]?.label || '继续', apply: () => ({}) }]),
       };
     }
+    // V15.16: 投资人 review 事件不在 EVENTS 数组里,按 isInvestorReview 标记单独 hydrate
+    if (savedEvent.isInvestorReview) {
+      const fallbackOptions = (savedEvent.options || []).map((o) => ({
+        label: o.label || '确认',
+        detail: o.detail || '',
+        apply: () => ({}),
+      }));
+      return {
+        ...savedEvent,
+        options: rehydrateEventOptions(savedEvent.options, fallbackOptions.length ? fallbackOptions : [{ label: '确认', apply: () => ({}) }]),
+      };
+    }
     const def = EVENTS.find((event) => event.id === savedEvent.id);
     if (!def) return null;
     let sourceOptions = def.options;
@@ -715,7 +844,7 @@
     if (!savedState || typeof savedState !== 'object') return null;
     const base = makeInitialState();
     const now = Date.now();
-    const hydrated = {
+    let hydrated = {
       ...base,
       ...savedState,
       paused: true,
@@ -734,6 +863,7 @@
       newMissionComplete: null,
       newEndingUnlocked: null,
     };
+    hydrated = syncDebtLegacyFields(hydrated);
     advanceRuntimeCounters(hydrated);
     return pushActionHistory(hydrated, {
       category: 'system',
@@ -805,6 +935,7 @@
 
   function snapshotActionMetrics(state) {
     const vehicleIds = new Set((state.vehicles || []).map((v) => v.id));
+    const debtSummary = getDebtSummary(state);
     return {
       day: state.day,
       hour: state.hour,
@@ -823,8 +954,9 @@
       unlockedEndingTier: state.unlockedEndingTier || 0,
       monthlySalary: state.monthlySalary || 0,
       monthlyEventImpact: state.monthlyEventImpact || 0,
-      debtAmount: state.debtAmount || 0,
-      debtDueDay: state.debtDueDay || 0,
+      debtAmount: debtSummary.totalRepay,
+      debtDueDay: debtSummary.nextDueDay,
+      debtCount: debtSummary.count,
       negFundsDays: state.negFundsDays || 0,
       paused: !!state.paused,
       speed: state.speed || 1,
@@ -940,8 +1072,44 @@
 
   // V14.67: updateZoneHeat 整套删除(V14.6 已删 heat 圆圈渲染,字段累而不读)。
 
+  function processDueDebts(state) {
+    let s = syncDebtLegacyFields(state);
+    if (s.gameOver || s.debtCrisis) return s;
+    const debts = normalizeDebts(s);
+    const dueDebts = debts.filter((debt) => debt.dueDay <= s.day);
+    if (dueDebts.length === 0) return s;
+
+    const dueIds = new Set(dueDebts.map((debt) => debt.id));
+    const totalDue = dueDebts.reduce((sum, debt) => sum + debt.repay, 0);
+    if (s.funds >= totalDue) {
+      s.funds -= totalDue;
+      s.monthlyDebtPaid = (s.monthlyDebtPaid || 0) + totalDue;
+      s = pushLog(s, `债务到期扣款 ¥${totalDue.toLocaleString()}: ${dueDebts.map(describeDebt).join('、')}`, 'warn');
+      s = pushNotif(s, `已偿还到期债务 ¥${totalDue.toLocaleString()}`, 'success');
+      return syncDebtLegacyFields({
+        ...s,
+        debts: debts.filter((debt) => !dueIds.has(debt.id)),
+      });
+    }
+
+    const shortfall = totalDue - s.funds;
+    s.debtCrisis = {
+      day: s.day,
+      hour: s.hour,
+      dueDebts,
+      allDebts: debts,
+      totalDue,
+      shortfall,
+      funds: s.funds,
+    };
+    s.paused = true;
+    s = pushLog(s, `债务危机: 到期应还 ¥${totalDue.toLocaleString()},资金缺口 ¥${shortfall.toLocaleString()}`, 'warn');
+    s = pushNotif(s, `债务危机 · 缺口 ¥${shortfall.toLocaleString()}`, 'warn');
+    return syncDebtLegacyFields(s);
+  }
+
   function tick(state) {
-    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.showTutorial || state.activeStory) return state;
+    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.showTutorial || state.activeStory || state.debtCrisis) return state;
     let s = { ...state };
     s = openDueMonthlyReport(s);
     if (s.showMonthlyReport) return s;
@@ -954,7 +1122,7 @@
       drivers = s.drivers;
       vehicles = s.vehicles;
       // V6 fix: 日结可能触发投资人事件或死亡,触发后立即返回不要继续派单(codex review High)
-      if (s.activeEvent || s.gameOver) return s;
+      if (s.activeEvent || s.gameOver || s.debtCrisis) return s;
     }
 
     // 跑单中的司机推进
@@ -1259,22 +1427,20 @@
     // CrewInspector 主界面平时主动解雇不计入。
     const deathThreshold = GAME.DEATH_FUNDS_DAYS + (s.bankruptcyGraceBonus || 0);
     if (s.negFundsDays >= deathThreshold) {
-      s.gameOver = { type: 'lose', reason: `资金负数超过 ${deathThreshold} 天,投资人撤资,公司破产`, deathCause: 'bankruptcy', stats: snapshotStats(s) };
+      // V15.16: 若由投资人撤资触发(gameOverPending = 'kicked_out'),改 deathCause + 文案
+      if (s.gameOverPending === 'kicked_out') {
+        const kickedConfig = INVESTOR_REVIEW && INVESTOR_REVIEW.endings && INVESTOR_REVIEW.endings.kicked_out;
+        const reason = kickedConfig
+          ? `${kickedConfig.reason}(资金负数超过 ${deathThreshold} 天)`
+          : `投资人撤资,资金负数超过 ${deathThreshold} 天,公司清算`;
+        s.gameOver = { type: 'lose', reason, deathCause: 'kicked_out', stats: snapshotStats(s) };
+      } else {
+        s.gameOver = { type: 'lose', reason: `资金负数超过 ${deathThreshold} 天,投资人撤资,公司破产`, deathCause: 'bankruptcy', stats: snapshotStats(s) };
+      }
     }
 
-    // V14: 借贷一次性还款 — 到期日(第 debtDueDay 天)直接扣 debtAmount;不够还直接破产。
-    if (s.debtDueDay && s.day >= s.debtDueDay && !s.gameOver) {
-      s.funds -= s.debtAmount;
-      s.monthlyDebtPaid = (s.monthlyDebtPaid || 0) + s.debtAmount;
-      s = pushLog(s, `高利贷到期,扣款 ¥${s.debtAmount}`, 'warn');
-      if (s.funds < 0) {
-        s.gameOver = { type: 'lose', reason: `高利贷到期还不上 ¥${s.debtAmount},直接破产`, deathCause: 'debt_default', stats: snapshotStats(s) };
-      } else {
-        s = pushNotif(s, `已还清高利贷 ¥${s.debtAmount}`, 'success');
-      }
-      s.debtDueDay = 0;
-      s.debtAmount = 0;
-    }
+    s = processDueDebts(s);
+    if (s.debtCrisis || s.gameOver) return s;
 
     // V6: 结局检测 — 只解锁下一个 tier(防跳级,codex review Medium)
     if (!s.gameOver) {
@@ -1374,6 +1540,11 @@
     // V15: 政策事件按游戏绝对时间触发,优先于随机事件。
     // 触发后会 set s.activeEvent = activePolicyEvent,后续随机事件分支自动跳过。
     s = policyEventTick(s);
+
+    // V15.16: 投资人定期 review(day 90/180/270/360),与政策事件互斥(都设 activeEvent)。
+    // policyEventTick 已经判定了 s.activeEvent,所以两者不会同日双弹。
+    s = investorReviewTick(s);
+    if (s.activeEvent) return s;
     if (s.activeEvent || s.gameOver) {
       s = openDueMonthlyReport(s);
       return s;
@@ -1491,6 +1662,269 @@
     return s;
   }
 
+  // ============================================================
+  // V15.16: 投资人定期 review — 按绝对时间触发,惩罚 + 目标驱动双轨
+  // 详见 GAME_DESIGN.md 第七章「投资人定期 review」
+  // ============================================================
+
+  // 计算可运营车组数 = min(已配车司机数, 拥有的车辆数中已被司机绑定的)
+  function countOperatingCrews(s) {
+    return (s.drivers || []).filter((d) => d.vehicleId).length;
+  }
+
+  // 检查是否拥有指定订单类型的车组(airport=专车=凯美瑞,luxury=豪华=奔驰 E)
+  function hasOrderTypeCrew(s, orderType) {
+    const requiredVehicleId = orderType === 'airport' ? 'camry' : (orderType === 'luxury' ? 'benz_e' : null);
+    if (!requiredVehicleId) return true;
+    const vehMap = {};
+    (s.vehicles || []).forEach((v) => { vehMap[v.id] = v; });
+    return (s.drivers || []).some((d) => {
+      if (!d.vehicleId) return false;
+      const veh = vehMap[d.vehicleId];
+      return veh && veh.type === requiredVehicleId;
+    });
+  }
+
+  // 判断 KPI 是否达标。stage = 'q1' | 'h1' | 'q3'(y1 仪式感事件,无 KPI)
+  // threshold 'two_of_three' = 资金/口碑/车组三选二;'all' = 全部满足 + 关键车型
+  function evaluateInvestorKPI(s, stage) {
+    const kpi = INVESTOR_REVIEW.kpi[stage];
+    if (!kpi) return true;
+    const crews = countOperatingCrews(s);
+    const fundsPass = (s.funds || 0) >= kpi.funds;
+    const repPass = (s.reputation || 0) >= kpi.reputation;
+    const crewsPass = crews >= kpi.crews;
+    const airportPass = !kpi.requireAirport || hasOrderTypeCrew(s, 'airport');
+    const luxuryPass = !kpi.requireLuxury || hasOrderTypeCrew(s, 'luxury');
+    if (kpi.threshold === 'two_of_three') {
+      const passCount = (fundsPass ? 1 : 0) + (repPass ? 1 : 0) + (crewsPass ? 1 : 0);
+      return passCount >= 2 && airportPass && luxuryPass;
+    }
+    return fundsPass && repPass && crewsPass && airportPass && luxuryPass;
+  }
+
+  // 算半年 / Q3 警告的扣款金额(按车组规模分档)
+  function getInvestorReviewFee(s, stage) {
+    const tiers = INVESTOR_REVIEW.punishment[stage]?.tiers;
+    if (!tiers) return { fee: 0, label: '' };
+    const crews = countOperatingCrews(s);
+    for (const tier of tiers) {
+      if (crews <= tier.maxCrews) return { fee: tier.fee, label: tier.label };
+    }
+    return { fee: tiers[tiers.length - 1].fee, label: tiers[tiers.length - 1].label };
+  }
+
+  // 算 Q3 撤资扣款 = max(funds * 1.5, 100000)
+  function getInvestorFiredAmount(s) {
+    const conf = INVESTOR_REVIEW.punishment.q3_fired;
+    return Math.max(Math.floor((s.funds || 0) * conf.multiplier), conf.minAmount);
+  }
+
+  // 投资人 review 主 tick — 在 endOfDay 末尾调用,检查 day 是否到达评估点
+  function investorReviewTick(state) {
+    let s = state;
+    if (s.activeEvent || s.activePolicyDecision || s.gameOver) return s;
+    if (s.lastReviewDay === s.day) return s;  // 防同日重复触发
+    if (s.investorBoosted) {
+      // Q3 已经触发过(达标接受/达标稳着/撤资其中之一),只剩年终 review 仪式感
+      if (s.day === 360 && s.reviewCounter < 4) {
+        return triggerInvestorReview(s, 'y1');
+      }
+      return s;
+    }
+    const item = INVESTOR_REVIEW.schedule.find((x) => x.atDay === s.day);
+    if (!item) return s;
+    return triggerInvestorReview(s, item.stage);
+  }
+
+  // 触发投资人 review 事件 — 根据 KPI 检查结果决定走哪个分支
+  function triggerInvestorReview(state, stage) {
+    let s = state;
+    if (stage === 'q1') {
+      if (evaluateInvestorKPI(s, 'q1')) {
+        // 达标:无感推进,只更新 lastReviewDay
+        s = { ...s, lastReviewDay: s.day, reviewCounter: (s.reviewCounter || 0) + 1 };
+        s = pushLog(s, `【Q1 review】KPI 达标,投资人未追问`, 'event');
+        return s;
+      }
+      // 不达标:弹警告事件
+      return openInvestorReviewEvent(s, 'q1', { fee: 0 });
+    }
+    if (stage === 'h1') {
+      if (evaluateInvestorKPI(s, 'h1')) {
+        s = { ...s, lastReviewDay: s.day, reviewCounter: (s.reviewCounter || 0) + 1 };
+        s = pushLog(s, `【半年 review】KPI 达标,投资人未追问`, 'event');
+        return s;
+      }
+      const { fee, label } = getInvestorReviewFee(s, 'h1');
+      return openInvestorReviewEvent(s, 'h1', { fee, feeLabel: label });
+    }
+    if (stage === 'q3') {
+      if (evaluateInvestorKPI(s, 'q3')) {
+        // 达标:走愿景分支
+        return openInvestorReviewEvent(s, 'q3_pass', { fee: 0 });
+      }
+      // 不达标:看 missCount
+      if ((s.investorMissCount || 0) >= 2) {
+        // 累计 ≥ 2 次未达标 → 撤资
+        const fee = getInvestorFiredAmount(s);
+        return openInvestorReviewEvent(s, 'q3_fired', { fee });
+      }
+      // 中途追上的玩家(missCount < 2):弹考核罚金
+      const { fee, label } = getInvestorReviewFee(s, 'q3_warn');
+      return openInvestorReviewEvent(s, 'q3_warn', { fee, feeLabel: label });
+    }
+    if (stage === 'y1') {
+      return openInvestorReviewEvent(s, 'y1', { fee: 0 });
+    }
+    return s;
+  }
+
+  // 装载 activeEvent — 按 stage 取对应文案 + 选项
+  function openInvestorReviewEvent(state, stage, ctx) {
+    const stageData = INVESTOR_REVIEW.stages[stage];
+    if (!stageData) return state;
+    let s = { ...state };
+    let desc = stageData.desc;
+    // 占位符替换
+    if (ctx.fee !== undefined && ctx.fee > 0) {
+      desc = desc.replace(/\{N\}/g, ctx.fee.toLocaleString());
+    }
+    if (stage === 'q3_fired') {
+      const remaining = Math.max(0, ctx.fee - (s.funds || 0));
+      desc = desc.replace(/\{remaining\}/g, remaining.toLocaleString());
+    }
+    if (stage === 'y1') {
+      const startFundsK = Math.round(GAME.STARTING_FUNDS / 1000);
+      const currentFundsK = Math.max(0, Math.round((s.funds || 0) / 1000));
+      const startCrews = 2;  // 开局 2 司机 2 车
+      const currentCrews = countOperatingCrews(s);
+      desc = desc
+        .replace(/\{startFundsK\}/g, startFundsK)
+        .replace(/\{currentFundsK\}/g, currentFundsK)
+        .replace(/\{startCrews\}/g, startCrews)
+        .replace(/\{currentCrews\}/g, currentCrews);
+    }
+    // 构造选项(单选 / 多选)
+    let options;
+    if (stageData.options) {
+      // 多选项(q3_pass / y1):每个选项有 id / label / detail
+      options = stageData.options.map((o) => ({
+        label: o.label,
+        detail: o.detail,
+        apply: () => ({}),  // 实际副作用在 resolveInvestorReviewEvent 处理
+      }));
+    } else {
+      // 单选项(q1 / h1 / q3_warn / q3_fired):buttonLabel
+      options = [
+        { label: stageData.buttonLabel || '知道了', detail: '', apply: () => ({}) },
+      ];
+    }
+    s.activeEvent = {
+      id: `investor_review_${stage}`,
+      title: stageData.title,
+      tag: stageData.tag,
+      desc,
+      isInvestorReview: true,
+      investorReviewStage: stage,
+      investorReviewFee: ctx.fee || 0,
+      investorReviewFeeLabel: ctx.feeLabel || '',
+      skipScale: true,  // 不走 scaleEventEffect 缩放
+      options,
+    };
+    s.paused = true;
+    s = pushLog(s, `【投资人 review】${stageData.title}`, 'event');
+    return s;
+  }
+
+  // 解析投资人 review 事件玩家选项 — 由 resolveEvent 检测 isInvestorReview 后调用
+  function resolveInvestorReviewEvent(state, optionIdx) {
+    const ev = state.activeEvent;
+    if (!ev || !ev.isInvestorReview) return state;
+    const stage = ev.investorReviewStage;
+    const fee = ev.investorReviewFee || 0;
+    const feeLabel = ev.investorReviewFeeLabel || '';
+    let s = { ...state, activeEvent: null, paused: false };
+    const fundsBefore = s.funds;
+
+    if (stage === 'q1') {
+      s.investorMissCount = (s.investorMissCount || 0) + 1;
+      s.lastReviewDay = s.day;
+      s.reviewCounter = (s.reviewCounter || 0) + 1;
+      s = pushLog(s, '【Q1 review】未达标,警告 1', 'warn');
+    } else if (stage === 'h1') {
+      s.funds -= fee;
+      s.investorMissCount = (s.investorMissCount || 0) + 1;
+      s.lastReviewDay = s.day;
+      s.reviewCounter = (s.reviewCounter || 0) + 1;
+      s = recordMonthlyEventImpact(s, -fee, { title: '投资人半年 review', label: feeLabel || '咨询费', detail: '半年 review 未达标' });
+      s = pushLog(s, `【半年 review】扣款 ¥${fee.toLocaleString()}(${feeLabel})`, 'warn');
+    } else if (stage === 'q3_pass') {
+      s.lastReviewDay = s.day;
+      s.reviewCounter = (s.reviewCounter || 0) + 1;
+      s.investorBoosted = true;
+      if (optionIdx === 0) {
+        const bonus = INVESTOR_REVIEW.punishment.q3_boost.bonus;
+        s.funds += bonus;
+        s.investorPath = 'ipo';
+        s = recordMonthlyEventImpact(s, bonus, { title: '投资人 Q3 review', label: '投后加注', detail: '接受 IPO 挑战' });
+        s = pushLog(s, `【Q3 review】+¥${bonus.toLocaleString()} 投后加注,激活 IPO 路径`, 'success');
+      } else {
+        s.investorPath = 'settle';
+        s = pushLog(s, '【Q3 review】选择稳着先,不再触发评估', 'event');
+      }
+    } else if (stage === 'q3_warn') {
+      s.funds -= fee;
+      s.investorMissCount = (s.investorMissCount || 0) + 1;
+      s.lastReviewDay = s.day;
+      s.reviewCounter = (s.reviewCounter || 0) + 1;
+      s = recordMonthlyEventImpact(s, -fee, { title: '投资人 Q3 review', label: feeLabel || '考核罚金', detail: 'Q3 review 未达标' });
+      s = pushLog(s, `【Q3 review】考核罚金 ¥${fee.toLocaleString()}(${feeLabel})`, 'warn');
+    } else if (stage === 'q3_fired') {
+      s.funds -= fee;
+      s.gameOverPending = 'kicked_out';
+      s.investorBoosted = true;
+      s.investorPath = 'fired';
+      s.lastReviewDay = s.day;
+      s.reviewCounter = (s.reviewCounter || 0) + 1;
+      s = recordMonthlyEventImpact(s, -fee, { title: '投资人撤资', label: '撤回投资款', detail: '终止合作,清算倒计时 5 天' });
+      s = pushLog(s, `【投资人撤资】扣款 ¥${fee.toLocaleString()},清算倒计时 5 天`, 'warn');
+    } else if (stage === 'y1') {
+      s.lastReviewDay = s.day;
+      s.reviewCounter = (s.reviewCounter || 0) + 1;
+      if (optionIdx === 1) {
+        // 接受当前结局收尾
+        const tier = s.unlockedEndingTier || 0;
+        const ending = (typeof ENDINGS !== 'undefined') ? ENDINGS.find((e) => e.tier === tier) : null;
+        if (ending) {
+          s.gameOver = {
+            type: 'win',
+            endingId: ending.id,
+            endingName: ending.name,
+            endingDesc: ending.desc,
+            stats: snapshotStats(s),
+            forced: false,
+          };
+          s = pushLog(s, `【年终 review】接受当前结局:${ending.name}`, 'success');
+        } else {
+          s = pushLog(s, '【年终 review】当前未解锁任何结局,继续运营', 'event');
+        }
+      } else {
+        s = pushLog(s, '【年终 review】继续运营冲 IPO', 'event');
+      }
+    }
+
+    // 检查破产倒计时(扣款若导致 funds < 0)
+    if (s.funds < GAME.DEATH_FUNDS_THRESHOLD) {
+      s.negFundsDays = Math.max(1, s.negFundsDays || 0);
+    }
+    return openDueMonthlyReport(s);
+  }
+
+  // ============================================================
+  // V15.16 投资人 review 结束
+  // ============================================================
+
   function triggerPolicyNotice(state, eventDef, stage) {
     const stageData = eventDef.stages[stage];
     let s = { ...state };
@@ -1555,6 +1989,9 @@
     if (!ps.decisionFired || !ps.decision) return s;
     const params = eventDef.params;
     const r0 = ps.refMonthlyRevenue || 1;
+    const complianceSchedule = params.COMPLIANCE_SCHEDULE_PCT || [0.25, 0.20, 0.15, 0.10];
+    const complianceFirstPct = Math.round((complianceSchedule[0] || 0.25) * 100);
+    const complianceFloorPct = Math.round((complianceSchedule[complianceSchedule.length - 1] || 0.10) * 100);
     let stageKey;
     if (ps.decision === 'A') {
       stageKey = Math.random() < params.A_VERDICT_GOOD_PCT ? 'verdict_pass' : 'verdict_fine';
@@ -1574,7 +2011,7 @@
       policyEffectPreview = [
         { label: '立即罚款', value: `-¥${Math.round(r0 * params.B_FINE_PCT).toLocaleString()}`, tone: 'negative' },
         { label: '60 天禁运 · 订单量', value: `降至 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}%(60 天)`, tone: 'negative' },
-        { label: '强制启动月合规支出', value: `首月 ¥${Math.round(r0 * 0.25).toLocaleString()} → 稳定后 ¥${Math.round(r0 * 0.10).toLocaleString()}/月`, tone: 'negative' },
+        { label: '强制启动月合规成本', value: `每月按流水扣:首月 ${complianceFirstPct}% → 稳定后 ${complianceFloorPct}%`, tone: 'negative' },
       ];
     }
     // verdict_pass / notice / resume 默认空数组(无副作用)
@@ -1697,9 +2134,15 @@
             loanAmount,
           },
         };
-        // 复用现有 debt 系统(L1114-1126 已有处理):到期一次性扣 debtAmount
-        s.debtAmount = (s.debtAmount || 0) + repayTotal;
-        s.debtDueDay = s.day + params.B_LOAN_DUE_DAYS;
+        s = addDebt(s, {
+          type: 'expansion_loan',
+          label: '扩张贷款',
+          source: '监管扩张窗口',
+          principal: loanAmount,
+          repay: repayTotal,
+          dueDay: s.day + params.B_LOAN_DUE_DAYS,
+          interestRate: params.B_LOAN_RATE || 0,
+        });
         s = pushLog(s, `借入扩张贷款 ¥${loanAmount.toLocaleString()},${params.B_LOAN_DUE_DAYS} 天后还本付息 ¥${repayTotal.toLocaleString()}`, 'warn');
         s = pushNotif(s, `+¥${loanAmount.toLocaleString()} 贷款 · 90 天后到期 ¥${repayTotal.toLocaleString()}`, 'warn');
       }
@@ -2098,10 +2541,15 @@
     if (c.debt) {
       const dueDay = s.day + plan.debtPeriodDays;
       s.funds += plan.debtPrincipal;
-      s.debtAmount = (s.debtAmount || 0) + plan.debtRepay;
-      s.debtDueDay = s.debtDueDay && s.debtDueDay > s.day
-        ? Math.max(s.debtDueDay, dueDay)
-        : dueDay;
+      s = addDebt(s, {
+        type: 'high_interest',
+        label: '高利贷',
+        source: '投资人压力',
+        principal: plan.debtPrincipal,
+        repay: plan.debtRepay,
+        dueDay,
+        interestRate: plan.debtInterestRate,
+      });
       took.push(`借高利贷 ¥${plan.debtPrincipal.toLocaleString()}`);
       s = pushLog(s, `借入高利贷 +¥${plan.debtPrincipal.toLocaleString()},${plan.debtPeriodDays} 天后需还 ¥${plan.debtRepay.toLocaleString()}(利息约 ${Math.round(plan.debtInterestRate * 100)}%)`, 'warn');
     }
@@ -2129,7 +2577,14 @@
       s = applyPolicyEventClose(s, ev);
       return openDueMonthlyReport(s);
     }
+    // V15.16: 投资人 review 事件走专属处理
+    if (ev.isInvestorReview) {
+      return resolveInvestorReviewEvent(state, optionIdx);
+    }
     const opt = ev.options[optionIdx];
+    if (opt?.requireFunds !== undefined && state.funds < opt.requireFunds) {
+      return pushNotif(state, `资金不足!需要 ¥${opt.requireFunds.toLocaleString()}`, 'warn');
+    }
     let eff = {};
     try {
       const raw = opt.apply(state) || {};
@@ -2248,11 +2703,19 @@
     }
     // V14.67: 删除 promoteBest / fireMostExpensive / sellMostExpensive 三个 effect 处理分支。
     //         投资人压力的裁员/卖车走 resolveInvestorPressure,events 数据已无任何选项使用这些字段。
-    // V14: 高利贷一次性还款 — 立刻 +funds,debtDueDay 当天扣 debtAmount。
+    // 事件型贷款也进入债务明细,避免和扩张贷款/高利贷混成一个不可解释的大数。
     if (eff.debtAmount && eff.debtPeriodDays) {
-      s.debtAmount = eff.debtAmount;
-      s.debtDueDay = s.day + eff.debtPeriodDays;
-      s = pushLog(s, `借入高利贷,${eff.debtPeriodDays} 天后(第 ${s.debtDueDay} 日)需还 ¥${eff.debtAmount}`, 'warn');
+      const dueDay = s.day + eff.debtPeriodDays;
+      s = addDebt(s, {
+        type: 'event_loan',
+        label: eff.debtLabel || '事件贷款',
+        source: ev.title || '事件选择',
+        principal: eff.debtPrincipal || eff.debtAmount,
+        repay: eff.debtAmount,
+        dueDay,
+        interestRate: eff.debtInterestRate ?? null,
+      });
+      s = pushLog(s, `借入${eff.debtLabel || '事件贷款'},${eff.debtPeriodDays} 天后(第 ${dueDay} 日)需还 ¥${eff.debtAmount}`, 'warn');
     }
     s = pushLog(s, `事件「${ev.title}」: ${opt.label}`, 'event');
     // V7: 链式事件触发计数累加 — 让下次触发同一 chain 时进入下一 stage
@@ -2406,6 +2869,69 @@
     return s;
   }
 
+  function resolveDebtCrisis(state, choice) {
+    if (!state.debtCrisis) return state;
+    const debts = normalizeDebts(state);
+    const crisis = state.debtCrisis;
+    if (choice === 'bankrupt') {
+      const next = {
+        ...state,
+        debtCrisis: null,
+        gameOver: {
+          type: 'lose',
+          reason: `债务到期还不上 ¥${(crisis.totalDue || 0).toLocaleString()},放弃经营并破产结算`,
+          deathCause: 'debt_default',
+          stats: snapshotStats(state),
+        },
+      };
+      return pushActionHistory(next, {
+        category: 'player',
+        type: 'DEBT_CRISIS_BANKRUPT',
+        label: '玩家在债务危机中选择破产结算',
+        before: state,
+        details: { totalDue: crisis.totalDue || 0, shortfall: crisis.shortfall || 0 },
+      });
+    }
+
+    if (choice !== 'restructure' || debts.length === 0) return state;
+    const totalRepay = debts.reduce((sum, debt) => sum + debt.repay, 0);
+    const remainingDaysSum = debts.reduce((sum, debt) => sum + Math.max(0, (debt.dueDay || state.day) - state.day), 0);
+    const newPeriodDays = cap(remainingDaysSum, DEBT_RESTRUCTURE_MIN_DAYS, DEBT_RESTRUCTURE_MAX_DAYS);
+    const newRepay = roundInvestorMoney(totalRepay * (1 + DEBT_RESTRUCTURE_FEE_RATE));
+    const nextDebt = {
+      id: makeDebtId(state, 'restructured'),
+      type: 'restructured',
+      label: '重组债务',
+      source: '债务危机',
+      principal: totalRepay,
+      repay: newRepay,
+      dueDay: state.day + newPeriodDays,
+      createdDay: state.day,
+      interestRate: DEBT_RESTRUCTURE_FEE_RATE,
+    };
+    let next = syncDebtLegacyFields({
+      ...state,
+      debtCrisis: null,
+      paused: false,
+      debtRestructureCount: (state.debtRestructureCount || 0) + 1,
+      debts: [nextDebt],
+    });
+    next = pushLog(next, `债务重组: ${debts.length} 笔债务合并为 ¥${newRepay.toLocaleString()},${newPeriodDays} 天后到期`, 'warn');
+    next = pushNotif(next, `债务已重组 · +5% 后待还 ¥${newRepay.toLocaleString()}`, 'warn');
+    return pushActionHistory(next, {
+      category: 'player',
+      type: 'DEBT_RESTRUCTURE',
+      label: '玩家选择债务重组',
+      before: state,
+      details: {
+        debtCount: debts.length,
+        oldTotal: totalRepay,
+        newTotal: newRepay,
+        newPeriodDays,
+      },
+    });
+  }
+
   function gameReducer(state, action) {
     state = stampRealTime(state, action?.type);
     switch (action.type) {
@@ -2469,6 +2995,7 @@
       case 'ASSIGN_VEHICLE': return assignVehicle(state, action.driverId, action.vehicleId);
       case 'FIRE_DRIVER': return fireDriver(state, action.driverId);
       case 'SELL_VEHICLE': return sellVehicle(state, action.vehicleId);
+      case 'RESOLVE_DEBT_CRISIS': return resolveDebtCrisis(state, action.choice);
       case 'LOAD_AUTOSAVE': return hydrateAutosaveState(action.state) || state;
       case 'RESET': return makeInitialState();
       case 'CLEAR_FLOAT_GAIN': return { ...state, floatGains: state.floatGains.filter((g) => g.id !== action.id) };
@@ -2579,7 +3106,7 @@
     getVehicleData, computeStatCaps, canTakeOrder, inHourWindow,
     isZoneUnlocked, getZoneUnlockText,
     getRarityLoyaltyRule, getDriverLoyaltyCap, getDriverQuitLine,
-    getInvestorPressurePlan,
+    getInvestorPressurePlan, getDebtSummary,
     getEventBusinessScale, scaleEventEffect,
     computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,
     getTrainingCost,

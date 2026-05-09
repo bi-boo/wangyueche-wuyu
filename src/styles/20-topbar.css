@@ -114,6 +114,37 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .ts-debt-countdown {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 1px;
+    padding: 1px 5px;
+    background: color-mix(in srgb, var(--gold) 36%, var(--card) 64%);
+    border: 1px solid color-mix(in srgb, var(--ink) 26%, transparent);
+    color: var(--ink-2);
+    font-size: 11px;
+    line-height: 1.15;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ts-debt-countdown.urgent {
+    background: color-mix(in srgb, var(--warn) 16%, var(--card) 84%);
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 42%, var(--ink) 58%);
+  }
+  .debt-help-list {
+    display: grid;
+    gap: 3px;
+  }
+  .debt-help-list span {
+    display: block;
+    white-space: nowrap;
+  }
   .speed-controls {
     display: flex;
     align-items: center;
@@ -504,3 +535,5 @@
   .btn-block { width: 100%; }
   .btn-sm { padding: 6px 10px; font-size: 14px; }
   .btn-xs { padding: 4px 9px; font-size: 14px; border-radius: 2px; }
+
+  /* V15.16 投资人 review KPI 样式见 99-overrides.css 末尾(连续 HUD + !important 覆盖需要在最末层) */

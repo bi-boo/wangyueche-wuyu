@@ -104,6 +104,9 @@ function App() {
     state.currentMissionIdx,
     state.drivers.length,
     state.vehicles.length,
+    state.debtAmount,
+    state.debtDueDay,
+    state.debtCrisis,
     state.paused,
   ]);
 
@@ -140,13 +143,15 @@ function App() {
     state.currentMissionIdx,
     state.drivers.length,
     state.vehicles.length,
+    state.debtAmount,
+    state.debtDueDay,
   ]);
 
   // V15: 8× 自适应空白压缩 — 上一 tick 无完单/无日切/无剧情/口碑无变化时,下次间隔压到 50ms;
   // 有事则保持 250ms。其他档位维持固定间隔行为不变。
   const lastTickSnapshotRef = useRef(null);
   useEffect(() => {
-    if (state.paused || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showTutorial || state.gameOver) {
+    if (state.paused || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showTutorial || state.debtCrisis || state.gameOver) {
       lastTickSnapshotRef.current = null;
       return;
     }
@@ -166,7 +171,7 @@ function App() {
     const interval = (state.speed === 8 && !eventful) ? 50 : baseInterval;
     const t = setTimeout(() => dispatch({type: 'TICK'}), interval);
     return () => clearTimeout(t);
-  }, [state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activeStory, state.showTutorial, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
+  }, [state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activeStory, state.showTutorial, state.debtCrisis, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
 
   useEffect(() => {
     if (!selectedZoneId) return;
@@ -388,7 +393,7 @@ function App() {
       const target = event.target;
       if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
       event.preventDefault();
-      if (confirmOpts || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showMonthlyReport || state.newEndingUnlocked || state.gameOver) return;
+      if (confirmOpts || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showMonthlyReport || state.newEndingUnlocked || state.debtCrisis || state.gameOver) return;
       if (showPauseMenu) {
         closePauseMenu({ resume: true });
         return;
@@ -412,6 +417,7 @@ function App() {
     state.activeStory,
     state.showMonthlyReport,
     state.newEndingUnlocked,
+    state.debtCrisis,
     state.gameOver,
     state.paused,
     state.hasStarted,
@@ -505,6 +511,8 @@ function App() {
         onResolveInvestor={(choices) => dispatch({type: 'RESOLVE_INVESTOR', choices})} />}
       {state.activePolicyDecision && <PolicyDecisionModal decision={state.activePolicyDecision} state={state}
         onResolve={(choiceId, extraToggles) => dispatch({type: 'RESOLVE_POLICY_DECISION', choiceId, extraToggles})} />}
+      {state.debtCrisis && <DebtCrisisModal state={state} crisis={state.debtCrisis}
+        onResolve={(choice) => dispatch({type: 'RESOLVE_DEBT_CRISIS', choice})} />}
       {state.activeStory && <StoryModal story={state.activeStory} drivers={state.drivers} onClose={() => dispatch({type: 'STORY_SHOWN'})} />}
       {state.showMonthlyReport && <MonthlyReportModal report={state.showMonthlyReport} onClose={() => dispatch({type: 'CLOSE_MONTHLY_REPORT'})} />}
       {hasFinaleMissionNotice && (

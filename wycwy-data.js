@@ -838,7 +838,7 @@
       desc: '滴答出行又涨抽成了。法务说要么忍,要么自建小程序甩开它。但是自建成本不低。',
       options: [
         { label: '硬扛新抽成', detail: '抽成 +5%(封顶 40%)', choiceKey: 'fight', apply: (s) => ({ commissionRate: Math.min(0.40, ((s && s.commissionRate) || 0.20) + 0.05) }) },
-        { label: '搞自营小程序 −¥180,000', detail: '资金 −¥180,000(资金不足时禁用),抽成永久 0%,事件不再触发', choiceKey: 'selfop', apply: () => ({ funds: -180000, commissionRate: 0, platformDone: true }) },
+        { label: '搞自营小程序 −¥180,000', detail: '资金 −¥180,000(资金不足时禁用),抽成永久 0%,事件不再触发', choiceKey: 'selfop', requireFunds: 180000, apply: () => ({ funds: -180000, commissionRate: 0, platformDone: true }) },
       ],
     },
 
@@ -1170,10 +1170,151 @@
 
   const POLICY_EVENTS = [POLICY_GOV_BAN];
 
+  // V15.16: 投资人定期 review — 按绝对时间触发,惩罚 + 目标驱动双轨。
+  // 与 INVESTOR_PRESSURE(资金负时触发的失败兜底)互补:
+  //   - INVESTOR_PRESSURE:玩家亏损时触发,救场用
+  //   - INVESTOR_REVIEW:玩家"看起来很稳"但成长停滞时触发,扩张激励用
+  // 详见 GAME_DESIGN.md 第七章「投资人定期 review」小节。
+  const INVESTOR_REVIEW = {
+    id: 'investor_review',
+    // 4 个评估点:Q1 / 半年 / Q3 / 年终。按游戏内 day 触发。
+    schedule: [
+      { atDay: 90,  stage: 'q1', type: 'warning' },
+      { atDay: 180, stage: 'h1', type: 'punish' },
+      { atDay: 270, stage: 'q3', type: 'branch' },
+      { atDay: 360, stage: 'y1', type: 'vision' },
+    ],
+    // KPI 阈值。threshold: 'two_of_three' = 资金/口碑/车组三选二;'all' = 全部满足。
+    // requireAirport / requireLuxury = 必须拥有对应订单类型的车组(airport=专车,luxury=豪华)。
+    kpi: {
+      q1: { funds: 25000,  reputation: 100, crews: 3, requireAirport: false, requireLuxury: false, threshold: 'two_of_three' },
+      h1: { funds: 60000,  reputation: 280, crews: 5, requireAirport: false, requireLuxury: false, threshold: 'two_of_three' },
+      q3: { funds: 150000, reputation: 480, crews: 7, requireAirport: true,  requireLuxury: false, threshold: 'all' },
+      y1: null,  // 仪式感事件,无硬 KPI
+    },
+    // 扣款公式参数
+    punishment: {
+      // 半年扣款:按车组规模分档(crews <= maxCrews 时收 fee)
+      h1: {
+        tiers: [
+          { maxCrews: 3,   fee: 15000, label: '小公司的咨询费' },
+          { maxCrews: 6,   fee: 25000, label: '中型公司的咨询费' },
+          { maxCrews: 999, fee: 40000, label: '大公司的咨询费' },
+        ],
+      },
+      // Q3 不达标 + missCount<2 的中段扣款(同 h1 公式)
+      q3_warn: {
+        tiers: [
+          { maxCrews: 3,   fee: 20000, label: '考核罚金(小车队)' },
+          { maxCrews: 6,   fee: 35000, label: '考核罚金(中车队)' },
+          { maxCrews: 999, fee: 55000, label: '考核罚金(大车队)' },
+        ],
+      },
+      // Q3 撤资扣款:max(funds * 1.5, 100000)
+      q3_fired: {
+        multiplier: 1.5,
+        minAmount: 100000,
+      },
+      // Q3 接受挑战的现金加注
+      q3_boost: {
+        bonus: 30000,
+      },
+    },
+    // 各阶段事件文案。{N}/{remaining}/{startFunds} 等占位由 engine 渲染时替换。
+    stages: {
+      q1: {
+        title: '老板有点意见',
+        tag: '投资人',
+        desc: '投资人微信你了。\n\n"最近忙吗?看你这几个月数据没什么变化。"\n\n半小时后又来一条:"当初让你接这个车队,是觉得你能搞出更大的局面。我们投了钱,是想看到回报。下季度希望能看到些动静。"',
+        buttonLabel: '回复"好"',
+      },
+      h1: {
+        title: '来开个会吧',
+        tag: '投资人',
+        desc: '周六中午被叫去公司。会议室里坐了三个 VP,桌上摆着你过去半年的报表。\n\n"我们觉得你最近的状态有点 plateau。"\n"给你三个月,再给你一次机会。"\n\n临走时人事丢下一句:"这次会议的咨询费 ¥{N},从你账上扣了。"\n你笑着点头,签了字。',
+        buttonLabel: '签字',
+      },
+      q3_pass: {
+        title: 'Q3 数据看完了',
+        tag: '投资人',
+        desc: '投资人这次没找麻烦。\n\n"数据看了,过去半年扩了不少。现在你这个体量,可以考虑下一步了。"\n\n"想没想过冲一下规上企业?做到 Tier 4 / Tier 5,我们投后再加一笔。"',
+        options: [
+          { id: 'accept',  label: '接受挑战 → 投后加注 ¥30,000', detail: '激活 Tier 4-5 强目标驱动,顶栏 KPI 切换为「距 IPO 还差 X」' },
+          { id: 'decline', label: '稳着先 → 维持现状',           detail: '不再触发 review,以当前 Tier 收尾' },
+        ],
+      },
+      q3_warn: {
+        title: 'Q3 review 没过',
+        tag: '投资人',
+        desc: 'Q3 review 出来了。投资人没说很重的话,但话里有话。\n\n"这次先扣个考核罚金 ¥{N},下次再不达标——你懂的。"',
+        buttonLabel: '签字',
+      },
+      q3_fired: {
+        title: 'PIP 了',
+        tag: '投资人',
+        desc: 'HRBP 上午 9 点发邮件:"请于今日下午 3 点到 12 楼会议室,带上你的工牌。"\n\n投资人没来。只来了一封邮件:\n"感谢您过去一年的服务。鉴于您未能达成既定的业务目标,我们决定终止合作。撤回投资款 ¥{N} 已从公司账户划扣。祝您下一段职业旅程一切顺利。"\n\n当晚你打开账户,余额 −¥{remaining}。',
+        buttonLabel: '默认接受',
+      },
+      y1: {
+        title: '年终 review',
+        tag: '年终',
+        desc: '年会上,投资人当着所有人念你这一年的数据。\n\n"去年这个时候,账上 ¥{startFundsK} 万、车队 {startCrews} 辆。"\n"今年——账上 ¥{currentFundsK} 万,车队 {currentCrews} 辆。"\n\n"明年,IPO?"',
+        options: [
+          { id: 'continue', label: '继续运营冲 IPO',   detail: '继续运营,目标 Tier 5(¥1,000,000 / 12 车组)' },
+          { id: 'settle',   label: '接受当前结局收尾', detail: '触发当前已解锁的最高 Tier 结算' },
+        ],
+      },
+    },
+    // 失败结局文案(deathCause = 'kicked_out')。被踢出局结局触发时由 engine 读取此文案。
+    endings: {
+      kicked_out: {
+        title: '被踢出局',
+        reason: '未能达成业务目标,投资人终止合作,公司无力继续运营。',
+      },
+    },
+  };
+
+  // V15.15: 链式事件 NPC 画像定位。internalRole / archetype 是策划内部字段,不要直接展示给玩家。
+  const EVENT_NPCS = {
+    borrow: {
+      id: 'borrow',
+      name: '老张',
+      internalRole: '借钱与家庭压力线',
+      archetype: '老实、要面子、长期跑车的中年司机。事件重点是信任关系和老板是否把司机当人看。',
+      avatar: 'assets/npc/npc-laozhang-borrow.png',
+      tone: 'warm',
+    },
+    platform: {
+      id: 'platform',
+      name: '平台经理',
+      internalRole: '平台抽成与自营选择线',
+      archetype: '穿西装、话术很稳的商务经理。事件重点是平台规则、抽成压力和是否转向自营。',
+      avatar: 'assets/npc/npc-platform-manager.png',
+      tone: 'blue',
+    },
+    rival: {
+      id: 'rival',
+      name: '滴答猎头',
+      internalRole: '竞品挖人与钥匙司机线',
+      archetype: '笑得很职业、手里拿报价单的竞品负责人。事件重点是人才争夺和高薪挽留。',
+      avatar: 'assets/npc/npc-rival-hunter.png',
+      tone: 'red',
+    },
+    accident: {
+      id: 'accident',
+      name: '小李',
+      internalRole: '事故责任与信任线',
+      archetype: '年轻司机,刚出事故后紧张又愧疚。事件重点是责任归属、保险和车队信任。',
+      avatar: 'assets/npc/npc-xiaoli-accident.png',
+      tone: 'blue',
+    },
+  };
+
   window.WYCWY_DATA = {
     GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES,
-    TRAININGS, EVENTS, INVESTOR_PRESSURE, POLICY_EVENTS,
+    TRAININGS, EVENTS, INVESTOR_PRESSURE, POLICY_EVENTS, INVESTOR_REVIEW,
     FIRST_NAMES, MISSIONS, ENDINGS,
     RECRUIT_TICKETS, RARITY_META, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES,
+    EVENT_NPCS,
   };
 })();
