@@ -112,6 +112,7 @@
       .filter(Boolean);
 
     // 旧存档兼容:老版本只有 debtAmount/debtDueDay,没有债务明细。
+    // TODO V17:V15.11 后所有新存档已是 debts 数组结构,迁移期满后可移除此兼容分支
     if (debts.length === 0 && state?.debtAmount > 0 && state?.debtDueDay > 0) {
       debts = [{
         id: `legacy-debt-${state.debtDueDay}`,
@@ -668,7 +669,7 @@
       // V14.9: 删除 triggeredEvents(V6 兼容字段)、lowLoyaltyDays/lowRepDays(累而不读的死字段)
       // V14.67: 删除 yesterdayLost/Earned/Completed、kpiHistory、zoneHeat(累而不读)
       eventCooldowns: {},   // V7: 事件冷却 — { [eventId]: dayUnlocked }(仅本局有效,RESET 时重置;seenStories 才跨周目)
-      eventChainCount: {},  // V7: 链式事件触发计数(已弃用,V15.x 改用 chainChoices)
+      // V15.16 cleanup:eventChainCount 字段彻底删除(V7 遗留,V15.x 改用 chainChoices)
       // V15.x: 真分支链式
       chainChoices: {},     // { [chain]: choiceKey } — 玩家在 chain 事件里选了什么,后续段据此过滤
       keyDriverIds: [],     // 钥匙司机 ID 列表(rival_pricing +¥3k/+¥4k 标记)
@@ -864,6 +865,13 @@
       newEndingUnlocked: null,
     };
     hydrated = syncDebtLegacyFields(hydrated);
+    // V15.16 fix:V15.16 之前的老存档没有 investorBoosted/investorPath 字段
+    // 若加载时玩家已 day > 270,说明 Q3 评估理论上已"无感通过",标记为 settle 防止再次触发
+    if (hydrated.day > 270 && !hydrated.investorBoosted) {
+      hydrated.investorBoosted = true;
+      hydrated.investorPath = 'settle';
+      hydrated.reviewCounter = Math.max(hydrated.reviewCounter || 0, 3);
+    }
     advanceRuntimeCounters(hydrated);
     return pushActionHistory(hydrated, {
       category: 'system',
@@ -1075,6 +1083,9 @@
   function processDueDebts(state) {
     let s = syncDebtLegacyFields(state);
     if (s.gameOver || s.debtCrisis) return s;
+    // V15.16 fix:被踢出局倒计时期间(投资人撤资,5 天破产判定)不应被债务危机弹窗打断
+    // 让 deathCause = 'kicked_out' 的归因优先于 'debt_default'
+    if (s.gameOverPending === 'kicked_out') return s;
     const debts = normalizeDebts(s);
     const dueDebts = debts.filter((debt) => debt.dueDay <= s.day);
     if (dueDebts.length === 0) return s;
@@ -1525,6 +1536,10 @@
 
     // V10.10: 只维护资金失败计数,减少玩家需要盯住的隐藏失败条件。
     s.negFundsDays = s.funds < GAME.DEATH_FUNDS_THRESHOLD ? (s.negFundsDays || 0) + 1 : 0;
+    // V15.16 fix:资金回正时清 gameOverPending 标记,避免下次再死时仍归因 kicked_out
+    if (s.funds >= 0 && s.gameOverPending === 'kicked_out') {
+      s.gameOverPending = null;
+    }
 
     // V14: 借贷改为一次性还款,扣款逻辑挪到上面破产检查附近。这里不再有分期扣款。
 
@@ -1673,6 +1688,7 @@
   }
 
   // 检查是否拥有指定订单类型的车组(airport=专车=凯美瑞,luxury=豪华=奔驰 E)
+  // V15.16 fix:vehicle 对象只有 templateId 字段(genVehicle line 478),没有 type 字段
   function hasOrderTypeCrew(s, orderType) {
     const requiredVehicleId = orderType === 'airport' ? 'camry' : (orderType === 'luxury' ? 'benz_e' : null);
     if (!requiredVehicleId) return true;
@@ -1681,7 +1697,7 @@
     return (s.drivers || []).some((d) => {
       if (!d.vehicleId) return false;
       const veh = vehMap[d.vehicleId];
-      return veh && veh.type === requiredVehicleId;
+      return veh && veh.templateId === requiredVehicleId;
     });
   }
 
@@ -1726,8 +1742,9 @@
     if (s.activeEvent || s.activePolicyDecision || s.gameOver) return s;
     if (s.lastReviewDay === s.day) return s;  // 防同日重复触发
     if (s.investorBoosted) {
-      // Q3 已经触发过(达标接受/达标稳着/撤资其中之一),只剩年终 review 仪式感
-      if (s.day === 360 && s.reviewCounter < 4) {
+      // V15.16 fix:只有「接受挑战」(IPO 路径)的玩家才会触发年终 review
+      // 「稳着先」(settle) 和「撤资」(fired) 走完即退出 review 体系
+      if (s.day === 360 && s.investorPath === 'ipo' && s.reviewCounter < 4) {
         return triggerInvestorReview(s, 'y1');
       }
       return s;
@@ -2723,11 +2740,6 @@
     if (ev.chain && opt.choiceKey !== undefined) {
       s.chainChoices = { ...(s.chainChoices || {}), [ev.chain]: opt.choiceKey };
     }
-    // 兼容字段:旧 eventChainCount 仍然 +1(给 V7 时期数据用,V15.x 不依赖)
-    if (ev.chain) {
-      const prev = (s.eventChainCount && s.eventChainCount[ev.chain]) || 0;
-      s.eventChainCount = { ...(s.eventChainCount || {}), [ev.chain]: prev + 1 };
-    }
     // V14.75: 累加事件资金影响并记录来源,月报展示可追溯明细。
     s = recordMonthlyEventImpact(s, s.funds - fundsBefore, {
       title: ev.title,
@@ -2874,13 +2886,17 @@
     const debts = normalizeDebts(state);
     const crisis = state.debtCrisis;
     if (choice === 'bankrupt') {
+      // V15.16 fix:若已被投资人撤资标记 kicked_out,应保留撤资归因(防 race condition)
+      const isKickedOut = state.gameOverPending === 'kicked_out';
       const next = {
         ...state,
         debtCrisis: null,
         gameOver: {
           type: 'lose',
-          reason: `债务到期还不上 ¥${(crisis.totalDue || 0).toLocaleString()},放弃经营并破产结算`,
-          deathCause: 'debt_default',
+          reason: isKickedOut
+            ? '投资人撤资 + 债务到期连环爆雷,公司清算'
+            : `债务到期还不上 ¥${(crisis.totalDue || 0).toLocaleString()},放弃经营并破产结算`,
+          deathCause: isKickedOut ? 'kicked_out' : 'debt_default',
           stats: snapshotStats(state),
         },
       };

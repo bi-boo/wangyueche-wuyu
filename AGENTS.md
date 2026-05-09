@@ -13,44 +13,50 @@
 
 ---
 
-## 文件结构
+## 文件结构(V14.93 反向拆分后,与 CLAUDE.md 一致)
 
 ```
 网约车物语/
-├── 网约车物语-V3.html           主入口(2700+ 行,内嵌 React 组件)
-├── src/
-│   ├── styles.css              UI 样式源码(维护优先改这里)
-│   ├── styles/                 UI 样式分块源码(维护优先改这里)
-│   │   ├── 00-foundation.css   字体、token、全局基础
-│   │   ├── 10-atoms.css        头像、车辆、基础视觉元素
-│   │   ├── 20-layout-city.css  顶栏、主体布局、城市地图
-│   │   ├── 30-lists-tools.css  日志、车辆、培训、按钮
-│   │   ├── 40-modals-feedback.css 弹窗、通知、滚动条
-│   │   ├── 50-responsive-shell.css 任务条、三栏、抽屉
-│   │   ├── 60-v8-game-ui.css   调度台、订单池、任务提示、像素化反馈
-│   │   └── 70-responsive-effects.css 响应式、CRT、粒子、抽卡
-│   ├── app/                    React 组件分块源码(维护优先改这里)
-│   │   ├── 00-runtime.jsx      音效、hooks、全局数据引用
-│   │   ├── 10-atoms-map.jsx    头像/车标/统计条/城市地图/订单气泡
-│   │   ├── 20-shell-fleet.jsx  顶栏、任务条、司机/车辆列表、历史抽屉
-│   │   ├── 30-inspectors.jsx   订单/司机/车辆调度台
-│   │   ├── 40-modals.jsx       教程、事件、招募、结局、任务提示
-│   │   └── 90-app.jsx          App 主组件
-│   └── app.jsx                 由 src/app/*.jsx 拼接的组件镜像
-├── scripts/
-│   └── build-html.mjs          将 src 源码重新内嵌回 HTML
+├── 网约车物语-V3.html           主入口薄壳(106 行,只引用 src/ 和外部库)
 ├── wycwy-data.js                游戏配置(司机/车辆/订单/任务/结局/事件)
 ├── wycwy-engine.js              游戏引擎(reducer + tick + 死亡/结局检测)
-├── wycwy-app.js                 React 组件镜像(由 src/app.jsx 同步,不作为主维护入口)
-├── ark-pixel-16px.woff2         中文像素字体(58KB)
-├── zcool-qingke-huangyou.ttf    标题/按钮展示字体(本地化,避免 file:// 依赖网络)
+├── ark-pixel-16px.woff2         字体存档(已决策不启用,见 PRODUCT.md)
+├── zcool-qingke-huangyou.ttf    字体存档(同上)
 ├── admin.html                   数值调参后台(独立工具页)
 ├── GAME_DESIGN.md               游戏机制文档(每次改动同步更新)
-├── AGENTS.md                    本文件
-└── archive/
-    ├── v1/                      初版(单文件,无任务系统)
-    └── v2/                      多文件 + KPI 但还有滚动
+├── PRODUCT.md / DESIGN.md       品牌定位与设计系统
+├── CLAUDE.md / AGENTS.md        协作约定文档
+├── src/
+│   ├── styles/                  CSS 拆分(11 个文件,文件名 0-99 数字前缀决定加载顺序)
+│   │   ├── 00-tokens.css        (CSS 变量 / 字体)
+│   │   ├── 10-base.css          (reset / 占位元素)
+│   │   ├── 20-topbar.css        (顶栏 + KPI)
+│   │   ├── 30-modals.css        (基础弹窗)
+│   │   ├── 40-tasks-list.css    (任务条 + 三栏 + 列表)
+│   │   ├── 50-feedback.css      (统一游戏反馈层)
+│   │   ├── 60-inspector.css     (常驻调度台)
+│   │   ├── 70-pixel-flytext.css (像素游戏化 + 飘字)
+│   │   ├── 80-map-hud.css       (地图 + HUD,本组最大 1740 行)
+│   │   ├── 90-toggles-recruit.css (CRT 滤镜 + 招募券)
+│   │   └── 99-overrides.css     (V10.3 像素硬边回调,最后覆盖层 1134 行)
+│   └── app/                     React 组件拆分(9 个文件,Babel 多 script 共享作用域)
+│       ├── 00-runtime.jsx       (helpers / hooks / 常量)
+│       ├── 10-icons.jsx         (DriverAvatar/VehicleIcon/OrderIcon/StatIcon/CityMap)
+│       ├── 20-topbar.jsx        (TopBar + KPI + MissionBar + SpeedControl + BottomHUD)
+│       ├── 30-fleet.jsx         (CrewCompact + FleetPanel)
+│       ├── 40-inspector.jsx     (CrewInspector + ZoneInspector + DriverAttributeRows)
+│       ├── 50-modals.jsx        (Tutorial/Event/Recruit/Shop/Story/Monthly)
+│       ├── 60-roadmap.jsx       (UnlockRoadmap/EndingAchievement/RunHistory)
+│       ├── 70-endings.jsx       (EndingModal/EndingUnlock/MissionToast/ConfirmModal)
+│       └── 90-app.jsx           (App + ReactDOM.createRoot)
+├── scripts/
+│   ├── generate-pixel-assets.mjs (像素资产生成)
+│   └── sim-strategies.js         (策略模拟)
+├── assets/                      像素图素材(司机头像 / 车辆图 / 改装件 / NPC 立绘)
+└── archive/                     历史版本(v1 / v2,V14.93 拆分前快照)
 ```
+
+**关键变化**:V14.93 之前 `网约车物语-V3.html` 是 2700+ 行内嵌组件的单文件;V14.93 反向拆分后变成 106 行薄壳,所有 React/CSS 移到 `src/` 下。
 
 ---
 
