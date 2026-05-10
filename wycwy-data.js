@@ -597,7 +597,7 @@
       desc: '小李这周连跑了 14 个夜班,腰椎间盘突出又犯了。今天发动车的时候,他从座椅上起不来。',
       options: [
         { label: '强制让他休息一周', detail: '车闲置 −¥800,所有司机忠诚 +25', apply: () => ({ funds: -800, allLoyalty: 25 }) },
-        { label: '建议他考虑别的工作', detail: '钱保住,所有司机忠诚 −20,口碑 −5(兔死狐悲)', apply: () => ({ allLoyalty: -20, reputation: -5 }) },
+        { label: '建议他考虑别的工作', detail: '钱保住,所有司机忠诚 −20(兔死狐悲)', apply: () => ({ allLoyalty: -20 }) },
       ],
     },
     {
@@ -624,7 +624,7 @@
       desc: '当地新规:60 岁以上司机不得继续注册接单。车队里老王 58,老周 56,都快踩线。',
       options: [
         { label: '内部转岗做调度', detail: '−¥1,500(转岗培训),所有司机忠诚 +15', apply: () => ({ funds: -1500, allLoyalty: 15 }) },
-        { label: '到时候直接劝退', detail: '钱保住,失去最强司机,所有司机忠诚 −15,口碑 −5', apply: () => ({ loseBest: true, allLoyalty: -15, reputation: -5 }) },
+        { label: '到时候直接劝退', detail: '钱保住,失去最强司机,所有司机忠诚 −15', apply: () => ({ loseBest: true, allLoyalty: -15 }) },
       ],
     },
     {
@@ -642,7 +642,7 @@
       desc: '车队成立至今没给司机交社保,司机们最近开始议论。老周老婆怀孕了,他直接问你能不能帮缴。',
       options: [
         { label: '给全员补缴 + 以后正常缴', detail: '−¥3,500,所有司机忠诚 +30', apply: () => ({ funds: -3500, allLoyalty: 30 }) },
-        { label: '装作没听见,继续跑车', detail: '钱保住,所有司机忠诚 −25,口碑 −3', apply: () => ({ allLoyalty: -25, reputation: -3 }) },
+        { label: '装作没听见,继续跑车', detail: '钱保住,所有司机忠诚 −25', apply: () => ({ allLoyalty: -25 }) },
       ],
     },
     {
@@ -678,7 +678,7 @@
       desc: '老周父亲深夜突发脑梗送医院。他来请假,说至少要七天陪护。',
       options: [
         { label: '全薪准假 + 慰问金', detail: '−¥2,000,全员信任 +30', apply: () => ({ funds: -2000, trustLoyalty: 30 }) },
-        { label: '不准假', detail: '钱保住,所有司机忠诚 −25,口碑 −3', apply: () => ({ allLoyalty: -25, reputation: -3 }) },
+        { label: '不准假', detail: '钱保住,所有司机忠诚 −25', apply: () => ({ allLoyalty: -25 }) },
       ],
     },
     {
@@ -687,7 +687,7 @@
       desc: '小张说送外卖比开网约车多挣两千,而且不用伺候人。他来跟你打招呼准备走。',
       options: [
         { label: '加薪挽留', detail: '月薪 +¥1,200,司机留下且忠诚 +30', apply: () => ({ keepBest: true, salaryRaise: 1200 }) },
-        { label: '放他走', detail: '钱保住,失去最强司机,口碑 −3', apply: () => ({ loseBest: true, reputation: -3 }) },
+        { label: '放他走', detail: '钱保住,失去最强司机', apply: () => ({ loseBest: true }) },
       ],
     },
 
