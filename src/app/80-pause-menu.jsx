@@ -67,7 +67,7 @@ function PauseMenu({
             音效 {muted ? '关' : '开'}
           </button>
           <button className={`pause-setting ${crtOn ? 'on' : ''}`} onClick={onToggleCrt}>
-            CRT {crtOn ? '开' : '关'}
+            复古滤镜 {crtOn ? '开' : '关'}
           </button>
           <button className="pause-setting" onClick={onShowTutorial}>新手指引</button>
           <button className="pause-setting" onClick={onExportDiagnostics}>诊断导出</button>
