@@ -552,8 +552,9 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
           </div>
         )}
 
-        {/* V14.92: 风险操作折叠 — 默认收起,避免新手误以为"解雇是日常操作" */}
-        {(canFireDriver || canSellVehicle) && (
+        {/* V14.92: 风险操作折叠 — 默认收起,避免新手误以为"解雇是日常操作"
+            V15.17:day 60 后才解锁(避免开局玩家误解雇唯一司机) */}
+        {(canFireDriver || canSellVehicle) && E.isUIGateUnlocked(state, 'risk_actions') && (
           <details className="inspector-section inspector-danger-actions">
             <summary className="inspector-section-title">风险操作</summary>
             <div className="inspector-danger-action-list">
