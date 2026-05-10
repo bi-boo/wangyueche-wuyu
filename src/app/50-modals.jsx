@@ -1248,12 +1248,22 @@ const MISSION_ORDER_TARGETS = {
 };
 
 function getMissionRouteRows(state, orderStatusById) {
-  const currentIdx = Math.min(state.currentMissionIdx || 0, MISSIONS.length);
+  // V15.16:乱序完成 — 状态用 completedMissionIds 判断,hidden 任务标"自动达成"
+  const completedSet = new Set(state.completedMissionIds || []);
+  const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && !m.hidden);
   return MISSIONS.map((mission, idx) => {
     const orderId = MISSION_ORDER_TARGETS[mission.id];
     const orderStatus = orderId ? orderStatusById[orderId] : null;
-    const stateClass = idx < currentIdx ? 'done' : idx === currentIdx ? 'current' : 'locked';
-    const stateLabel = idx < currentIdx ? '已完成' : idx === currentIdx ? '当前任务' : '后续任务';
+    const isDone = completedSet.has(mission.id);
+    const isCurrent = currentMission && currentMission.id === mission.id;
+    const stateClass = isDone ? 'done' : isCurrent ? 'current' : 'locked';
+    const stateLabel = isDone
+      ? '已完成'
+      : isCurrent
+        ? '当前任务'
+        : mission.hidden
+          ? '自动达成'
+          : '后续任务';
     return { mission, idx, orderStatus, stateClass, stateLabel };
   });
 }

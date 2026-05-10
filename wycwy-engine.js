@@ -935,19 +935,41 @@
 
   function checkMission(state) {
     let s = state;
-    if (s.currentMissionIdx >= MISSIONS.length) return s;
     if (s.newMissionComplete) return s;
-    const mission = MISSIONS[s.currentMissionIdx];
-    if (!mission) return s;
-    if (mission.check(s)) {
-      const reward = mission.reward || {};
-      s = { ...s };
-      if (reward.funds) s.funds += reward.funds;
-      s.completedMissionIds = [...s.completedMissionIds, mission.id];
-      s.newMissionComplete = mission;
-      s.currentMissionIdx += 1;
-      const rewardText = reward.funds ? ` (+¥${reward.funds})` : '';
-      s = pushLog(s, `任务完成: ${mission.title}${rewardText} — ${reward.message || ''}`, 'event');
+
+    // V15.16:乱序检查 — 找未完成且 check pass 的任务,支持 hidden 任务并行完成
+    // hidden 任务静默 toast,非 hidden 任务弹 MissionToast(单弹窗,等用户清后下次再触发)
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const completedSet = new Set(s.completedMissionIds || []);
+      for (const mission of MISSIONS) {
+        if (completedSet.has(mission.id)) continue;
+        if (!mission.check(s)) continue;
+
+        const reward = mission.reward || {};
+        s = { ...s };
+        if (reward.funds) s.funds += reward.funds;
+        s.completedMissionIds = [...s.completedMissionIds, mission.id];
+
+        // currentMissionIdx 重新指向第一个未完成的非 hidden 任务(MissionBar 显示用)
+        const newCompleted = new Set(s.completedMissionIds);
+        const firstActiveIdx = MISSIONS.findIndex((m) => !newCompleted.has(m.id) && !m.hidden);
+        s.currentMissionIdx = firstActiveIdx >= 0 ? firstActiveIdx : MISSIONS.length;
+
+        const rewardText = reward.funds ? ` (+¥${reward.funds})` : '';
+        if (mission.hidden) {
+          // 静默 toast,可继续连锁完成下一个
+          s = pushLog(s, `✓ ${reward.message || mission.title}${rewardText}`, 'event');
+          s = pushNotif(s, `✓ ${reward.message || mission.title}${rewardText}`, 'event');
+          changed = true;
+          break;
+        }
+        // 非 hidden 弹 MissionToast,等用户清后下次触发再继续检查
+        s.newMissionComplete = mission;
+        s = pushLog(s, `任务完成: ${mission.title}${rewardText} — ${reward.message || ''}`, 'event');
+        return s;
+      }
     }
     return s;
   }

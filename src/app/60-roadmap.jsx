@@ -44,8 +44,10 @@ function MissionRouteRow({ row, expanded, onOpenShop }) {
 }
 
 function MissionRoutePanel({ state, orderStatusById, onOpenShop }) {
-  const currentIdx = Math.min(state.currentMissionIdx || 0, MISSIONS.length);
-  const currentMission = MISSIONS[currentIdx];
+  // V15.16:乱序完成 — 找第一个未完成且非 hidden 的任务作为"当前任务"
+  const completedSet = new Set(state.completedMissionIds || []);
+  const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && !m.hidden);
+  const currentIdx = currentMission ? MISSIONS.indexOf(currentMission) : MISSIONS.length;
   const rows = getMissionRouteRows(state, orderStatusById);
   const currentOrderId = currentMission ? MISSION_ORDER_TARGETS[currentMission.id] : null;
   const currentOrderStatus = currentOrderId ? orderStatusById[currentOrderId] : null;

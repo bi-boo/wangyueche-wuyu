@@ -1,6 +1,11 @@
 function MissionBar({ state, onOpenRoadmap }) {
-  const idx = state.currentMissionIdx;
-  if (idx >= MISSIONS.length) {
+  // V15.16:进度只数非 hidden 任务,被动等型/复合首单 hidden 后台静默达成
+  const completedSet = new Set(state.completedMissionIds || []);
+  const visibleMissions = MISSIONS.filter((m) => !m.hidden);
+  const completedVisibleCount = visibleMissions.filter((m) => completedSet.has(m.id)).length;
+  const currentMission = visibleMissions.find((m) => !completedSet.has(m.id));
+
+  if (!currentMission) {
     return (
       <div className="mission-bar objective-card finale">
         <div className="mb-head">
@@ -17,19 +22,18 @@ function MissionBar({ state, onOpenRoadmap }) {
       </div>
     );
   }
-  const m = MISSIONS[idx];
   return (
-    <div className="mission-bar objective-card" aria-label={`当前任务:${m.title}`}>
+    <div className="mission-bar objective-card" aria-label={`当前任务:${currentMission.title}`}>
       <div className="mb-head">
-        <span className="mb-tag">任务 {idx + 1}/{MISSIONS.length}</span>
+        <span className="mb-tag">任务 {completedVisibleCount + 1}/{visibleMissions.length}</span>
         <button className="mb-roadmap-btn" onClick={onOpenRoadmap} aria-label="查看目标">
           <span>查看目标</span>
           <span className="mb-roadmap-btn-arrow">→</span>
         </button>
       </div>
       <div className="mb-content">
-        <strong className="mb-action">{m.title}</strong>
-        <p className="mb-hint">{m.desc}</p>
+        <strong className="mb-action">{currentMission.title}</strong>
+        <p className="mb-hint">{currentMission.desc}</p>
       </div>
     </div>
   );

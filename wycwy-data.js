@@ -912,6 +912,7 @@
       title: '把口碑提升到 90',
       desc: '城市口碑达到 90,解锁西城区',
       hint: '提高服务、稳定完单、减少投诉和流失,口碑会逐步上涨',
+      hidden: true,  // V15.16:被动等型,改为静默 toast 不占任务卡槽
       check: (s) => s.reputation >= 90,
       reward: { funds: 900, message: '西城区解锁,订单池开始变厚。' },
     },
@@ -936,6 +937,7 @@
       title: '把口碑提升到 180',
       desc: '城市口碑达到 180,解锁丰台区',
       hint: '丰台区专车订单更多;服务训练和稳定完单会让口碑涨得更快',
+      hidden: true,  // V15.16:被动等型
       check: (s) => s.reputation >= 180,
       reward: { funds: 1800, message: '丰台区解锁,专车订单开始出现。' },
     },
@@ -944,6 +946,7 @@
       title: '跑出第一单专车订单',
       desc: '凯美瑞/奔驰 E + 车技 ≥35,完成 1 单专车订单',
       hint: '把车技 35 的司机分配到凯美瑞或奔驰 E,系统会自动匹配专车订单',
+      hidden: true,  // V15.16:复合型自动达成,改为静默 toast
       check: (s) => (s.orderCounts && s.orderCounts.airport >= 1) || false,
       reward: { funds: 2400, message: '专车订单跑通,收入台阶抬高了。' },
     },
@@ -976,6 +979,7 @@
       title: '把口碑提升到 520',
       desc: '城市口碑达到 520,解锁朝阳区',
       hint: '朝阳区豪华车订单占比最高;继续用服务训练和高质量完单积累口碑',
+      hidden: true,  // V15.16:被动等型
       check: (s) => s.reputation >= 520,
       reward: { funds: 4500, message: '朝阳区解锁,豪华车订单会更稳定出现。' },
     },
@@ -984,6 +988,7 @@
       title: '跑出第一单豪华车订单',
       desc: '奔驰 E + 车技 ≥70,完成 1 单豪华车订单',
       hint: '豪华车订单主推朝阳区(口碑 520 解锁),需要高口碑、高车技和奔驰 E',
+      hidden: true,  // V15.16:复合型自动达成,改为静默 toast(isFinale 仪式感保留)
       check: (s) => (s.orderCounts && s.orderCounts.luxury >= 1) || false,
       reward: { funds: 5000, message: '豪华车订单跑通,本局主线目标完成。', isFinale: true },
     },
