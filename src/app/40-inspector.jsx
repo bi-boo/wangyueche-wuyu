@@ -368,9 +368,10 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
         <span className="panel-sub">{driver ? '车组概览 / 常用操作 / 能力训练' : '分配司机 / 车辆订单'}</span>
       </div>
       <div className="inspector-scroll driver-inspector-grid">
+        {/* V15.17:hero 跟左侧车队卡完全一致 — 头像 + 名字+车型 meta + 忠诚 chip
+            背景/月薪/接单率移到下方独立「司机详情」卡 */}
         <div className="inspector-hero crew-hero">
-          {/* V15.17:hero 车组概览也用三段式横向布局,跟左侧列表卡视觉一致 */}
-          <div className="crew-overview-row">
+          <div className="crew-overview-row crew-card-row">
             {driver ? (
               <>
                 <div className="crew-row-avatar">
@@ -378,12 +379,9 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                 </div>
                 <div className="crew-row-info">
                   <strong className="crew-row-name">{driver.name}</strong>
-                  <span className="crew-row-sub">{getDriverMetaLine(driver, `月薪 ¥${driver.salary.toLocaleString()}`)}</span>
                   {vd ? (
                     <span className="crew-row-meta" title={`${vd.name} · 可接 ${getVehicleOrderFullSummary(vd)}`}>
-                      <VehicleIcon template={vd} size={20} />
-                      <span className="crew-row-vehicle-name">{vd.name}</span>
-                      <span className="crew-row-meta-divider">·</span>
+                      <VehicleIcon template={vd} size={18} />
                       <span className="crew-row-order">{getInspectorVehicleOrderSummary(vd)}{vehicle && vehicle.policyCertified ? ' · 合规已更新' : ''}</span>
                     </span>
                   ) : (
@@ -394,6 +392,18 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                     </span>
                   )}
                 </div>
+                <div className="crew-row-right">
+                  {showWorkStatus && (
+                    <span className={`crew-status-pill ${statusClass}`} title={workStatus}>
+                      <i className={`cc-status-light ${statusClass}`} />
+                      {workStatus}
+                    </span>
+                  )}
+                  <span className={`crew-loyalty-mini ${loyaltyMeta?.cls || ''}`}
+                        title={loyaltyMeta ? `${loyaltyMeta.label} · ${loyaltyMeta.effect}` : ''}>
+                    忠诚 {driver.loyalty ?? 50}
+                  </span>
+                </div>
               </>
             ) : (
               <>
@@ -401,26 +411,68 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                   <div className="crew-empty-avatar">空</div>
                 </div>
                 <div className="crew-row-info">
-                  <strong className="crew-row-name">待配司机</strong>
+                  <strong className="crew-row-name">{vd ? vd.name : '空车'}</strong>
                   <span className="crew-row-meta" title={`可接 ${getVehicleOrderFullSummary(vd)}`}>
-                    <VehicleIcon template={vd} size={20} />
-                    <span className="crew-row-vehicle-name">{vd.name}</span>
-                    <span className="crew-row-meta-divider">·</span>
+                    <VehicleIcon template={vd} size={18} />
                     <span className="crew-row-order">{getInspectorVehicleOrderSummary(vd)}{vehicle && vehicle.policyCertified ? ' · 合规已更新' : ''}</span>
+                  </span>
+                </div>
+                <div className="crew-row-right">
+                  <span className="crew-status-pill empty" title="空车">
+                    <i className="cc-status-light empty" />
+                    空车
                   </span>
                 </div>
               </>
             )}
           </div>
-          {showWorkStatus && (
-            <div className="crew-overview-side">
-              <span className={`crew-status-pill ${statusClass}`} title={workStatus}>
-                <i className={`cc-status-light ${statusClass}`} />
-                {workStatus}
-              </span>
-            </div>
-          )}
         </div>
+
+        {/* V15.17:司机详情卡 — 整合背景 + 月薪 + 接单率拆解(原 tryrate-card 合并进来) */}
+        {driver && (
+          <div className="inspector-section">
+            <div className="inspector-section-title">司机详情</div>
+            <div className="driver-detail-card">
+              <div className="driver-detail-row">
+                <span className="driver-detail-label">背景</span>
+                <span className="driver-detail-value">{getDriverMetaLine(driver)}</span>
+              </div>
+              <div className="driver-detail-row">
+                <span className="driver-detail-label">月薪</span>
+                <span className="driver-detail-value">¥{driver.salary.toLocaleString()}</span>
+              </div>
+              {showTryRateCard && (() => {
+                const breakdown = E.getDriverTryRateBreakdown(driver, reputation);
+                const fmt = (v) => v.toFixed(2);
+                return (
+                  <>
+                    <div className="driver-detail-row driver-detail-tryrate">
+                      <span className="driver-detail-label">今日接单率</span>
+                      <span className="driver-detail-value tryrate-final-inline">
+                        <strong>{Math.round(breakdown.final * 100)}%</strong>
+                        {breakdown.capped && <span className="tryrate-cap-badge">封顶 99%</span>}
+                      </span>
+                    </div>
+                    <div className="tryrate-formula tryrate-formula-inline">
+                      基础 {Math.round(breakdown.base * 100)}%
+                      <span className="tryrate-mul"> × </span>
+                      口碑 {fmt(breakdown.repMul)}
+                      <span className="tryrate-mul"> × </span>
+                      忠诚 {fmt(breakdown.loyaltyMul)}
+                      {breakdown.bonus !== 1.0 && (
+                        <>
+                          <span className="tryrate-mul"> × </span>
+                          <span className="tryrate-bonus">加成 {fmt(breakdown.bonus)}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="tryrate-hint">单数少时看这里:口碑/忠诚哪个低就是当前瓶颈</div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* V14.2: 选中空车(无司机) → 顶部显示分配司机列表;
             选中司机 → 先给常用操作,再进入能力训练,降低寻找按钮的成本。 */}
@@ -486,38 +538,6 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
             />
           </div>
         )}
-
-        {/* V15.16:接单率拆解 — 让玩家归因「今天单少」是哪个变量在压
-            V15.17:m5(三车组)完成后才解锁,前期玩家不需要看公式 */}
-        {driver && showTryRateCard && (() => {
-          const breakdown = E.getDriverTryRateBreakdown(driver, reputation);
-          const fmt = (v) => v.toFixed(2);
-          return (
-            <div className="inspector-section">
-              <div className="inspector-section-title">今日接单率</div>
-              <div className="tryrate-card">
-                <div className="tryrate-final">
-                  <strong>{Math.round(breakdown.final * 100)}%</strong>
-                  {breakdown.capped && <span className="tryrate-cap-badge">封顶 99%</span>}
-                </div>
-                <div className="tryrate-formula">
-                  基础 {Math.round(breakdown.base * 100)}%
-                  <span className="tryrate-mul"> × </span>
-                  口碑 {fmt(breakdown.repMul)}
-                  <span className="tryrate-mul"> × </span>
-                  忠诚 {fmt(breakdown.loyaltyMul)}
-                  {breakdown.bonus !== 1.0 && (
-                    <>
-                      <span className="tryrate-mul"> × </span>
-                      <span className="tryrate-bonus">加成 {fmt(breakdown.bonus)}</span>
-                    </>
-                  )}
-                </div>
-                <div className="tryrate-hint">单数少时看这里:口碑/忠诚哪个低就是当前瓶颈</div>
-              </div>
-            </div>
-          );
-        })()}
 
         {/* V14.2: 选中空车时,车辆信息单独展示(无 hover 操作) */}
         {!driver && vd && (

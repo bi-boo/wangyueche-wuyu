@@ -127,7 +127,50 @@
   .inspector-section:first-child {
     margin-top: 0;
   }
-  /* V15.16:接单率拆解卡片 — 司机详情面板 */
+  /* V15.17:司机详情卡 — hero 之外独立 section,整合背景/月薪/接单率 */
+  .driver-detail-card {
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+    padding: 10px 12px;
+    display: grid;
+    gap: 6px;
+  }
+  .driver-detail-row {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 13px;
+  }
+  .driver-detail-label {
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .driver-detail-value {
+    color: var(--ink);
+    font-weight: 800;
+  }
+  .driver-detail-tryrate {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-soft);
+  }
+  .tryrate-final-inline strong {
+    font-size: 18px;
+    color: var(--accent-deep);
+    font-weight: 900;
+    margin-right: 6px;
+  }
+  .tryrate-formula-inline {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: var(--ink-2);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+
+  /* V15.16:接单率拆解卡片 — 司机详情面板(旧独立卡,已合并到 driver-detail-card,保留 css 兼容) */
   .tryrate-card {
     background: var(--sub);
     border: 1px solid var(--border-soft);

@@ -524,16 +524,13 @@
     gap: 4px;
     flex-shrink: 0;
   }
-  /* inspector hero 中的车组概览也用三段式,但更宽松 */
+  /* inspector hero 中的车组概览也用三段式,跟左侧列表卡同构 */
   .crew-overview-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 12px;
-    padding: 4px 2px;
-  }
-  .crew-overview-row .crew-row-avatar {
-    /* 详情页头像稍大 */
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 4px 2px !important;
   }
   .crew-overview-row .crew-row-name {
     font-size: 16px;
