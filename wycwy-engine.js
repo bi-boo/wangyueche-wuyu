@@ -237,10 +237,21 @@
     return Number(cap(4.5 + goodReviews * 0.03 - badReviews * 0.15, 3, 5).toFixed(1));
   }
 
+  // V15.16 audit fix:片区解锁加 hysteresis 滞后机制,避免口碑临界值波动反复解锁/反锁
+  // 已解锁的片区用 unlock.reputation - ZONE_HYSTERESIS_GAP 作为反锁阈值
+  // 例:解锁阈值 90 → 反锁阈值 80;玩家达到 90 解锁,降到 89 不会立刻反锁,跌到 79 才反锁
+  // funds / day 阈值无 hysteresis(funds 一般稳定、day 单调递增)
+  const ZONE_HYSTERESIS_GAP = 10;
   function isZoneUnlocked(state, zone) {
     if (!zone || !zone.unlock) return true;
     const u = zone.unlock;
-    if (u.reputation !== undefined && state.reputation < u.reputation) return false;
+    const wasUnlocked = state.zoneLockSnapshot?.[zone.id] === true;
+    if (u.reputation !== undefined) {
+      const threshold = wasUnlocked
+        ? Math.max(0, u.reputation - ZONE_HYSTERESIS_GAP)
+        : u.reputation;
+      if (state.reputation < threshold) return false;
+    }
     if (u.funds !== undefined && state.funds < u.funds) return false;
     if (u.day !== undefined && state.day < u.day) return false;
     return true;
@@ -1411,8 +1422,9 @@
       const prev = prevSnapshot[zone.id];
       if (prev === true && !unlocked) {
         // 之前解锁,现在锁了
+        const lockBackThreshold = Math.max(0, (zone.unlock?.reputation ?? 0) - ZONE_HYSTERESIS_GAP);
         s = pushNotif(s, `⚠ ${zone.name} 因口碑下降被反锁(口碑 ${s.reputation})`, 'warn');
-        s = pushLog(s, `⚠ ${zone.name} 反锁 · 口碑跌破门槛 ${zone.unlock?.reputation ?? 0}`, 'warn');
+        s = pushLog(s, `⚠ ${zone.name} 反锁 · 口碑跌破反锁阈值 ${lockBackThreshold}(解锁阈值 ${zone.unlock?.reputation ?? 0})`, 'warn');
         // V14.8: 中断该区跑单中的司机。注意写入局部 drivers 变量而不是 s.drivers,
         // 因为 tick 末尾 (L963) 会执行 s.drivers = drivers 覆盖,如果只改 s.drivers 会被吃掉
         let interrupted = 0;
