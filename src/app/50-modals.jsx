@@ -141,14 +141,18 @@ function formatOrderBoostText(effect) {
 }
 
 // V14: 投资人压力多选弹窗 — 三个开关任意组合 + 兜底「靠流水硬扛」单选
-function EventResourceSnapshot({ state, thirdLabel = '今日流水', thirdValue, thirdTone = '' }) {
+function EventResourceSnapshot({ state, thirdLabel, thirdValue, thirdTone = '' }) {
   if (!state) return null;
+  // V15.16 audit:第三列改为可选 — 普通事件不再显示「今日流水」(对决策无意义),
+  // 只有显式传 thirdLabel + thirdValue 才显示(债务危机用「到期缺口」、破产用「距破产」)
   const metrics = [
     { label: '资金', value: `¥${state.funds.toLocaleString()}`, tone: state.funds < 0 ? 'danger' : '' },
     { label: '口碑', value: state.reputation },
-    { label: thirdLabel, value: thirdValue ?? `¥${state.todayEarned.toLocaleString()}`, tone: thirdTone },
-    { label: '司机/车辆', value: `${state.drivers.length}/${state.vehicles.length}` },
   ];
+  if (thirdLabel && thirdValue !== undefined) {
+    metrics.push({ label: thirdLabel, value: thirdValue, tone: thirdTone });
+  }
+  metrics.push({ label: '司机/车辆', value: `${state.drivers.length}/${state.vehicles.length}` });
   return (
     <div className="event-resource-snapshot" aria-label="当前经营状态">
       {metrics.map((metric) => (
