@@ -333,15 +333,25 @@ function InvestorReviewStat({ state }) {
   if (gameOverPending === 'kicked_out' || investorPath === 'fired' || investorPath === 'settle') {
     return null;
   }
+  // 共用 popover:所有状态都用同一份评估规则说明
+  const helpPopover = (
+    <TopbarHelp id="investor-help-popover" title="投资人评估规则">
+      <HelpRow label="怎么算">投资人按第 90 / 180 / 270 / 360 天(Q1/半年/Q3/年终)评估你的经营 KPI(资金、口碑、可运营车组)。</HelpRow>
+      <HelpRow label="不达标">Q1 警告 → 半年扣咨询费 ¥15-40k → 累计 2 次未达标 → Q3 撤资(扣 funds×1.5 或 ¥100k 兜底,直接触发 5 天破产倒计时)。</HelpRow>
+      <HelpRow label="达标">Q3 KPI 全部达标可选「接受挑战」+¥30k 加注冲 IPO,或「稳着先」以当前最高结局收尾,之后不再触发评估。</HelpRow>
+    </TopbarHelp>
+  );
+
   // 状态 4 / 状态 6:IPO 路径(接受挑战后)
   if (investorPath === 'ipo') {
     if (day >= 355) {
       // 状态 6:Q3 后未撤资,等年终 review(最后 5 天)
       const daysToY1 = Math.max(0, 360 - day);
       return (
-        <div className="ts-stat topbar-stat ir-stat ir-stat--boosted" aria-label={`距年终 review ${daysToY1} 天`} title="年终 review:展示一年成绩,选择继续冲 IPO 或收尾">
+        <div className="ts-stat topbar-stat ir-stat ir-stat--boosted has-help" tabIndex="0" aria-describedby="investor-help-popover" title="投资人评估规则">
           <span className="ts-label">距年终 review</span>
           <strong className="ts-value">{daysToY1} 天</strong>
+          {helpPopover}
         </div>
       );
     }
@@ -350,9 +360,10 @@ function InvestorReviewStat({ state }) {
     const remaining = Math.max(0, tier5 - (funds || 0));
     const remainingW = (remaining / 10000).toFixed(0);
     return (
-      <div className="ts-stat topbar-stat ir-stat ir-stat--ipo" aria-label={`距 IPO 还差 ¥${remainingW} 万`} title="Q3 已接受投资人挑战 — 冲 Tier 5 IPO 上市">
+      <div className="ts-stat topbar-stat ir-stat ir-stat--ipo has-help" tabIndex="0" aria-describedby="investor-help-popover" title="投资人评估规则">
         <span className="ts-label">距 IPO</span>
         <strong className="ts-value">¥{remainingW} 万</strong>
+        {helpPopover}
       </div>
     );
   }
@@ -367,18 +378,13 @@ function InvestorReviewStat({ state }) {
   const daysLeft = Math.max(0, next.atDay - day);
   const missCount = investorMissCount || 0;
   let cls = 'ir-stat--default';
-  let helpText = '投资人按季度评估你的经营 KPI,不达标会扣款或撤资';
-  if (missCount >= 2) {
-    cls = 'ir-stat--warn2';
-    helpText = '已累计 2 次未达标 — 下次仍不达标投资人将撤资';
-  } else if (missCount >= 1) {
-    cls = 'ir-stat--warn1';
-    helpText = '已 1 次未达标 — 下次评估前请提升 KPI';
-  }
+  if (missCount >= 2) cls = 'ir-stat--warn2';
+  else if (missCount >= 1) cls = 'ir-stat--warn1';
   return (
-    <div className={`ts-stat topbar-stat ir-stat ${cls}`} aria-label={`距${next.name} ${daysLeft} 天`} title={helpText}>
+    <div className={`ts-stat topbar-stat ir-stat ${cls} has-help`} tabIndex="0" aria-describedby="investor-help-popover" title="投资人评估规则">
       <span className="ts-label">距{next.name}</span>
       <strong className="ts-value">{daysLeft} 天</strong>
+      {helpPopover}
     </div>
   );
 }
@@ -514,7 +520,7 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
                   </span>
                 </HelpRow>
               )}
-              <HelpRow label="破产">资金为负会进入投资人压力倒计时,连续负债过久会失败。</HelpRow>
+              <HelpRow label="破产">资金 &lt; 0 连续 5 天 → 公司破产。两种常见触发:现金流断裂 / 投资人 Q3 撤资大额扣款。</HelpRow>
             </TopbarHelp>
           </div>
           <div className="ts-stat topbar-stat rep-stat has-help" tabIndex="0" aria-describedby="rep-help-popover" title={repSubTitle || '城市口碑'}>
