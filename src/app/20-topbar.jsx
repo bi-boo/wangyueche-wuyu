@@ -500,11 +500,18 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
               const cls = daysLeft <= 1 ? 'ts-death-pulse' : daysLeft <= 2 ? 'ts-death-warn' : 'ts-death-info';
               return <span className={`ts-death-countdown ${cls}`}>距破产 {daysLeft} 天</span>;
             })()}
-            {nextDebt && (
-              <span className={`ts-debt-countdown ${debtUrgent ? 'urgent' : ''}`}>
-                {debtSummary.nextDaysLeft} 天后 · {nextDebt.label || '债务'} ¥{(nextDebt.repay || 0).toLocaleString()}
-              </span>
-            )}
+            {nextDebt && (() => {
+              // V15.16 audit fix:大额债务金额按「¥X 万」格式紧凑显示,避免顶栏 chip 溢出截断
+              const amount = nextDebt.repay || 0;
+              const amountText = amount >= 10000
+                ? `¥${(amount / 10000).toFixed(amount % 10000 === 0 ? 0 : 1)} 万`
+                : `¥${amount.toLocaleString()}`;
+              return (
+                <span className={`ts-debt-countdown ${debtUrgent ? 'urgent' : ''}`} title={`${debtSummary.nextDaysLeft} 天后 · ${nextDebt.label || '债务'} ¥${amount.toLocaleString()}`}>
+                  {debtSummary.nextDaysLeft} 天 · {nextDebt.label || '债务'} {amountText}
+                </span>
+              );
+            })()}
             <TopbarHelp id="funds-help-popover" title="资金规则">
               <HelpRow label="收入">司机完成订单后入账,平台抽成 {commissionText}% 后剩余收入进入资金。</HelpRow>
               <HelpRow label="支出">招募司机、购买车辆、训练能力、事件选择、还债和解雇补偿都会消耗资金。</HelpRow>
