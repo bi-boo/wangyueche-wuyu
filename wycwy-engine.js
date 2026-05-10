@@ -227,7 +227,7 @@
   // 5-49% 线性递增(忠诚 += pct),≥50% 拉满到 normalCap
   function getSalaryRaiseLoyaltyEffect(pct) {
     if (typeof pct !== 'number' || pct < 1 || pct > 50) return null;
-    if (pct === 1) return { delta: -5, fillMax: false, hint: '侮辱性涨薪 — 司机心里嘀咕「就这?」' };
+    if (pct === 1) return { delta: -5, fillMax: false, hint: '司机心里嘀咕「就这?」' };
     if (pct === 2) return { delta: -3, fillMax: false, hint: '太抠了,司机不爽' };
     if (pct === 3) return { delta: -1, fillMax: false, hint: '聊胜于无,司机略不悦' };
     if (pct === 4) return { delta: 0, fillMax: false, hint: '调薪幅度过小,司机不会注意到' };

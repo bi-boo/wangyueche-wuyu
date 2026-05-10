@@ -1160,23 +1160,16 @@
   .salary-raise-modal .salary-raise-row strong.positive,
   .salary-raise-modal .salary-raise-row em.positive { color: var(--green); }
   .salary-raise-modal .salary-raise-hint {
-    margin-top: 4px;
-    padding: 8px 10px;
-    background: var(--card);
-    border-left: 3px solid var(--ink-3);
-    font-size: 14px;
-    color: var(--ink-2);
+    margin-top: 2px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-3);
   }
-  .salary-raise-modal .salary-raise-hint.negative {
-    border-left-color: var(--warn);
-    color: var(--warn);
-    background: color-mix(in srgb, var(--warn) 10%, var(--card) 90%);
-  }
-  .salary-raise-modal .salary-raise-hint.positive {
-    border-left-color: var(--green);
-    color: var(--green);
-    background: color-mix(in srgb, var(--green) 10%, var(--card) 90%);
-  }
+  .salary-raise-modal .salary-raise-hint.negative { color: var(--warn); }
+  .salary-raise-modal .salary-raise-hint.positive { color: var(--accent-deep); }
 
   .stat-bar-track {
     position: relative;
