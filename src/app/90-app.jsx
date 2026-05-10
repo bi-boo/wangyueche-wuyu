@@ -447,7 +447,6 @@ function App() {
             onRecruit={() => setShowRecruit(true)}
             onShop={() => setShowShop(true)}
             onOpenRoadmap={() => openRoadmap('missions')}
-            onRequestSalaryRaise={(driver) => setSalaryRaiseDriverId(driver.id)}
           />
         </div>
 
@@ -493,6 +492,7 @@ function App() {
                 requestConfirm={requestConfirm}
                 onSelectVehicle={(vid) => { setSelectedDriverId(null); setSelectedVehicleId(vid); setInspectorTab('details'); }}
                 onSelectDriver={(did) => { setSelectedVehicleId(null); setSelectedDriverId(did); setInspectorTab('details'); }}
+                onRequestSalaryRaise={(driver) => setSalaryRaiseDriverId(driver.id)}
               />
             ) : (
               <InspectorEmpty state={state} />

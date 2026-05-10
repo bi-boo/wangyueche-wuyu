@@ -209,7 +209,7 @@ function getTrainingCost(training, currentValue) {
   return E.getTrainingCost ? E.getTrainingCost(training, currentValue) : training.cost;
 }
 
-function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, loyaltyMeta }) {
+function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, loyaltyMeta, onRequestSalaryRaise }) {
   // V14.65: 忠诚、车技、服务统一成同一种属性行;差异只体现在是否可主动训练。
   const goodRate = Math.round(E.getDriverGoodReviewRate(driver) * 100);
   const loyalty = Math.max(0, Math.min(100, driver.loyalty ?? 50));
@@ -275,6 +275,17 @@ function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, l
               >
                 {row.maxed ? '满' : '+'}
               </button>
+            ) : row.type === 'loyalty' && onRequestSalaryRaise ? (
+              <button
+                type="button"
+                className="driver-attr-action"
+                disabled={row.value >= 100}
+                title={row.value >= 100 ? '忠诚已满,无需调薪' : `给 ${driver.name} 调薪以提升忠诚`}
+                aria-label={row.value >= 100 ? '忠诚已满' : '调薪'}
+                onClick={() => onRequestSalaryRaise(driver)}
+              >
+                {row.value >= 100 ? '满' : '+'}
+              </button>
             ) : (
               <span className="driver-attr-action-placeholder" aria-hidden="true" />
             )}
@@ -327,7 +338,7 @@ function VehicleSwapModal({ driver, vehicles, drivers, dispatch, onClose }) {
   );
 }
 
-function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, requestConfirm, onSelectVehicle, onSelectDriver }) {
+function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, requestConfirm, onSelectVehicle, onSelectDriver, onRequestSalaryRaise }) {
   const [showVehicleSwap, setShowVehicleSwap] = useState(false);
   if (!driver && !inspectedVehicle) return null;
   const vehicle = driver ? vehicles.find((v) => v.id === driver.vehicleId) : inspectedVehicle;
@@ -467,6 +478,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
               dispatch={dispatch}
               vehicleData={vd}
               loyaltyMeta={loyaltyMeta}
+              onRequestSalaryRaise={onRequestSalaryRaise}
             />
           </div>
         )}

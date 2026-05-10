@@ -1,4 +1,4 @@
-function CrewCompact({ driver, vehicle, selected, linked, onClick, onRequestSalaryRaise }) {
+function CrewCompact({ driver, vehicle, selected, linked, onClick }) {
   const vd = vehicle ? E.getVehicleData(vehicle) : null;
   const status = getDriverWorkState(driver, vehicle);
   const lightClass = driver.status === 'driving' ? 'driving'
@@ -40,17 +40,9 @@ function CrewCompact({ driver, vehicle, selected, linked, onClick, onRequestSala
         )}
         <span className={`crew-loyalty-mini ${loyaltyMeta.cls}`} title={`${loyaltyMeta.label} · ${loyaltyMeta.effect}`}>
           忠诚 {driver.loyalty ?? 50}
-          {onRequestSalaryRaise && (
-            <button
-              type="button"
-              className="crew-loyalty-raise-btn"
-              onClick={(e) => { e.stopPropagation(); onRequestSalaryRaise(driver); }}
-              title={`给 ${driver.name} 调薪以提升忠诚`}
-              aria-label="调薪"
-            >+</button>
-          )}
         </span>
         {/* V15.16 audit:已赚累计金额对玩家决策无意义,移除以减少视觉噪音 */}
+        {/* V15.16:调薪入口移到右侧 inspector 「能力训练」忠诚行,与车技/服务统一交互 */}
       </div>
     </div>
   );
@@ -68,7 +60,6 @@ function FleetPanel({
   onRecruit,
   onShop,
   onOpenRoadmap,
-  onRequestSalaryRaise,
 }) {
   // V14.6: 删除 crews/pending 两 tab 和顶部待处理横条,
   // 配车缺口直接由未配车司机/空车卡片自身表达。
@@ -106,7 +97,6 @@ function FleetPanel({
               selected={selectedDriverId === d.id || (selectedVehicle ? d.vehicleId === selectedVehicle.id : false)}
               linked={selectedVehicle ? d.vehicleId === selectedVehicle.id : false}
               onClick={() => onSelectDriver(d.id)}
-              onRequestSalaryRaise={onRequestSalaryRaise}
             />
           );
         })}

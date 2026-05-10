@@ -1106,33 +1106,7 @@
   .crew-loyalty-mini.good {
     color: var(--green);
   }
-  /* V15.16:司机忠诚旁的调薪 + 按钮 — 玩家手动加忠诚唯一通道 */
-  .crew-loyalty-raise-btn {
-    margin-left: 6px;
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    background: var(--accent-soft);
-    border: 1.5px solid var(--accent);
-    color: var(--accent-deep);
-    font-size: 13px;
-    font-weight: 900;
-    line-height: 1;
-    cursor: pointer;
-    border-radius: 2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.12s, transform 0.08s;
-  }
-  .crew-loyalty-raise-btn:hover {
-    background: var(--accent);
-    color: var(--card);
-    transform: scale(1.1);
-  }
-  .crew-loyalty-raise-btn:active {
-    transform: scale(0.95);
-  }
+  /* V15.16:调薪入口移到右侧 inspector 「能力训练」忠诚行,复用 .driver-attr-action 样式 */
 
   /* V15.16:调薪弹窗内部样式 */
   .salary-raise-modal .salary-raise-slider-row {
