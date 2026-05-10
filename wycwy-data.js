@@ -1,4 +1,4 @@
-/* 网约车物语 V10.14 - 配置数据(北京区片地图) */
+/* 网约车物语 V10.14 - 配置数据(虚构都市分区地图,V15.17 谐音化) */
 (function () {
   const GAME = {
     STARTING_FUNDS: 10000,
@@ -508,38 +508,38 @@
     // V14.29: 每个片区都包含 4 种订单,orderMix 控制出现权重。
     // 初级片区基础订单占比高,高级片区高价订单占比高,让“解锁新片区 = 更高收入结构”更直观。
     // V14.7.2: shape 坐标按底图(city-map-clean-v1.png)重新对齐 — 5 个岛屿轮廓:
-    //   西城(中心岛,被河流环绕,菱形)/ 海淀(左上椭圆岛)/ 朝阳(右上岛,上有港口凹角)
-    //   大兴(左下岛,含机场跑道,长形)/ 丰台(右下岛,交通枢纽)
+    //   熙城(中心岛,被河流环绕,菱形)/ 海甸(左上椭圆岛)/ 昭阳(右上岛,上有港口凹角)
+    //   大馨(左下岛,含机场跑道,长形)/ 风台(右下岛,交通枢纽)
     {
-      id: 'downtown', name: '西城区', x: 50, y: 49,
+      id: 'downtown', name: '熙城区', x: 50, y: 49,
       orderMix: { short: 78, business: 16, airport: 5, luxury: 1 },
       color: '#FF8C42', desc: '核心城区,以特惠订单为主,口碑起来后扩张到这里。',
       unlock: { reputation: 90 }, density: 0.8,
       shape: [[42,38], [58,36], [65,46], [62,58], [50,62], [40,58], [36,48]],
     },
     {
-      id: 'residential', name: '海淀区', x: 18, y: 21,
+      id: 'residential', name: '海甸区', x: 18, y: 21,
       orderMix: { short: 72, business: 20, airport: 6, luxury: 2 },
       color: '#5FAD41', desc: '高校和科技园密集,特惠订单稳定,适合开局运营。',
       unlock: { reputation: 0 }, density: 0.8,
       shape: [[7,12], [22,6], [32,12], [33,28], [25,36], [10,33], [4,22]],
     },
     {
-      id: 'station', name: '丰台区', x: 75, y: 74,
+      id: 'station', name: '风台区', x: 75, y: 74,
       orderMix: { short: 35, business: 25, airport: 34, luxury: 6 },
       color: '#F59E0B', desc: '交通枢纽,专车订单为主,日常订单兜底。',
       unlock: { reputation: 180 }, density: 1.0,
       shape: [[55,58], [80,55], [97,62], [97,82], [85,93], [62,93], [52,82], [50,68]],
     },
     {
-      id: 'cbd', name: '朝阳区', x: 75, y: 22,
+      id: 'cbd', name: '昭阳区', x: 75, y: 22,
       orderMix: { short: 18, business: 44, airport: 12, luxury: 26 },
       color: '#0EA5E9', desc: 'CBD 商务区,快车订单和豪华车订单主推,日常订单兜底。',
       unlock: { reputation: 520 }, density: 1.4,
       shape: [[55,10], [78,5], [95,15], [97,32], [88,40], [68,40], [55,32], [54,20]],
     },
     {
-      id: 'airport', name: '大兴区', x: 24, y: 75,
+      id: 'airport', name: '大馨区', x: 24, y: 75,
       orderMix: { short: 24, business: 30, airport: 38, luxury: 8 },
       color: '#22C55E', desc: '机场片区,专车订单需求集中,快车和特惠订单兜底。',
       unlock: { reputation: 340 }, density: 1.4,
@@ -910,11 +910,11 @@
     {
       id: 'm7_reputation_90',
       title: '把口碑提升到 90',
-      desc: '城市口碑达到 90,解锁西城区',
+      desc: '城市口碑达到 90,解锁熙城区',
       hint: '提高服务、稳定完单、减少投诉和流失,口碑会逐步上涨',
       hidden: true,  // V15.16:被动等型,改为静默 toast 不占任务卡槽
       check: (s) => s.reputation >= 90,
-      reward: { funds: 900, message: '西城区解锁,订单池开始变厚。' },
+      reward: { funds: 900, message: '熙城区解锁,订单池开始变厚。' },
     },
     {
       id: 'm8_driving_35',
@@ -935,11 +935,11 @@
     {
       id: 'm10_reputation_180',
       title: '把口碑提升到 180',
-      desc: '城市口碑达到 180,解锁丰台区',
-      hint: '丰台区专车订单更多;服务训练和稳定完单会让口碑涨得更快',
+      desc: '城市口碑达到 180,解锁风台区',
+      hint: '风台区专车订单更多;服务训练和稳定完单会让口碑涨得更快',
       hidden: true,  // V15.16:被动等型
       check: (s) => s.reputation >= 180,
-      reward: { funds: 1800, message: '丰台区解锁,专车订单开始出现。' },
+      reward: { funds: 1800, message: '风台区解锁,专车订单开始出现。' },
     },
     {
       id: 'm11_first_airport',
@@ -977,17 +977,17 @@
     {
       id: 'm15_reputation_520',
       title: '把口碑提升到 520',
-      desc: '城市口碑达到 520,解锁朝阳区',
-      hint: '朝阳区豪华车订单占比最高;继续用服务训练和高质量完单积累口碑',
+      desc: '城市口碑达到 520,解锁昭阳区',
+      hint: '昭阳区豪华车订单占比最高;继续用服务训练和高质量完单积累口碑',
       hidden: true,  // V15.16:被动等型
       check: (s) => s.reputation >= 520,
-      reward: { funds: 4500, message: '朝阳区解锁,豪华车订单会更稳定出现。' },
+      reward: { funds: 4500, message: '昭阳区解锁,豪华车订单会更稳定出现。' },
     },
     {
       id: 'm16_first_luxury',
       title: '跑出第一单豪华车订单',
       desc: '奔驰 E + 车技 ≥70,完成 1 单豪华车订单',
-      hint: '豪华车订单主推朝阳区(口碑 520 解锁),需要高口碑、高车技和奔驰 E',
+      hint: '豪华车订单主推昭阳区(口碑 520 解锁),需要高口碑、高车技和奔驰 E',
       hidden: true,  // V15.16:复合型自动达成,改为静默 toast(isFinale 仪式感保留)
       check: (s) => (s.orderCounts && s.orderCounts.luxury >= 1) || false,
       reward: { funds: 5000, message: '豪华车订单跑通,本局主线目标完成。', isFinale: true },
