@@ -1542,7 +1542,8 @@
         s.drivers = s.drivers.map((d) => applyDriverLoyaltyDelta(d, -moraleLoss));
       }
       s = pushLog(s, `${names} 因忠诚过低离开车队,其他司机忠诚 -${moraleLoss}`, 'warn');
-      s = pushNotif(s, `${names} 离队,车队士气 -${moraleLoss}`, 'warn');
+      // V15.16 audit fix:文案修正「士气」→「全员忠诚」(语义和 effect 字段对齐)
+      s = pushNotif(s, `${names} 离队,全员忠诚 -${moraleLoss}`, 'warn');
     }
     s.todayCompleted = 0;
     s.todayEarned = 0;
