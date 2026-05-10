@@ -1523,7 +1523,7 @@
     for (const d of s.drivers) {
       const risk = getDriverQuitRisk(d);
       if (risk <= 0) continue;
-      if (s.drivers.length - quitting.length <= 1) break;
+      // V15.16 audit fix:删除「至少留 1 个司机」的 guard,允许全员离队 → 触发新失败结局
       if (Math.random() < risk) quitting.push(d);
     }
     if (quitting.length > 0) {
@@ -1544,6 +1544,16 @@
       s = pushLog(s, `${names} 因忠诚过低离开车队,其他司机忠诚 -${moraleLoss}`, 'warn');
       // V15.16 audit fix:文案修正「士气」→「全员忠诚」(语义和 effect 字段对齐)
       s = pushNotif(s, `${names} 离队,全员忠诚 -${moraleLoss}`, 'warn');
+      // V15.16 audit fix:全员离队 → 公司无人运营,直接 game over(crew_collapsed 新结局)
+      if (s.drivers.length === 0) {
+        s.gameOver = {
+          type: 'lose',
+          reason: '全员离队,公司无人运营,经营宣告失败。',
+          deathCause: 'crew_collapsed',
+          stats: snapshotStats(s),
+        };
+        s = pushLog(s, `【全员离队】最后 ${quitting.length} 名司机离开,公司清算`, 'warn');
+      }
     }
     s.todayCompleted = 0;
     s.todayEarned = 0;
