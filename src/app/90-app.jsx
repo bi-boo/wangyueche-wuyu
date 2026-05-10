@@ -60,6 +60,17 @@ function App() {
     }
     return localStorage.getItem('wycwy-crt') === '1';
   });
+  // V15.17:渐进解锁开关 — 默认关(走完整教学),开启后新游戏直接全解锁
+  const [skipOnboarding, setSkipOnboarding] = useState(() => {
+    return localStorage.getItem('wycwy-skip-onboarding') === '1';
+  });
+  const toggleSkipOnboarding = () => {
+    const v = !skipOnboarding;
+    setSkipOnboarding(v);
+    localStorage.setItem('wycwy-skip-onboarding', v ? '1' : '0');
+    // 立刻生效:如果开启,当前 state 一次性解锁所有 gate
+    if (v) dispatch({ type: 'UNLOCK_ALL_GATES' });
+  };
   // 上一次的关键状态 — 用于差分触发 sfx
   const prevRef = useRef({
     completedTotal: 0,
@@ -370,6 +381,10 @@ function App() {
         setShowPauseMenu(false);
         setResumeAfterPauseMenu(false);
         dispatch({ type: 'RESET' });
+        // V15.17:跳过教学开启时,新游戏立刻全解锁
+        if (skipOnboarding) {
+          setTimeout(() => dispatch({ type: 'UNLOCK_ALL_GATES' }), 0);
+        }
       },
     });
   };
@@ -580,11 +595,13 @@ function App() {
           autosave={getSavedAutosave()}
           muted={muted}
           crtOn={crtOn}
+          skipOnboarding={skipOnboarding}
           onContinue={() => closePauseMenu({ resume: true })}
           onLoadAutosave={loadAutosaveFromMenu}
           onNewGame={startNewGameFromMenu}
           onToggleMute={toggleMute}
           onToggleCrt={toggleCrt}
+          onToggleSkipOnboarding={toggleSkipOnboarding}
           onShowTutorial={() => { closePauseMenu({ resume: false }); dispatch({type: 'OPEN_TUTORIAL'}); }}
           onExportDiagnostics={() => exportGameDiagnostics(state)}
         />

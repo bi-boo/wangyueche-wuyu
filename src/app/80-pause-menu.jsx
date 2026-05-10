@@ -17,11 +17,13 @@ function PauseMenu({
   autosave,
   muted,
   crtOn,
+  skipOnboarding,
   onContinue,
   onLoadAutosave,
   onNewGame,
   onToggleMute,
   onToggleCrt,
+  onToggleSkipOnboarding,
   onShowTutorial,
   onExportDiagnostics,
 }) {
@@ -68,6 +70,11 @@ function PauseMenu({
           </button>
           <button className={`pause-setting ${crtOn ? 'on' : ''}`} onClick={onToggleCrt}>
             复古滤镜 {crtOn ? '开' : '关'}
+          </button>
+          <button className={`pause-setting ${skipOnboarding ? 'on' : ''}`}
+                  onClick={onToggleSkipOnboarding}
+                  title="开启后:新游戏直接解锁全部功能,跳过引导 splash">
+            跳过教学 {skipOnboarding ? '开' : '关'}
           </button>
           <button className="pause-setting" onClick={onShowTutorial}>新手指引</button>
           <button className="pause-setting" onClick={onExportDiagnostics}>诊断导出</button>

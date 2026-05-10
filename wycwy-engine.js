@@ -3174,6 +3174,11 @@
         s = scanUIGates(s);
         return s;
       }
+      // V15.17:跳过教学 — 老玩家可以一次性解锁所有 UI gate(localStorage 触发)
+      case 'UNLOCK_ALL_GATES': {
+        const allIds = (UI_GATES || []).map((g) => g.id);
+        return { ...state, unlockedUIGates: allIds, activeUnlockSplash: null };
+      }
       case 'CLEAR_NEW_ENDING': return { ...state, newEndingUnlocked: null };
       // V14: 关闭月报弹窗 → 清零月度累计 + 月份计数 +1。
       // V14.67: 月结工资打负不再立即触发投资人事件,留 1 天缓冲让玩家先跑单挽救;

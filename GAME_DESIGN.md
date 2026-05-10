@@ -719,6 +719,32 @@ V15.16 任务系统精简:**16 → 11 显式主线任务**。被动等型(等口
 显式主线 11 条 → 每条玩家都有动作可执行(买/招/配/训),无"挂着等"卡顿感。
 hidden 里程碑 5 条 → checkMission 乱序检查(不阻塞主线 idx 推进),完成时静默 toast + 奖励。
 
+### 渐进式新手引导(V15.17 新增)
+
+为降低新手认知负担,所有 UI 入口按 gate 渐进解锁,8 个 gate 配 mission/day 触发条件:
+
+| Gate ID | 触发条件 | 解锁的 UI |
+|---|---|---|
+| `recruit_btn` | m1 完成第一单 | 「+ 招募」按钮 |
+| `shop_btn` | m2 跑完第一日 | 「+ 买车」按钮 |
+| `supply_chip` | m2 跑完第一日 | 顶栏供需指示器 |
+| `training_actions` | m5 补齐三车组 | 司机详情车技/服务训练 +按钮 |
+| `tryrate_card` | m5 补齐三车组 | 司机详情接单率拆解卡 |
+| `salary_raise` | m6 训练一次服务 | 司机详情忠诚行调薪 +按钮 |
+| `risk_actions` | day 60 | 司机详情底部「风险操作」折叠区 |
+| `investor_chip` | day 80 | 顶栏「距 review N 天」倒计时 |
+
+触发时弹半屏 splash 教学卡片(暗化背景 + 标题 + 描述 + 位置提示 + 「知道了」按钮),
+关闭后 UI 入口永久可见。`UI_GATES` 配置见 wycwy-data.js,
+`unlockUIGate` / `scanUIGates` / `isUIGateUnlocked` 见 wycwy-engine.js。
+
+任务驱动 spotlight:当前主线任务对应的入口加 pulse 动画 + 红点(招募/买车两个常驻按钮),
+让玩家"现在该点哪里"零困惑。
+
+跳过开关:暂停菜单底部「跳过教学」按钮,localStorage 持久化(`wycwy-skip-onboarding`)。
+开启后立刻 dispatch UNLOCK_ALL_GATES,开新游戏也立刻全解锁。
+hydrateAutosaveState 老存档加载时也会根据当前 day/任务状态批量解锁,避免连环弹 splash。
+
 ---
 
 ## 六、五种结局(V10 — 阶段目标按可运营车组计算)
