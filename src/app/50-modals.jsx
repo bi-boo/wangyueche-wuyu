@@ -737,50 +737,60 @@ function MonthlyReportModal({ report, onClose }) {
           </div>
         </div>
 
-        <div className="monthly-section">
-          <div className="monthly-section-title">支出构成</div>
-          <div className="monthly-row danger">
-            <span>月结发薪 ({report.drivers.length} 人)</span>
-            <strong>−{fmt(report.salary)}</strong>
-          </div>
-          {report.debtPaid > 0 && (
-            <div className="monthly-row danger">
-              <span>债务扣款</span>
-              <strong>−{fmt(report.debtPaid)}</strong>
-            </div>
-          )}
-          {report.severance > 0 && (
-            <div className="monthly-row danger">
-              <span>解雇补偿</span>
-              <strong>−{fmt(report.severance)}</strong>
-            </div>
-          )}
-          {report.salary === 0 && report.debtPaid === 0 && report.severance === 0 && (
-            <div className="monthly-empty-row">本月没有固定支出</div>
-          )}
-        </div>
-
-        {report.eventImpact !== 0 && (
-          <div className="monthly-section monthly-event-section">
-            <div className="monthly-section-title">其他现金变动</div>
-            <div className={`monthly-row monthly-subtotal ${report.eventImpact < 0 ? 'danger' : 'positive'}`}>
-              <span>事件合计</span>
-              <strong>{sign(report.eventImpact)}</strong>
-            </div>
-            <div className="monthly-event-list">
-              {eventItems.map((item, idx) => (
-                <div key={`${item.day}-${item.title}-${idx}`} className={`monthly-event-item ${item.amount < 0 ? 'danger' : 'positive'}`}>
-                  <div className="monthly-event-copy">
-                    <strong>第 {item.day} 日 · {item.title}</strong>
-                    <span>{item.label || '事件现金变动'}</span>
-                    {item.detail && <span className="monthly-event-detail">{item.detail}</span>}
-                  </div>
-                  <em>{sign(item.amount)}</em>
+        {/* V15.16 audit:支出按"已扣 vs 今日扣"分组 */}
+        {/* 第 1 组:本月日常变动 — 过去 30 天逐日已扣(事件 / 债务到期 / 解雇补偿) */}
+        {(report.eventImpact !== 0 || report.debtPaid > 0 || report.severance > 0) && (
+          <div className="monthly-section">
+            <div className="monthly-section-title">本月日常变动 <em className="monthly-section-hint">(过去 30 天逐日已扣)</em></div>
+            {report.eventImpact !== 0 && (
+              <>
+                <div className={`monthly-row ${report.eventImpact < 0 ? 'danger' : 'positive'}`}>
+                  <span>事件合计</span>
+                  <strong>{sign(report.eventImpact)}</strong>
                 </div>
-              ))}
-            </div>
+                {eventItems.length > 0 && (
+                  <div className="monthly-event-list">
+                    {eventItems.map((item, idx) => (
+                      <div key={`${item.day}-${item.title}-${idx}`} className={`monthly-event-item ${item.amount < 0 ? 'danger' : 'positive'}`}>
+                        <div className="monthly-event-copy">
+                          <strong>第 {item.day} 日 · {item.title}</strong>
+                          <span>{item.label || '事件现金变动'}</span>
+                          {item.detail && <span className="monthly-event-detail">{item.detail}</span>}
+                        </div>
+                        <em>{sign(item.amount)}</em>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {report.debtPaid > 0 && (
+              <div className="monthly-row danger">
+                <span>债务到期扣款</span>
+                <strong>−{fmt(report.debtPaid)}</strong>
+              </div>
+            )}
+            {report.severance > 0 && (
+              <div className="monthly-row danger">
+                <span>解雇补偿</span>
+                <strong>−{fmt(report.severance)}</strong>
+              </div>
+            )}
           </div>
         )}
+
+        {/* 第 2 组:本次月结新扣 — 月底统一结算的薪酬 */}
+        <div className="monthly-section">
+          <div className="monthly-section-title">本次月结新扣 <em className="monthly-section-hint">(今日结算)</em></div>
+          {report.salary > 0 ? (
+            <div className="monthly-row danger">
+              <span>司机工资 ({report.drivers.length} 人)</span>
+              <strong>−{fmt(report.salary)}</strong>
+            </div>
+          ) : (
+            <div className="monthly-empty-row">本月无司机,无工资支出</div>
+          )}
+        </div>
 
         <div className={`monthly-net-profit ${report.netProfit >= 0 ? 'positive' : 'danger'}`}>
           <span>当月净利润</span>

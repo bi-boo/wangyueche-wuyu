@@ -1465,19 +1465,30 @@
   }
   .monthly-event-item.positive em { color: var(--green); }
   .monthly-event-item.danger em { color: var(--warn); }
+  /* V15.16 audit:当月净利润改为「总结句」样式,不再像 button */
   .monthly-net-profit {
     display: flex; justify-content: space-between; align-items: center;
-    margin: 12px 0;
-    padding: 14px 16px;
-    background: var(--accent);
-    border: 3px solid var(--ink);
-    box-shadow: 3px 3px 0 var(--ink);
-    color: #FFF8E7;
-    font-size: 18px;
+    margin: 14px 0 8px;
+    padding: 12px 16px;
+    background: transparent;
+    border-top: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    box-shadow: none;
+    color: var(--ink);
+    font-size: 14px;
     font-weight: 700;
+    letter-spacing: 0.4px;
   }
-  .monthly-net-profit.danger { background: var(--warn); }
-  .monthly-net-profit strong { font-size: 24px; }
+  .monthly-net-profit.positive strong { color: var(--green); }
+  .monthly-net-profit.danger strong { color: var(--warn); }
+  .monthly-net-profit strong { font-size: 28px; font-weight: 900; }
+  .monthly-section-hint {
+    font-size: 11px;
+    font-style: normal;
+    color: var(--ink-3);
+    font-weight: 400;
+    margin-left: 6px;
+  }
   .monthly-driver-list { display: flex; flex-direction: column; gap: 6px; }
   .monthly-driver-row {
     display: flex; align-items: center; gap: 10px;
@@ -1521,8 +1532,13 @@
   .monthly-final-grid > div { padding: 6px; }
   .monthly-final-grid span { display: block; font-size: 11px; color: var(--ink-3); }
   .monthly-final-grid strong { display: block; font-size: 18px; margin-top: 2px; }
+  /* V15.16 audit:继续运营按钮强化 — 区分于上方「当月净利润」总结句 */
   .monthly-continue {
-    width: 100%; margin-top: 14px; padding: 12px; font-size: 14px; font-weight: 700;
+    width: 100%; margin-top: 16px;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
   }
   /* V14: 投资人多选弹窗 */
   .investor-choices {
