@@ -720,20 +720,11 @@
       ],
     },
 
-    // ============ celeb chain 拆段 ============
-    {
-      id: 'celeb_base', title: '明星打到你家车', tag: '运气', emoji: 'star', cooldown: 35,
-      unlockMission: 3,
-      desc: '一名歌手打到了你的车,司机服务很到位。',
-      options: [
-        { label: '配合宣传', detail: '+15 口碑,但司机被偷拍隐私', apply: () => ({ reputation: 15, allLoyalty: -10 }) },
-        { label: '低调处理', detail: '+8 口碑,司机赞', apply: () => ({ reputation: 8, allLoyalty: 5 }) },
-      ],
-    },
+    // ============ celeb chain 拆段(V15.16:base 已删除,pack/paparazzi 独立化) ============
     {
       id: 'celeb_pack', title: '明星经纪公司想包车', tag: '运气', emoji: 'star', cooldown: 35,
       unlockMission: 9,
-      desc: '上次那位歌手的经纪公司打电话来,想长期签约车队做艺人接送。一个月 ¥15,000 包月,但要求 24 小时待命。',
+      desc: '一家演员经纪公司打电话来,看中车队的服务质量,想长期签约做艺人接送。一个月 ¥15,000 包月,但要求 24 小时待命。',
       options: [
         { label: '签下来全力服务', detail: '+¥15,000 签约费,所有司机忠诚 −15(24h 待命强度大)', apply: () => ({ funds: 15000, allLoyalty: -15 }) },
         { label: '婉拒,保持普通业务', detail: '所有司机忠诚 +10,口碑 +5', apply: () => ({ allLoyalty: 10, reputation: 5 }) },
@@ -742,7 +733,7 @@
     {
       id: 'celeb_paparazzi', title: '八卦记者跟拍司机', tag: '运气', emoji: 'star', cooldown: 35,
       unlockMission: 13,
-      desc: '上次那位歌手的私生活被狗仔盯上,你的司机被多次跟拍。狗仔出价 ¥5,000 让司机透露行程。',
+      desc: '一位流量明星最近被狗仔盯上,正好近期常打你家车。司机被多次跟拍,狗仔出价 ¥5,000 让司机透露行程。',
       options: [
         { label: '严令司机闭口 + 送签保密协议', detail: '−¥1,500,口碑 +15,所有司机忠诚 +10(讲规矩)', apply: () => ({ funds: -1500, reputation: 15, allLoyalty: 10 }) },
         { label: '默许司机收钱', detail: '+¥5,000(分成),口碑 −25(业内骂走灰)', apply: () => ({ funds: 5000, reputation: -25 }) },
