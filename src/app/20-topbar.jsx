@@ -395,22 +395,27 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
   const tierName = tierEnding ? tierEnding.name : '初创期';
   const hourText = `${String(state.hour).padStart(2, '0')}:00`;
   // V14.67: 删除 supplyTotal/supplyTaken/supplyLost/activeDrivers/idleDrivers 5 个未使用的局部变量。
-  // V14.60: 用近 6 小时滑动窗口判断供需;数据不足时先按匹配正常展示,不暴露“采样中”。
-  // 阈值是绝对值 — 平均流失 ≥3/h 算司机不够,平均闲置 ≥5/h 算司机偏多。
+  // V15.16 audit:供需判定从 lossAvg/idleAvg 改为「已解锁区订单密度 vs 实际车组」比例
+  // 引导玩家「解锁越多区 → 需要越多车」,而不是看实时流失/闲置(玩家不直观)。
+  // 公式:density 之和(高峰 ×1.3) / 车组数 = 供需压力比
+  //   > 0.8 → 供给不足(每辆车要服务 >0.8 个区的订单密度,会有流失)
+  //   < 0.4 → 供给充足(车多得有富余)
+  //   其他   → 匹配正常
   const supplyHistory = state.supplyHistory || [];
   const histLen = supplyHistory.length;
   const lossSum = supplyHistory.reduce((a, b) => a + (b.lost || 0), 0);
   const idleSum = supplyHistory.reduce((a, b) => a + (b.idle || 0), 0);
   const lossAvg = histLen > 0 ? lossSum / histLen : 0;
   const idleAvg = histLen > 0 ? idleSum / histLen : 0;
-  // V14.81: 供需轴改为风险轴。0%=供给充足/安全,50%=临界,100%=供给不足。
-  // lossAvg 是主要风险来源; idleAvg 会把指针拉回左侧,表示司机供给更充足。
-  const supplyRisk = histLen >= 3
-    ? Math.max(0, Math.min(100, 18 + (lossAvg / 6) * 82 - (idleAvg / 5) * 18))
-    : 18;
-  const showAxis = !state.paused && histLen >= 3;
+  const unlockedDensitySum = ZONES.filter((z) => E.isZoneUnlocked(state, z))
+    .reduce((sum, z) => sum + (z.density || 1.0), 0);
+  const operatingCrews = (state.drivers || []).filter((d) => d.vehicleId).length;
+  const supplyPressure = operatingCrews > 0 ? unlockedDensitySum / operatingCrews : 99;
+  // 风险轴 0-100:基于 supplyPressure 映射(0.4=充足/18%,0.6=正常中位/50%,0.8+=不足/85%+)
+  const supplyRisk = Math.max(0, Math.min(100, (supplyPressure - 0.2) / 0.8 * 80 + 10));
+  const showAxis = !state.paused;
   let supplyValue = '匹配正常';
-  let supplySubText = '等待订单刷新';
+  let supplySubText = `${ZONES.filter((z) => E.isZoneUnlocked(state, z)).length} 个片区 / ${operatingCrews} 车组`;
   let supplyCls = 'supply-balanced';
   let supplyCardCls = 'balanced';
   if (state.paused) {
@@ -418,11 +423,15 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
     supplySubText = '点地图下方开始';
     supplyCls = 'supply-idle';
     supplyCardCls = 'idle';
-  } else if (lossAvg >= 3) {
+  } else if (operatingCrews === 0) {
+    supplyValue = '无可运营车组';
+    supplyCls = 'supply-undersupply';
+    supplyCardCls = 'undersupply';
+  } else if (supplyPressure > 0.8) {
     supplyValue = '供给不足';
     supplyCls = 'supply-undersupply';
     supplyCardCls = 'undersupply';
-  } else if (idleAvg >= 5) {
+  } else if (supplyPressure < 0.4) {
     supplyValue = '供给充足';
     supplyCls = 'supply-oversupply';
     supplyCardCls = 'oversupply';
