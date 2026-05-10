@@ -397,7 +397,7 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
                   {disabledReason && <span className="negative">{disabledReason}</span>}
                   {eff.funds !== undefined && (
                     <span className={eff.funds < 0 ? 'negative' : 'positive'}>
-                      资金 {eff.funds > 0 ? '+' : ''}{eff.funds.toLocaleString()} · 选后 ¥{nextFunds.toLocaleString()}
+                      资金 {eff.funds > 0 ? '+' : ''}{eff.funds.toLocaleString()}
                     </span>
                   )}
                   {eff.reputation !== undefined && (
@@ -472,7 +472,7 @@ function PolicyNoticeModal({ event, state, onResolve }) {
           <div className="modal-title">{event.title}</div>
           <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{event.desc}</div>
         </div>
-        <EventResourceSnapshot state={state} />
+        {/* V15.16 audit:政策事件是叙事/信息性事件,不需要展示玩家当前数据(无决策权衡需要参考) */}
         {previews.length > 0 && (
           <div className="policy-effect-list" style={{margin: '0 0 12px', display: 'flex', flexDirection: 'column', gap: 6}}>
             {(event.policyStage === 'verdict_ban' || event.policyStage === 'verdict_fine') && (

@@ -41,10 +41,7 @@ function CrewCompact({ driver, vehicle, selected, linked, onClick }) {
         <span className={`crew-loyalty-mini ${loyaltyMeta.cls}`} title={`${loyaltyMeta.label} · ${loyaltyMeta.effect}`}>
           忠诚 {driver.loyalty ?? 50}
         </span>
-        <span className="crew-earnings" title={`${driver.name} 累计跑单收入 ¥${driver.totalEarned || 0}`}>
-          <span>已赚</span>
-          <strong>¥{driver.totalEarned || 0}</strong>
-        </span>
+        {/* V15.16 audit:已赚累计金额对玩家决策无意义,移除以减少视觉噪音 */}
       </div>
     </div>
   );
