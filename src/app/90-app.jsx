@@ -518,6 +518,13 @@ function App() {
         onResolve={(choice) => dispatch({type: 'RESOLVE_DEBT_CRISIS', choice})} />}
       {state.activeStory && <StoryModal story={state.activeStory} drivers={state.drivers} onClose={() => dispatch({type: 'STORY_SHOWN'})} />}
       {state.showMonthlyReport && <MonthlyReportModal report={state.showMonthlyReport} onClose={() => dispatch({type: 'CLOSE_MONTHLY_REPORT'})} />}
+      {/* V15.17:渐进解锁 splash — 不被其他 modal 遮挡,优先级仅次于 gameOver */}
+      {state.activeUnlockSplash && (
+        <UnlockSplashModal
+          gate={state.activeUnlockSplash}
+          onClose={() => dispatch({type: 'CLOSE_UNLOCK_SPLASH'})}
+        />
+      )}
       {hasFinaleMissionNotice && (
         <MissionToast mission={state.newMissionComplete} onClose={() => dispatch({type: 'CLEAR_MISSION_COMPLETE'})} />
       )}

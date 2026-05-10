@@ -9,6 +9,85 @@
     z-index: 100;
     padding: 20px;
   }
+  /* V15.17:渐进解锁 splash — 比普通 modal 更深的暗化 + 居中大字标题 */
+  .unlock-splash-overlay {
+    background: rgba(20,12,8,0.78);
+    z-index: 200;
+    animation: unlock-splash-fade 0.25s ease-out;
+  }
+  @keyframes unlock-splash-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .unlock-splash-modal {
+    max-width: 460px;
+    padding: 28px 30px 24px;
+    text-align: center;
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-deep), var(--shadow-md);
+    animation: unlock-splash-pop 0.3s ease-out;
+  }
+  @keyframes unlock-splash-pop {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .unlock-splash-tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--accent-deep);
+    background: var(--accent-soft);
+    padding: 4px 12px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+  .unlock-splash-icon {
+    color: var(--accent);
+    margin-bottom: 6px;
+    line-height: 0;
+  }
+  .unlock-splash-icon svg {
+    display: inline-block;
+  }
+  .unlock-splash-title {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .unlock-splash-desc {
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .unlock-splash-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+    padding: 6px 12px;
+    border-radius: 2px;
+    margin-bottom: 20px;
+  }
+  .unlock-splash-hint-label {
+    font-size: 12px;
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .unlock-splash-hint-value {
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 800;
+  }
+  .unlock-splash-confirm {
+    width: 100%;
+    min-height: 44px;
+    font-size: 15px;
+    font-weight: 800;
+  }
   .modal {
     background: #FFF8E7;
     border-radius: 2px;
