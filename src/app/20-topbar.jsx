@@ -510,13 +510,23 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
               return <span className={`ts-death-countdown ${cls}`}>距破产 {daysLeft} 天</span>;
             })()}
             {nextDebt && (() => {
-              // V15.16 audit fix:大额债务金额按「¥X 万」格式紧凑显示,避免顶栏 chip 溢出截断
-              const amount = nextDebt.repay || 0;
-              const amountText = amount >= 10000
-                ? `¥${(amount / 10000).toFixed(amount % 10000 === 0 ? 0 : 1)} 万`
-                : `¥${amount.toLocaleString()}`;
+              // V15.16 简化:多笔时顶栏显示「总待还」让玩家先感知总额,单笔时保留具体到期信息
+              const fmtAmount = (v) => v >= 10000
+                ? `¥${(v / 10000).toFixed(v % 10000 === 0 ? 0 : 1)} 万`
+                : `¥${(v || 0).toLocaleString()}`;
+              if (debtSummary.count > 1) {
+                const totalText = fmtAmount(debtSummary.totalRepay || 0);
+                return (
+                  <span className={`ts-debt-countdown ${debtUrgent ? 'urgent' : ''}`}
+                        title={`总待还 ${totalText}(共 ${debtSummary.count} 笔),最近一笔 ${debtSummary.nextDaysLeft} 天后到期`}>
+                    总待还 {totalText} · 最近 {debtSummary.nextDaysLeft} 天
+                  </span>
+                );
+              }
+              const amountText = fmtAmount(nextDebt.repay || 0);
               return (
-                <span className={`ts-debt-countdown ${debtUrgent ? 'urgent' : ''}`} title={`${debtSummary.nextDaysLeft} 天后 · ${nextDebt.label || '债务'} ¥${amount.toLocaleString()}`}>
+                <span className={`ts-debt-countdown ${debtUrgent ? 'urgent' : ''}`}
+                      title={`${debtSummary.nextDaysLeft} 天后 · ${nextDebt.label || '债务'} ¥${(nextDebt.repay || 0).toLocaleString()}`}>
                   {debtSummary.nextDaysLeft} 天 · {nextDebt.label || '债务'} {amountText}
                 </span>
               );
