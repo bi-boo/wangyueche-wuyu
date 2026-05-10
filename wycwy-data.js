@@ -13,7 +13,7 @@
     EARLY_EVENT_UNTIL_DAY: 10,
     CHAIN_EVENT_START_DAY: 21,
     // V15.x:开局前 10 天只抽 unlockMission=0 的事件白名单
-    EARLY_EVENT_IDS: ['oil_price', 'back_pain', 'rain_base', 'newyear_base', 'borrow_seed'],
+    EARLY_EVENT_IDS: ['rain_base', 'newyear_base', 'borrow_seed'],
     FOCUSED_EVENT_CHOICES: true,
     // V14.67: FATIGUE_REST_THRESHOLD / FATIGUE_RECOVERY_PER_DAY 已删,疲劳机制整套移除。
     // 死亡阈值
@@ -582,33 +582,8 @@
   //   - options[i].apply 返回 effect 中可包含:markKeyDriver / platformDone / addDrivers / addVehicles
   const EVENTS = [
     // ============ V7 单段事件(unlockMission 阶段化) ============
-    {
-      id: 'oil_price', title: '油价又涨了', tag: '行业', emoji: 'biz', cooldown: 30,
-      unlockMission: 0,
-      desc: '92 号汽油又涨了 0.4 元/升。燃油司机的成本被压得越来越薄。',
-      options: [
-        { label: '车队补贴', detail: '−¥1,500,所有司机忠诚 +15', apply: () => ({ funds: -1500, allLoyalty: 15 }) },
-        { label: '让司机自吞', detail: '钱保住,所有司机忠诚 −15', apply: () => ({ allLoyalty: -15 }) },
-      ],
-    },
-    {
-      id: 'back_pain', title: '小李的腰又犯了', tag: '人事', emoji: 'people', cooldown: 35,
-      unlockMission: 0,
-      desc: '小李这周连跑了 14 个夜班,腰椎间盘突出又犯了。今天发动车的时候,他从座椅上起不来。',
-      options: [
-        { label: '强制让他休息一周', detail: '车闲置 −¥800,所有司机忠诚 +25', apply: () => ({ funds: -800, allLoyalty: 25 }) },
-        { label: '建议他考虑别的工作', detail: '钱保住,所有司机忠诚 −20(兔死狐悲)', apply: () => ({ allLoyalty: -20 }) },
-      ],
-    },
-    {
-      id: 'ride_cancel_chain', title: '司机被连续取消单罚款', tag: '行业', emoji: 'biz', cooldown: 30,
-      unlockMission: 3,
-      desc: '小张这周被乘客连续取消 5 单,平台扣了 ¥1,200。每单都是他到了乘客就取消,平台不分原因。',
-      options: [
-        { label: '车队全额承担罚款', detail: '−¥1,200,所有司机忠诚 +20', apply: () => ({ funds: -1200, allLoyalty: 20 }) },
-        { label: '让小张自己背锅', detail: '钱保住,所有司机忠诚 −20', apply: () => ({ allLoyalty: -20 }) },
-      ],
-    },
+    // V15.16:删 oil_price / back_pain / ride_cancel_chain ——
+    // 三者都是「pay→loyalty 上 / don't→loyalty 下」纯模板,无 NPC 锚点,留一两个就够了。
     {
       id: 'complaint_harass', title: '司机被投诉骚扰女乘客', tag: '危机', emoji: 'people', cooldown: 35,
       unlockMission: 5,

@@ -1045,8 +1045,8 @@ EVENTS.filter(e =>
 
 | unlockMission | 对应里程碑 | 该阶段事件 |
 |---|---|---|
-| 0 | 开局 | oil_price、back_pain、rain_base、newyear_base、borrow_seed |
-| 3 | m3 三辆车 | celeb_base、ride_cancel_chain |
+| 0 | 开局 | rain_base、newyear_base、borrow_seed |
+| 3 | m3 三辆车 | celeb_base |
 | 5 | m5 三车组 | accident_seed、complaint_harass、borrow_close、borrow_distance |
 | 6 | m6 服务训练 | aging_test |
 | 8 | m8 车技 35 | platform_pressure、account_freeze、social_lapse |
@@ -1094,15 +1094,12 @@ EVENTS.filter(e =>
 
 | 事件 ID | 标题 | 标签 | 选项数 |
 |---|---|---|---|
-| `back_pain` | 小李的腰又犯了 | 人事 | 3 |
-| `oil_price` | 油价又涨了 | 行业 | 3 |
 | `account_freeze` | 平台账号被冻结 | 监管 | 3 |
 | `night_robbery` | 司机半夜被抢 | 危机 | 3 |
 | `complaint_harass` | 司机被投诉骚扰女乘客 | 危机 | 3 |
 | `social_lapse` | 司机社保断缴了 | 人事 | 3 |
 | `aging_test` | 网约车司机年龄新规 | 监管 | 3 |
 | `cheating_data` | 平台诱导刷单冲业绩 | 行业 | 3 |
-| `ride_cancel_chain` | 司机被连续取消单罚款 | 行业 | 3 |
 | `family_emergency` | 老周父亲住院 | 人事 | 3 |
 | `quit_temptation` | 司机想转行送外卖 | 人事 | 3 |
 
