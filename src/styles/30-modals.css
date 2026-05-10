@@ -258,14 +258,17 @@
     cursor: not-allowed;
     filter: grayscale(0.35);
   }
-  .pause-command.is-primary {
-    background: color-mix(in srgb, var(--accent) 76%, var(--card) 24%);
-    color: var(--ink);
+  /* V15.16 audit:三个 pause-command 统一中性底色,符合 DESIGN.md 「工坊橙 ≤10%」规则。
+     主次 / 警示由左侧 mark 角标颜色 + 标题文字色区分,不再用大面积底色。 */
+  .pause-command.is-primary .pause-command-mark {
+    background: var(--accent);
+    color: var(--card);
+    border-color: var(--accent-deep);
   }
-  .pause-command.is-danger {
-    background: color-mix(in srgb, var(--warn) 22%, var(--card) 78%);
-    color: var(--ink);
-    border-color: color-mix(in srgb, var(--warn) 54%, var(--ink) 46%);
+  .pause-command.is-danger .pause-command-mark {
+    background: var(--warn);
+    color: var(--card);
+    border-color: color-mix(in srgb, var(--warn) 60%, var(--ink) 40%);
   }
   .pause-command.is-danger b { color: var(--warn); }
   .pause-command-mark {
