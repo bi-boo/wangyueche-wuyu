@@ -602,7 +602,14 @@
     animation: slideIn 0.25s ease-out, slideOut 0.3s ease-in 2.5s forwards;
   }
   .notification-warn {
-    border-left-color: var(--warn);
+    border-left: 6px solid var(--warn);
+    border: 2px solid var(--warn);
+    background: color-mix(in srgb, var(--warn) 8%, var(--card) 92%);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    /* V15.16 audit:warn 级 toast 视觉强化 — 5s 持续(普通 2.5s) + 红边框 + 浅红底 */
+    animation: slideIn 0.25s ease-out, slideOut 0.3s ease-in 5s forwards;
   }  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
 
