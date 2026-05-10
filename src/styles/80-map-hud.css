@@ -1311,25 +1311,34 @@
   .event-resource-snapshot strong.danger {
     color: var(--warn);
   }
-  .event-modal .modal-options {
+  .event-modal .modal-options,
+  .debt-crisis-modal .modal-options {
     gap: 10px;
   }
-  .event-modal .modal-option {
+  .event-modal .modal-option,
+  .debt-crisis-modal .modal-option {
     position: relative;
     cursor: pointer;
-    background: #FFF8E7 !important;
     border: 2px solid var(--ink) !important;
     box-shadow: 3px 3px 0 rgba(42,35,32,0.28) !important;
     padding: 13px 14px;
   }
+  .event-modal .modal-option {
+    background: #FFF8E7 !important;
+  }
   /* V15.16 audit:删除右上角"选择"伪元素角标 — 整张卡片本身已是 button,角标冗余 */
   .event-modal .modal-option:hover,
-  .event-modal .modal-option:focus-visible {
-    background: #FFF8E7 !important;
+  .event-modal .modal-option:focus-visible,
+  .debt-crisis-modal .modal-option:hover,
+  .debt-crisis-modal .modal-option:focus-visible {
     border-color: var(--accent-deep) !important;
     box-shadow: 4px 4px 0 rgba(42,35,32,0.36) !important;
     outline: none;
     transform: translateY(-1px);
+  }
+  .event-modal .modal-option:hover,
+  .event-modal .modal-option:focus-visible {
+    background: #FFF8E7 !important;
   }
   @media (max-width: 760px) {
     .chain-event-modal {

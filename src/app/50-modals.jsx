@@ -181,7 +181,8 @@ function DebtCrisisModal({ state, crisis, onResolve }) {
         <div className="modal-desc">
           到期应还 <strong>¥{totalDue.toLocaleString()}</strong>,当前资金 <strong>¥{(state.funds || 0).toLocaleString()}</strong>,缺口 <strong className="negative">¥{shortfall.toLocaleString()}</strong>。
         </div>
-        <EventResourceSnapshot state={state} thirdLabel="到期缺口" thirdValue={`¥${shortfall.toLocaleString()}`} thirdTone="danger" />
+        {/* V15.16 audit:删除 EventResourceSnapshot 数据栏 — 与描述行重复(到期应还/当前资金/缺口都已展示),
+             口碑和司机/车辆与债务决策无关,只增加视觉噪音 */}
         <div className="debt-crisis-section">
           <div className="monthly-section-title">今日到期</div>
           <div className="debt-crisis-list">
