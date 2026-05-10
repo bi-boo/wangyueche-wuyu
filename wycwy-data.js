@@ -655,15 +655,6 @@
       ],
     },
     {
-      id: 'rain_trapped', title: '暴雨夜被困一整夜', tag: '天气', emoji: 'rain', cooldown: 30,
-      unlockMission: 11,
-      desc: '红色暴雨预警 + 地铁停运 + 多条主干道积水,司机们困在路上。是让他们继续跑还是撤?',
-      options: [
-        { label: '全员撤回保安全', detail: '−¥1,500(损失订单),所有司机忠诚 +20', apply: () => ({ funds: -1500, allLoyalty: 20 }) },
-        { label: '默许涨价 2 倍硬抢单', detail: '+¥3,000,口碑 −15(违规)', apply: () => ({ funds: 3000, reputation: -15 }) },
-      ],
-    },
-    {
       id: 'night_robbery', title: '司机半夜被抢', tag: '危机', emoji: 'crash', cooldown: 40,
       unlockMission: 11,
       desc: '凌晨两点,小李在城郊接了一单,被乘客持刀抢走当天现金。人没事,钱没了。',
@@ -702,15 +693,6 @@
       ],
     },
     {
-      id: 'rain_storm_metro', title: '暴雨夜地铁停运', tag: '天气', emoji: 'rain', cooldown: 30,
-      unlockMission: 10,
-      desc: '红色暴雨预警,地铁全线停运。打车需求是平时三倍,但路况危险,司机们也累。',
-      options: [
-        { label: '全员死撑抢单', detail: '订单 +80%,所有司机忠诚 −25(死撑抢单很拼命)', apply: () => ({ orderBoost: 1.8, allLoyalty: -25 }) },
-        { label: '车队组团送社区免费车', detail: '−¥1,500,口碑 +20', apply: () => ({ funds: -1500, reputation: 20 }) },
-      ],
-    },
-    {
       id: 'rain_red_alert', title: '50 年一遇红色预警', tag: '天气', emoji: 'rain', cooldown: 30,
       unlockMission: 14,
       desc: '气象台发布 50 年一遇极端暴雨预警,部分路段已经积水到腰。这是该让车队完全停运的程度了。',
@@ -740,32 +722,14 @@
       ],
     },
 
-    // ============ newyear chain 拆段 ============
+    // ============ newyear 单事件 ============
     {
       id: 'newyear_base', title: '春节将至', tag: '节日', emoji: 'festival', cooldown: 60,
       unlockMission: 0,
-      desc: '春节快到了,司机们想回家。',
+      desc: '春节又到了。司机们想回家,平台单量也凶。给红包?还是按平时来?',
       options: [
-        { label: '春节红包', detail: '−¥3,000,所有司机忠诚 +40', apply: () => ({ funds: -3000, allLoyalty: 40 }) },
-        { label: '正常过节', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
-      ],
-    },
-    {
-      id: 'newyear_spring_rush', title: '春运抢票热点', tag: '节日', emoji: 'festival', cooldown: 60,
-      unlockMission: 6,
-      desc: '今年春运抢票特别难。几个司机在车队群里说,如果回不去家就接着跑。',
-      options: [
-        { label: '车队帮买回家票', detail: '−¥4,000,所有司机忠诚 +35', apply: () => ({ funds: -4000, allLoyalty: 35 }) },
-        { label: '让司机自己想办法', detail: '钱保住,所有司机忠诚 −15', apply: () => ({ allLoyalty: -15 }) },
-      ],
-    },
-    {
-      id: 'newyear_return_block', title: '突发返乡限制', tag: '节日', emoji: 'festival', cooldown: 60,
-      unlockMission: 12,
-      desc: '春节前一周,周边省份突然要求"红码不准下高速 + 隔离 14 天"。多个司机想提前撤回,但你订单正好接到爆。',
-      options: [
-        { label: '准司机们提前回家', detail: '−¥4,000(闲置 + 补贴),所有司机忠诚 +40', apply: () => ({ funds: -4000, allLoyalty: 40 }) },
-        { label: '强制留人补一笔留岗费', detail: '−¥1,500,所有司机忠诚 −20', apply: () => ({ funds: -1500, allLoyalty: -20 }) },
+        { label: '春节红包 + 帮买回家票', detail: '−¥3,000,所有司机忠诚 +40', apply: () => ({ funds: -3000, allLoyalty: 40 }) },
+        { label: '正常过节,自己想办法', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
       ],
     },
 
@@ -809,16 +773,7 @@
         { label: '婉拒,介绍他银行信用贷', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
       ],
     },
-    {
-      id: 'borrow_cooled', title: '老张主动提辞职', tag: '人事', emoji: 'people', chain: 'borrow_cooled', cooldown: 999,
-      unlockMission: 11,
-      requireChainChoice: { borrow_close: 'refuse' },
-      desc: '老张说自己最近"想换种活法",其实你和他都明白——上次没借的那一万八,他到现在没解,所以决定走人。',
-      options: [
-        { label: '加薪挽留 + 私下补一笔', detail: '−¥4,000,司机留下,全员信任 +15', apply: () => ({ funds: -4000, keepBest: true, trustLoyalty: 15 }) },
-        { label: '同意离队', detail: '钱保住,失去老张,所有司机忠诚 −15', apply: () => ({ loseBest: true, allLoyalty: -15 }) },
-      ],
-    },
+    // V15.16:borrow_cooled 已删,help→refuse 路径在 close 节点终结(玩家自己的态度反复,无需二次挽回机会)
 
     // ============ platform_pressure 单事件重复触发(长线引导攒钱) ============
     {

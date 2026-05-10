@@ -1048,12 +1048,12 @@ EVENTS.filter(e =>
 | 0 | 开局 | oil_price、back_pain、rain_base、newyear_base、borrow_seed |
 | 3 | m3 三辆车 | celeb_base、ride_cancel_chain |
 | 5 | m5 三车组 | accident_seed、complaint_harass、borrow_close、borrow_distance |
-| 6 | m6 服务训练 | aging_test、newyear_spring_rush |
+| 6 | m6 服务训练 | aging_test |
 | 8 | m8 车技 35 | platform_pressure、account_freeze、social_lapse |
 | 9 | m9 凯美瑞 | cheating_data、celeb_pack |
-| 10 | m10 口碑 180 | rain_storm_metro、accident_trust、accident_breach |
-| 11 | m11 第一单专车 | rain_trapped、night_robbery、borrow_intimate、borrow_cooled |
-| 12 | m12 五车组 | family_emergency、newyear_return_block |
+| 10 | m10 口碑 180 | accident_trust、accident_breach |
+| 11 | m11 第一单专车 | night_robbery、borrow_intimate |
+| 12 | m12 五车组 | family_emergency |
 | 13 | m13 奔驰 E | rival_seed、celeb_paparazzi、accident_loyalty |
 | 14 | m14 车技 70 | quit_temptation、rain_red_alert、rival_pricing |
 | 15 | m15 口碑 520 | rival_friends_join_success、rival_friends_join_lost |
@@ -1101,7 +1101,6 @@ EVENTS.filter(e =>
 | `complaint_harass` | 司机被投诉骚扰女乘客 | 危机 | 3 |
 | `social_lapse` | 司机社保断缴了 | 人事 | 3 |
 | `aging_test` | 网约车司机年龄新规 | 监管 | 3 |
-| `rain_trapped` | 暴雨夜被困一整夜 | 天气 | 3 |
 | `cheating_data` | 平台诱导刷单冲业绩 | 行业 | 3 |
 | `ride_cancel_chain` | 司机被连续取消单罚款 | 行业 | 3 |
 | `family_emergency` | 老周父亲住院 | 人事 | 3 |
