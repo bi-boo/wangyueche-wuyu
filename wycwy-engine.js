@@ -2248,7 +2248,7 @@
           label: '平台监管整改',
           detail: `立即罚款 ¥${fine.toLocaleString()}`,
         });
-        s = pushLog(s, `平台监管整改:罚款 ¥${fine.toLocaleString()},60 天禁运启动 · 订单残血 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}%`, 'warn');
+        s = pushLog(s, `平台监管整改:罚款 ¥${fine.toLocaleString()},60 天禁运启动 · 订单量降至 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}%(平台只放出原来的 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}% 订单给你接)`, 'warn');
         s = pushNotif(s, `平台被整改 · 订单暴跌至 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}% · 60 天解禁`, 'warn');
       } else if (ev.policyStage === 'resume') {
         s.policyOngoingEffects = {
