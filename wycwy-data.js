@@ -623,7 +623,7 @@
       unlockMission: 6,
       desc: '当地新规:60 岁以上司机不得继续注册接单。车队里老王 58,老周 56,都快踩线。',
       options: [
-        { label: '内部转岗做调度', detail: '−¥1,500(转岗培训),所有司机忠诚 +15', apply: () => ({ funds: -1500, allLoyalty: 15 }) },
+        { label: '送他们去合规培训过渡', detail: '−¥1,500(培训费),所有司机忠诚 +15', apply: () => ({ funds: -1500, allLoyalty: 15 }) },
         { label: '到时候直接劝退', detail: '钱保住,失去最强司机,所有司机忠诚 −15', apply: () => ({ loseBest: true, allLoyalty: -15 }) },
       ],
     },
