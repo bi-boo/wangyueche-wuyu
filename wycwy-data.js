@@ -697,7 +697,7 @@
       unlockMission: 0,
       desc: '今天下大雨,平台订单需求暴涨。要让司机出车吗?',
       options: [
-        { label: '全员出车抢单', detail: '订单 +60%。30% 概率事故 → 修车 −¥1,500,全员忠诚 −20', apply: () => ({ orderBoost: 1.6, accidentRisk: { chance: 0.30, funds: -1500, allLoyalty: -20, log: '暴雨抢单发生剐蹭事故,司机受惊,车队垫付维修费' } }) },
+        { label: '全员出车抢单', detail: '订单 +60%,所有司机忠诚 −10(冒雨跑累)', apply: () => ({ orderBoost: 1.6, allLoyalty: -10 }) },
         { label: '全员休息保人', detail: '今天放假,口碑 +5,所有司机忠诚 +10', apply: () => ({ reputation: 5, allLoyalty: 10 }) },
       ],
     },
@@ -706,7 +706,7 @@
       unlockMission: 10,
       desc: '红色暴雨预警,地铁全线停运。打车需求是平时三倍,但路况危险,司机们也累。',
       options: [
-        { label: '全员死撑抢单', detail: '订单 +80%,基础全员忠诚 −15。40% 概率事故 → 修车 −¥2,500,再扣全员忠诚 −30', apply: () => ({ orderBoost: 1.8, allLoyalty: -15, accidentRisk: { chance: 0.40, funds: -2500, allLoyalty: -30, log: '暴雨夜死撑抢单发生事故,司机受伤,车队垫付医药费,人心散了' } }) },
+        { label: '全员死撑抢单', detail: '订单 +80%,所有司机忠诚 −25(死撑抢单很拼命)', apply: () => ({ orderBoost: 1.8, allLoyalty: -25 }) },
         { label: '车队组团送社区免费车', detail: '−¥1,500,口碑 +20,所有司机忠诚 +15', apply: () => ({ funds: -1500, reputation: 20, allLoyalty: 15 }) },
       ],
     },
@@ -716,7 +716,7 @@
       desc: '气象台发布 50 年一遇极端暴雨预警,部分路段已经积水到腰。这是该让车队完全停运的程度了。',
       options: [
         { label: '加入应急救援队送医送药', detail: '−¥2,000,口碑 +25,所有司机忠诚 +20', apply: () => ({ funds: -2000, reputation: 25, allLoyalty: 20 }) },
-        { label: '闷声继续抢单', detail: '+¥4,000,口碑 −25。55% 概率严重事故 → 修车 −¥4,000,全员忠诚 −50', apply: () => ({ funds: 4000, reputation: -25, accidentRisk: { chance: 0.55, funds: -4000, allLoyalty: -50, log: '50 年一遇红色预警还硬抢,司机受伤,直接想离开车队' } }) },
+        { label: '闷声继续抢单', detail: '+¥4,000,所有司机忠诚 −50(极端预警还硬抢,人心散了)', apply: () => ({ funds: 4000, allLoyalty: -50 }) },
       ],
     },
 
