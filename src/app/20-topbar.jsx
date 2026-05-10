@@ -563,6 +563,7 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
               <HelpRow label="片区">口碑达到门槛会自动解锁片区;跌破门槛会反锁,回升后自动恢复。已解锁:{unlockedZoneText}<br /><span className="rep-help-next">下一片区:{nextZoneText}</span></HelpRow>
             </TopbarHelp>
           </div>
+          {E.isUIGateUnlocked(state, 'supply_chip') && (
           <div className={`ts-stat topbar-stat supply-stat has-help ${supplyCardCls}`}
                tabIndex="0"
                aria-describedby="supply-help-popover"
@@ -591,7 +592,9 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
               <HelpRow label="建议">不足就招司机、买合适车型或训练司机;充足就优先解锁更高价片区和订单。</HelpRow>
             </TopbarHelp>
           </div>
-          {investorReviewVisible && <InvestorReviewStat state={state} />}
+          )}
+          {/* V15.17:投资人 chip 同时受 gate 解锁(day 80)和 investorReviewVisible(撤资/收尾后隐藏)双重控制 */}
+          {investorReviewVisible && E.isUIGateUnlocked(state, 'investor_chip') && <InvestorReviewStat state={state} />}
         </div>
         <div className="topbar-settings" aria-label="系统菜单">
           <button
