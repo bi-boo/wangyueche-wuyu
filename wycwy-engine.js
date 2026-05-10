@@ -222,6 +222,19 @@
     return cap(base + legacyBias, min, max);
   }
 
+  // V15.16: 调薪 → 忠诚变化映射
+  // 1-3% 侮辱性涨薪(司机觉得被嘲讽,忠诚减),4% 中性(不变),
+  // 5-49% 线性递增(忠诚 += pct),≥50% 拉满到 normalCap
+  function getSalaryRaiseLoyaltyEffect(pct) {
+    if (typeof pct !== 'number' || pct < 1 || pct > 50) return null;
+    if (pct === 1) return { delta: -5, fillMax: false, hint: '侮辱性涨薪 — 司机心里嘀咕「就这?」' };
+    if (pct === 2) return { delta: -3, fillMax: false, hint: '太抠了,司机不爽' };
+    if (pct === 3) return { delta: -1, fillMax: false, hint: '聊胜于无,司机略不悦' };
+    if (pct === 4) return { delta: 0, fillMax: false, hint: '调薪幅度过小,司机不会注意到' };
+    if (pct >= 50) return { delta: 0, fillMax: true, hint: '一步到位,司机感动,忠诚直接拉满' };
+    return { delta: pct, fillMax: false, hint: `司机满意,忠诚 +${pct}` };
+  }
+
   function applyDriverLoyaltyDelta(driver, delta, { trustBreakthrough = false } = {}) {
     const current = driver?.loyalty ?? 50;
     if (!delta) return { ...driver, loyalty: current };
@@ -3153,6 +3166,39 @@
           before: state,
         });
       }
+      // V15.16:司机调薪 — 月薪永久上调,按 pct 1-3 侮辱(忠诚减),4 中性,5-49 线性加,50 拉满
+      case 'RAISE_DRIVER_SALARY': {
+        const { driverId, pct } = action;
+        const effect = getSalaryRaiseLoyaltyEffect(pct);
+        if (!effect) return state;
+        const driver = state.drivers.find((d) => d.id === driverId);
+        if (!driver) return state;
+        const oldSalary = driver.salary;
+        const newSalary = Math.round(oldSalary * (1 + pct / 100));
+        const updatedDrivers = state.drivers.map((d) => {
+          if (d.id !== driverId) return d;
+          let next = { ...d, salary: newSalary };
+          if (effect.fillMax) {
+            next.loyalty = getDriverLoyaltyCap(d);
+          } else if (effect.delta !== 0) {
+            next = applyDriverLoyaltyDelta(next, effect.delta);
+          }
+          return next;
+        });
+        const updatedDriver = updatedDrivers.find((d) => d.id === driverId);
+        const loyaltyText = effect.fillMax
+          ? `拉满 ${updatedDriver.loyalty}`
+          : `${effect.delta >= 0 ? '+' : ''}${effect.delta} → ${updatedDriver.loyalty}`;
+        let s = { ...state, drivers: updatedDrivers };
+        s = pushLog(s, `给 ${driver.name} 调薪 +${pct}%(¥${oldSalary.toLocaleString()} → ¥${newSalary.toLocaleString()},忠诚 ${loyaltyText})`, effect.delta < 0 ? 'warn' : 'event');
+        return pushActionHistory(s, {
+          category: 'player',
+          type: 'RAISE_DRIVER_SALARY',
+          label: `调薪 ${driver.name} +${pct}%`,
+          before: state,
+          details: { driverId, pct, oldSalary, newSalary, loyaltyDelta: effect.delta, fillMax: effect.fillMax },
+        });
+      }
       default: return state;
     }
   }
@@ -3162,7 +3208,7 @@
     genName, genDriver, genVehicle,
     getVehicleData, computeStatCaps, canTakeOrder, inHourWindow,
     isZoneUnlocked, getZoneUnlockText,
-    getRarityLoyaltyRule, getDriverLoyaltyCap, getDriverQuitLine,
+    getRarityLoyaltyRule, getDriverLoyaltyCap, getDriverQuitLine, getSalaryRaiseLoyaltyEffect,
     getInvestorPressurePlan, getDebtSummary,
     getEventBusinessScale, scaleEventEffect,
     computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,

@@ -1106,6 +1106,103 @@
   .crew-loyalty-mini.good {
     color: var(--green);
   }
+  /* V15.16:司机忠诚旁的调薪 + 按钮 — 玩家手动加忠诚唯一通道 */
+  .crew-loyalty-raise-btn {
+    margin-left: 6px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: var(--accent-soft);
+    border: 1.5px solid var(--accent);
+    color: var(--accent-deep);
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, transform 0.08s;
+  }
+  .crew-loyalty-raise-btn:hover {
+    background: var(--accent);
+    color: var(--card);
+    transform: scale(1.1);
+  }
+  .crew-loyalty-raise-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* V15.16:调薪弹窗内部样式 */
+  .salary-raise-modal .salary-raise-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 18px 0 10px;
+  }
+  .salary-raise-modal .salary-raise-slider {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+  .salary-raise-modal .salary-raise-pct {
+    min-width: 60px;
+    text-align: right;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--ink);
+  }
+  .salary-raise-modal .salary-raise-pct.negative { color: var(--warn); }
+  .salary-raise-modal .salary-raise-pct.positive { color: var(--accent-deep); }
+  .salary-raise-modal .salary-raise-preview {
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+    padding: 12px 14px;
+    border-radius: 3px;
+    display: grid;
+    gap: 8px;
+  }
+  .salary-raise-modal .salary-raise-row {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 14px;
+  }
+  .salary-raise-modal .salary-raise-row > span {
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .salary-raise-modal .salary-raise-row > strong {
+    color: var(--ink);
+    font-weight: 900;
+  }
+  .salary-raise-modal .salary-raise-row > em {
+    font-style: normal;
+    font-size: 13px;
+  }
+  .salary-raise-modal .salary-raise-row strong.negative,
+  .salary-raise-modal .salary-raise-row em.negative { color: var(--warn); }
+  .salary-raise-modal .salary-raise-row strong.positive,
+  .salary-raise-modal .salary-raise-row em.positive { color: var(--green); }
+  .salary-raise-modal .salary-raise-hint {
+    margin-top: 4px;
+    padding: 8px 10px;
+    background: var(--card);
+    border-left: 3px solid var(--ink-3);
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+  .salary-raise-modal .salary-raise-hint.negative {
+    border-left-color: var(--warn);
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 10%, var(--card) 90%);
+  }
+  .salary-raise-modal .salary-raise-hint.positive {
+    border-left-color: var(--green);
+    color: var(--green);
+    background: color-mix(in srgb, var(--green) 10%, var(--card) 90%);
+  }
 
   .stat-bar-track {
     position: relative;

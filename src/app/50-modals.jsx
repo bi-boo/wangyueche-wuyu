@@ -165,6 +165,69 @@ function EventResourceSnapshot({ state, thirdLabel, thirdValue, thirdTone = '' }
   );
 }
 
+// V15.16:调薪弹窗 — 玩家手动给单个司机调薪,月薪永久上调,按 pct 计算忠诚变化
+// 1-3% 侮辱性涨薪(忠诚减) / 4% 中性 / 5-49% 线性加 / 50% 拉满
+function SalaryRaiseModal({ driver, onClose, onConfirm }) {
+  const [pct, setPct] = useState(10);
+  const effect = E.getSalaryRaiseLoyaltyEffect(pct) || { delta: 0, fillMax: false, hint: '' };
+  const newSalary = Math.round(driver.salary * (1 + pct / 100));
+  const cap = E.getDriverLoyaltyCap(driver);
+  const currentLoyalty = driver.loyalty ?? 50;
+  const previewLoyalty = effect.fillMax
+    ? cap
+    : Math.max(0, Math.min(cap, currentLoyalty + effect.delta));
+  const isInsult = effect.delta < 0;
+  const isMax = effect.fillMax;
+  const monthlyDelta = newSalary - driver.salary;
+  return (
+    <div className="modal-overlay">
+      <div className="modal salary-raise-modal" style={{maxWidth: 460}}>
+        <div className="modal-tag">调薪</div>
+        <div className="modal-title">给 {driver.name} 调薪</div>
+        <div className="modal-desc">
+          当前月薪 <strong>¥{driver.salary.toLocaleString()}</strong> · 忠诚 <strong>{currentLoyalty}/{cap}</strong>
+        </div>
+
+        <div className="salary-raise-slider-row">
+          <input
+            type="range"
+            min="1"
+            max="50"
+            value={pct}
+            onChange={(e) => setPct(Number(e.target.value))}
+            className="salary-raise-slider"
+            aria-label="调薪幅度"
+          />
+          <div className={`salary-raise-pct ${isInsult ? 'negative' : isMax ? 'positive' : ''}`}>+{pct}%</div>
+        </div>
+
+        <div className="salary-raise-preview">
+          <div className="salary-raise-row">
+            <span>月薪</span>
+            <strong>¥{driver.salary.toLocaleString()} → ¥{newSalary.toLocaleString()}</strong>
+            <em className="negative">+¥{monthlyDelta.toLocaleString()}/月(永久)</em>
+          </div>
+          <div className="salary-raise-row">
+            <span>忠诚</span>
+            <strong className={isInsult ? 'negative' : 'positive'}>
+              {currentLoyalty} → {previewLoyalty}
+              {isMax && <em className="positive"> (拉满)</em>}
+            </strong>
+          </div>
+          <div className={`salary-raise-hint ${isInsult ? 'negative' : isMax ? 'positive' : ''}`}>
+            {effect.hint}
+          </div>
+        </div>
+
+        <div className="modal-options" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 16}}>
+          <button className="btn btn-ghost" onClick={onClose}>取消</button>
+          <button className="btn btn-primary" onClick={() => onConfirm(driver.id, pct)}>确认调薪</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DebtCrisisModal({ state, crisis, onResolve }) {
   if (!crisis) return null;
   const debts = E.getDebtSummary ? E.getDebtSummary(state).debts : (crisis.allDebts || []);

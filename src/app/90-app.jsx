@@ -30,6 +30,7 @@ function App() {
   const [selectedZoneId, setSelectedZoneId] = useState(null);
   const [mobileTab, setMobileTab] = useState('city');
   const [showRecruit, setShowRecruit] = useState(false);
+  const [salaryRaiseDriverId, setSalaryRaiseDriverId] = useState(null);  // V15.16:调薪弹窗目标司机 id
   const [showShop, setShowShop] = useState(false);
   const [inspectorTab, setInspectorTab] = useState('details');
   const [showRoadmap, setShowRoadmap] = useState(false);
@@ -446,6 +447,7 @@ function App() {
             onRecruit={() => setShowRecruit(true)}
             onShop={() => setShowShop(true)}
             onOpenRoadmap={() => openRoadmap('missions')}
+            onRequestSalaryRaise={(driver) => setSalaryRaiseDriverId(driver.id)}
           />
         </div>
 
@@ -525,6 +527,21 @@ function App() {
           )}
         </div>
       )}
+      {/* V15.16:调薪弹窗 — 玩家手动给单个司机加忠诚的唯一手动通道 */}
+      {salaryRaiseDriverId !== null && (() => {
+        const target = state.drivers.find((d) => d.id === salaryRaiseDriverId);
+        if (!target) return null;
+        return (
+          <SalaryRaiseModal
+            driver={target}
+            onClose={() => setSalaryRaiseDriverId(null)}
+            onConfirm={(driverId, pct) => {
+              dispatch({ type: 'RAISE_DRIVER_SALARY', driverId, pct });
+              setSalaryRaiseDriverId(null);
+            }}
+          />
+        );
+      })()}
       {state.newEndingUnlocked && !state.gameOver && (
         <EndingUnlockModal
           ending={state.newEndingUnlocked}
