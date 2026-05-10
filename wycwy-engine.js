@@ -721,6 +721,8 @@
       unlockedUIGates: [],
       // 当前正在展示的解锁 splash 卡片队列(玩家点「知道了」后弹下一个)
       activeUnlockSplash: null,
+      // V15.17:刚解锁后的 spotlight — gateId + untilHour 自动过期 / 玩家点击 ack
+      spotlight: null,
       // V14.10: 死亡条件计数器(连续天数)— 只剩资金破产
       negFundsDays: 0,
       // V5: 投资人压力事件队列
@@ -1018,15 +1020,17 @@
 
   function unlockUIGate(state, gate) {
     if (!gate || isUIGateUnlocked(state, gate.id)) return state;
+    // V15.17:解锁时强制暂停 + 设 spotlight 让玩家关闭 splash 后能看到位置
+    // spotlight 12 游戏小时后自动过期,或玩家点击对应入口立刻 ack 清空
+    const untilHour = (state.day || 1) * 24 + (state.hour || 6) + 12;
     let s = {
       ...state,
+      paused: true,
       unlockedUIGates: [...(state.unlockedUIGates || []), gate.id],
+      spotlight: { gateId: gate.id, untilHour },
     };
-    // 第一个解锁直接展示;后续解锁如果当前 splash 还在,排队等(用 log 兜底)
     if (!s.activeUnlockSplash) {
       s.activeUnlockSplash = gate;
-    } else {
-      // 尾队列由 scanUIGates 在下一帧重试时触发(简单策略,不维护显式 queue)
     }
     s = pushLog(s, `🔓 解锁:${gate.title} — ${gate.hint}`, 'event');
     return s;
@@ -1596,6 +1600,11 @@
     s = checkMission(s);
     // V15.17:每 tick 扫一次 UI gate(任务完成 / day 阈值都可能触发解锁)
     s = scanUIGates(s);
+    // V15.17:spotlight 过期清理(玩家忽略未点 → 12 游戏小时后自动消)
+    if (s.spotlight) {
+      const nowHour = (s.day || 1) * 24 + (s.hour || 6);
+      if (nowHour >= (s.spotlight.untilHour || 0)) s = { ...s, spotlight: null };
+    }
     return s;
   }
 
@@ -1993,6 +2002,7 @@
       skipScale: true,  // 不走 scaleEventEffect 缩放
       options,
     };
+    s.paused = true;  // V15.17:investor review 弹出强制暂停
     s.paused = true;
     s = pushLog(s, `【投资人 review】${stageData.title}`, 'event');
     return s;
@@ -3177,7 +3187,12 @@
       // V15.17:跳过教学 — 老玩家可以一次性解锁所有 UI gate(localStorage 触发)
       case 'UNLOCK_ALL_GATES': {
         const allIds = (UI_GATES || []).map((g) => g.id);
-        return { ...state, unlockedUIGates: allIds, activeUnlockSplash: null };
+        return { ...state, unlockedUIGates: allIds, activeUnlockSplash: null, spotlight: null };
+      }
+      // V15.17:玩家点击新解锁的入口 → 立刻清除 spotlight(看过即消)
+      case 'ACK_SPOTLIGHT': {
+        if (!state.spotlight || state.spotlight.gateId !== action.gateId) return state;
+        return { ...state, spotlight: null };
       }
       case 'CLEAR_NEW_ENDING': return { ...state, newEndingUnlocked: null };
       // V14: 关闭月报弹窗 → 清零月度累计 + 月份计数 +1。

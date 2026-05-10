@@ -45,6 +45,7 @@ function CrewCompact({ driver, vehicle, selected, linked, onClick }) {
 
 function FleetPanel({
   state,
+  dispatch,
   selectedDriverId,
   selectedVehicleId,
   selectedVehicle,
@@ -72,24 +73,29 @@ function FleetPanel({
     <div className="panel panel-tight fleet-panel">
       <MissionBar state={state} onOpenRoadmap={onOpenRoadmap} />
       {(() => {
-        // V15.17:任务驱动 spotlight — 当前任务对应的入口加 pulse 动画 + 红点
-        const completedSet = new Set(state.completedMissionIds || []);
-        const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && !m.hidden);
-        const currentId = currentMission?.id;
-        const recruitTargets = ['m4_recruit_third_driver', 'm12_five_crews'];
-        const shopTargets = ['m3_buy_third_car', 'm9_buy_camry', 'm13_buy_benz'];
-        const recruitSpotlight = recruitTargets.includes(currentId);
-        const shopSpotlight = shopTargets.includes(currentId);
+        // V15.17 修订:去掉常态任务驱动 spotlight(用户反馈红点一直挂着烦)。
+        // 改用 state.spotlight 模型 — 仅在新解锁后 12 游戏小时内闪,玩家点过即清。
+        const spotGate = state.spotlight?.gateId;
+        const recruitSpotlight = spotGate === 'recruit_btn';
+        const shopSpotlight = spotGate === 'shop_btn';
+        const onRecruitClick = () => {
+          if (recruitSpotlight) dispatch({ type: 'ACK_SPOTLIGHT', gateId: 'recruit_btn' });
+          onRecruit();
+        };
+        const onShopClick = () => {
+          if (shopSpotlight) dispatch({ type: 'ACK_SPOTLIGHT', gateId: 'shop_btn' });
+          onShop();
+        };
         return (
           <div className="panel-header fleet-panel-header">
             <span className="panel-title">车队</span>
             <div className="fleet-actions">
               {/* V15.17:招募/买车按 gate 解锁,开局藏起,m1/m2 完成后露出 */}
               {E.isUIGateUnlocked(state, 'recruit_btn') && (
-                <button className={`btn btn-ghost btn-xs ${recruitSpotlight ? 'ui-spotlight' : ''}`} onClick={onRecruit}>+ 招募</button>
+                <button className={`btn btn-ghost btn-xs ${recruitSpotlight ? 'ui-spotlight' : ''}`} onClick={onRecruitClick}>+ 招募</button>
               )}
               {E.isUIGateUnlocked(state, 'shop_btn') && (
-                <button className={`btn btn-ghost btn-xs ${shopSpotlight ? 'ui-spotlight' : ''}`} onClick={onShop}>+ 买车</button>
+                <button className={`btn btn-ghost btn-xs ${shopSpotlight ? 'ui-spotlight' : ''}`} onClick={onShopClick}>+ 买车</button>
               )}
             </div>
             <div className="fleet-status-line">

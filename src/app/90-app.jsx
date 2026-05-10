@@ -452,6 +452,7 @@ function App() {
         <div className="col fleet-col">
           <FleetPanel
             state={state}
+            dispatch={dispatch}
             selectedDriverId={selectedDriverId}
             selectedVehicleId={selectedVehicleId}
             selectedVehicle={selectedVehicle}
