@@ -660,7 +660,7 @@
       desc: '红色暴雨预警 + 地铁停运 + 多条主干道积水,司机们困在路上。是让他们继续跑还是撤?',
       options: [
         { label: '全员撤回保安全', detail: '−¥1,500(损失订单),所有司机忠诚 +20', apply: () => ({ funds: -1500, allLoyalty: 20 }) },
-        { label: '默许涨价 2 倍硬抢单', detail: '+¥3,000,口碑 −15(违规),所有司机忠诚 −20', apply: () => ({ funds: 3000, reputation: -15, allLoyalty: -20 }) },
+        { label: '默许涨价 2 倍硬抢单', detail: '+¥3,000,口碑 −15(违规)', apply: () => ({ funds: 3000, reputation: -15 }) },
       ],
     },
     {
@@ -707,7 +707,7 @@
       desc: '红色暴雨预警,地铁全线停运。打车需求是平时三倍,但路况危险,司机们也累。',
       options: [
         { label: '全员死撑抢单', detail: '订单 +80%,所有司机忠诚 −25(死撑抢单很拼命)', apply: () => ({ orderBoost: 1.8, allLoyalty: -25 }) },
-        { label: '车队组团送社区免费车', detail: '−¥1,500,口碑 +20,所有司机忠诚 +15', apply: () => ({ funds: -1500, reputation: 20, allLoyalty: 15 }) },
+        { label: '车队组团送社区免费车', detail: '−¥1,500,口碑 +20', apply: () => ({ funds: -1500, reputation: 20 }) },
       ],
     },
     {
@@ -715,7 +715,7 @@
       unlockMission: 14,
       desc: '气象台发布 50 年一遇极端暴雨预警,部分路段已经积水到腰。这是该让车队完全停运的程度了。',
       options: [
-        { label: '加入应急救援队送医送药', detail: '−¥2,000,口碑 +25,所有司机忠诚 +20', apply: () => ({ funds: -2000, reputation: 25, allLoyalty: 20 }) },
+        { label: '加入应急救援队送医送药', detail: '−¥2,000,口碑 +25', apply: () => ({ funds: -2000, reputation: 25 }) },
         { label: '闷声继续抢单', detail: '+¥4,000,所有司机忠诚 −50(极端预警还硬抢,人心散了)', apply: () => ({ funds: 4000, allLoyalty: -50 }) },
       ],
     },
@@ -735,7 +735,7 @@
       unlockMission: 13,
       desc: '一位流量明星最近被狗仔盯上,正好近期常打你家车。司机被多次跟拍,狗仔出价 ¥5,000 让司机透露行程。',
       options: [
-        { label: '严令司机闭口 + 送签保密协议', detail: '−¥1,500,口碑 +15,所有司机忠诚 +10(讲规矩)', apply: () => ({ funds: -1500, reputation: 15, allLoyalty: 10 }) },
+        { label: '严令司机闭口 + 送签保密协议', detail: '−¥1,500,口碑 +15', apply: () => ({ funds: -1500, reputation: 15 }) },
         { label: '默许司机收钱', detail: '+¥5,000(分成),口碑 −25(业内骂走灰)', apply: () => ({ funds: 5000, reputation: -25 }) },
       ],
     },
@@ -765,7 +765,7 @@
       desc: '春节前一周,周边省份突然要求"红码不准下高速 + 隔离 14 天"。多个司机想提前撤回,但你订单正好接到爆。',
       options: [
         { label: '准司机们提前回家', detail: '−¥4,000(闲置 + 补贴),所有司机忠诚 +40', apply: () => ({ funds: -4000, allLoyalty: 40 }) },
-        { label: '强制留人补一笔留岗费', detail: '−¥1,500,订单 +50%(7天),所有司机忠诚 −20', apply: () => ({ funds: -1500, orderBoost: 1.5, boostDuration: 7, allLoyalty: -20 }) },
+        { label: '强制留人补一笔留岗费', detail: '−¥1,500,所有司机忠诚 −20', apply: () => ({ funds: -1500, allLoyalty: -20 }) },
       ],
     },
 
@@ -815,7 +815,7 @@
       requireChainChoice: { borrow_close: 'refuse' },
       desc: '老张说自己最近"想换种活法",其实你和他都明白——上次没借的那一万八,他到现在没解,所以决定走人。',
       options: [
-        { label: '加薪挽留 + 私下补一笔', detail: '−¥4,000 + 月薪 +¥800,司机留下,全员信任 +15', apply: () => ({ funds: -4000, keepBest: true, salaryRaise: 800, trustLoyalty: 15 }) },
+        { label: '加薪挽留 + 私下补一笔', detail: '−¥4,000,司机留下,全员信任 +15', apply: () => ({ funds: -4000, keepBest: true, trustLoyalty: 15 }) },
         { label: '同意离队', detail: '钱保住,失去老张,所有司机忠诚 −15', apply: () => ({ loseBest: true, allLoyalty: -15 }) },
       ],
     },
@@ -898,7 +898,7 @@
       requireChainChoice: { accident: 'cover' },
       desc: '小李路口转弯撞了一位骑电瓶车的大妈。大妈腿骨折,要住院。这次不是剐蹭,是真事故。',
       options: [
-        { label: '车队全担医疗费 + 误工费', detail: '−¥15,000,全员信任 +25,口碑 +10', choiceKey: 'cover', apply: () => ({ funds: -15000, trustLoyalty: 25, reputation: 10 }) },
+        { label: '车队全担医疗费 + 误工费', detail: '−¥15,000,全员信任 +25', choiceKey: 'cover', apply: () => ({ funds: -15000, trustLoyalty: 25 }) },
         { label: '让司机一人负责到底', detail: '钱保住,所有司机忠诚 −35,口碑 −10', choiceKey: 'shift', apply: () => ({ allLoyalty: -35, reputation: -10 }) },
       ],
     },
