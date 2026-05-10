@@ -1467,7 +1467,11 @@
     if (s.debtCrisis || s.gameOver) return s;
 
     // V6: 结局检测 — 只解锁下一个 tier(防跳级,codex review Medium)
-    if (!s.gameOver) {
+    // V15.16 audit fix:已有 activeEvent / activePolicyDecision / activeStory 弹着时跳过本次结局检测,
+    // 让玩家先处理完当前弹窗,下次 endOfDay 再检测结局,避免双弹窗同屏。
+    // forceEnd 强制结局例外:Tier 5 IPO 这种关键收尾仍立刻触发(不会和事件冲突,因为 forceEnd 直接 gameOver)
+    const hasOpenModal = s.activeEvent || s.activePolicyDecision || s.activeStory;
+    if (!s.gameOver && !hasOpenModal) {
       const nextEnding = ENDINGS.find((e) => e.tier === s.unlockedEndingTier + 1);
       if (nextEnding && nextEnding.check(s)) {
         s.unlockedEndingTier = nextEnding.tier;
