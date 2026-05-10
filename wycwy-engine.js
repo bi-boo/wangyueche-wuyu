@@ -3179,9 +3179,12 @@
       case 'CLEAR_NOTIF': return { ...state, notifications: state.notifications.filter((n) => n.id !== action.id) };
       case 'CLEAR_MISSION_COMPLETE': return { ...state, newMissionComplete: null };
       // V15.17:关闭解锁 splash 后,扫一次 gate 看有没有排队的下一个解锁
+      // 修订:关闭后自动续跑(paused=false),否则玩家以为游戏在跑但实际暂停,
+      //      等不到事件触发,误以为「事件不弹」
       case 'CLOSE_UNLOCK_SPLASH': {
-        let s = { ...state, activeUnlockSplash: null };
+        let s = { ...state, activeUnlockSplash: null, paused: false };
         s = scanUIGates(s);
+        // 若扫到下一个 gate 解锁,paused 会被 unlockUIGate 重新设回 true
         return s;
       }
       // V15.17:跳过教学 — 老玩家可以一次性解锁所有 UI gate(localStorage 触发)
