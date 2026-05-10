@@ -1109,7 +1109,7 @@
     let s = syncDebtLegacyFields(state);
     if (s.gameOver || s.debtCrisis) return s;
     // V15.16 fix:被踢出局倒计时期间(投资人撤资,5 天破产判定)不应被债务危机弹窗打断
-    // 让 deathCause = 'kicked_out' 的归因优先于 'debt_default'
+    // 让 deathCause = 'kicked_out' 的归因优先于 'bankruptcy'(原 debt_default 已合并)
     if (s.gameOverPending === 'kicked_out') return s;
     const debts = normalizeDebts(s);
     const dueDebts = debts.filter((debt) => debt.dueDay <= s.day);
@@ -2948,7 +2948,8 @@
           reason: isKickedOut
             ? '投资人撤资 + 债务到期连环爆雷,公司清算'
             : `债务到期还不上 ¥${(crisis.totalDue || 0).toLocaleString()},放弃经营并破产结算`,
-          deathCause: isKickedOut ? 'kicked_out' : 'debt_default',
+          // V15.16:debt_default 合并到 bankruptcy(都是「钱归零」死法,reason 文案区分触发路径)
+          deathCause: isKickedOut ? 'kicked_out' : 'bankruptcy',
           stats: snapshotStats(state),
         },
       };
