@@ -171,11 +171,14 @@ function SalaryRaiseModal({ driver, onClose, onConfirm }) {
   const [pct, setPct] = useState(10);
   const effect = E.getSalaryRaiseLoyaltyEffect(pct) || { delta: 0, fillMax: false, hint: '' };
   const newSalary = Math.round(driver.salary * (1 + pct / 100));
-  const cap = E.getDriverLoyaltyCap(driver);
+  // V15.16:调薪可突破 normalCap 到 100,所以 modal 上限统一用 100
+  const trustCap = 100;
   const currentLoyalty = driver.loyalty ?? 50;
   const previewLoyalty = effect.fillMax
-    ? cap
-    : Math.max(0, Math.min(cap, currentLoyalty + effect.delta));
+    ? trustCap
+    : effect.delta < 0
+      ? Math.max(0, currentLoyalty + effect.delta)
+      : Math.min(trustCap, currentLoyalty + effect.delta);
   const isInsult = effect.delta < 0;
   const isMax = effect.fillMax;
   const monthlyDelta = newSalary - driver.salary;
@@ -185,7 +188,7 @@ function SalaryRaiseModal({ driver, onClose, onConfirm }) {
         <div className="modal-tag">调薪</div>
         <div className="modal-title">给 {driver.name} 调薪</div>
         <div className="modal-desc">
-          当前月薪 <strong>¥{driver.salary.toLocaleString()}</strong> · 忠诚 <strong>{currentLoyalty}/{cap}</strong>
+          当前月薪 <strong>¥{driver.salary.toLocaleString()}</strong> · 忠诚 <strong>{currentLoyalty}</strong>(调薪可突破上限到 100)
         </div>
 
         <div className="salary-raise-slider-row">
@@ -1043,6 +1046,11 @@ function RecruitModal({ state, dispatch, onClose }) {
         <div className="gacha-grid">
           {cards.map((card) => {
             const meta = RARITY_META[card.rarity];
+            // V15.16:展示初始忠诚 + 离队阈值,让玩家知道高稀有度反直觉留人成本
+            const loyaltyRule = E.getRarityLoyaltyRule(card.rarity);
+            const normalCap = loyaltyRule?.normalCap ?? 100;
+            const quitLine = loyaltyRule?.quitBelow ?? 30;
+            const isHighRarity = card.rarity === 'SR' || card.rarity === 'SSR';
             return (
               <div key={card.id} className={`gacha-card rarity-${card.rarity}`} style={{borderColor: meta.color, background: meta.bg}}>
                 <div className="gacha-id-block">
@@ -1061,6 +1069,14 @@ function RecruitModal({ state, dispatch, onClose }) {
                 <div className="gacha-stats-block">
                   <StatBars stats={card.stats} caps={card.statCaps || E.computeStatCaps(card)} compact />
                 </div>
+                <div className="gacha-loyalty-info">
+                  忠诚 {card.loyalty ?? 50} · 普通上限 {normalCap} · 跌破 {quitLine} 离队
+                </div>
+                {isHighRarity && (
+                  <div className="gacha-rarity-warning">
+                    稀有度高 · 初始忠诚低 · 留人成本大
+                  </div>
+                )}
                 <button
                   className="btn btn-primary btn-sm btn-block"
                   onClick={() => {

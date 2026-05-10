@@ -231,7 +231,7 @@
     if (pct === 2) return { delta: -3, fillMax: false, hint: '太抠了,司机不爽' };
     if (pct === 3) return { delta: -1, fillMax: false, hint: '聊胜于无,司机略不悦' };
     if (pct === 4) return { delta: 0, fillMax: false, hint: '调薪幅度过小,司机不会注意到' };
-    if (pct >= 50) return { delta: 0, fillMax: true, hint: '一步到位,司机感动,忠诚直接拉满' };
+    if (pct >= 50) return { delta: 0, fillMax: true, hint: '一步到位,司机感动,忠诚直接拉满到 100(突破普通上限)' };
     return { delta: pct, fillMax: false, hint: `司机满意,忠诚 +${pct}` };
   }
 
@@ -3179,10 +3179,12 @@
         const updatedDrivers = state.drivers.map((d) => {
           if (d.id !== driverId) return d;
           let next = { ...d, salary: newSalary };
+          // V15.16:调薪带来的忠诚提升可突破 normalCap 直达 100(钱是真金白银,司机感受不被稀有度封顶)
+          // 侮辱性扣忠诚(delta<0)不需要 trustBreakthrough,因为减不受 cap 限制
           if (effect.fillMax) {
-            next.loyalty = getDriverLoyaltyCap(d);
+            next.loyalty = getDriverLoyaltyCap(d, true);
           } else if (effect.delta !== 0) {
-            next = applyDriverLoyaltyDelta(next, effect.delta);
+            next = applyDriverLoyaltyDelta(next, effect.delta, { trustBreakthrough: effect.delta > 0 });
           }
           return next;
         });
