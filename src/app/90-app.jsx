@@ -489,6 +489,7 @@ function App() {
                 vehicles={state.vehicles}
                 dispatch={dispatch}
                 funds={state.funds}
+                reputation={state.reputation}
                 requestConfirm={requestConfirm}
                 onSelectVehicle={(vid) => { setSelectedDriverId(null); setSelectedVehicleId(vid); setInspectorTab('details'); }}
                 onSelectDriver={(did) => { setSelectedVehicleId(null); setSelectedDriverId(did); setInspectorTab('details'); }}

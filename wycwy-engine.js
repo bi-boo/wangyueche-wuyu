@@ -560,6 +560,17 @@
     return Math.max(0.75, Math.min(1.25, 0.75 + loyalty / 200));
   }
 
+  // V15.16:接单率拆解 — 司机详情面板用,让玩家能归因「今天单少」是哪个变量在压
+  function getDriverTryRateBreakdown(driver, reputation) {
+    const base = 0.7;
+    const repMul = 0.5 + (reputation || 0) / 150;
+    const loyaltyMul = getDriverLoyaltyMultiplier(driver);
+    const bonus = driver?.orderRateBonus || 1.0;
+    const raw = base * repMul * loyaltyMul * bonus;
+    const final = Math.min(0.99, raw);
+    return { base, repMul, loyaltyMul, bonus, raw, final, capped: raw > 0.99 };
+  }
+
   function getDriverQuitRisk(driver) {
     const loyalty = driver?.loyalty ?? 50;
     const quitLine = getDriverQuitLine(driver);
@@ -3237,6 +3248,7 @@
     getInvestorPressurePlan, getDebtSummary,
     getEventBusinessScale, scaleEventEffect,
     computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,
+    getDriverTryRateBreakdown,
     getTrainingCost,
     buildHourlySupply,
     gameReducer, makeInitialState, hydrateAutosaveState,

@@ -338,7 +338,7 @@ function VehicleSwapModal({ driver, vehicles, drivers, dispatch, onClose }) {
   );
 }
 
-function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, requestConfirm, onSelectVehicle, onSelectDriver, onRequestSalaryRaise }) {
+function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, reputation, requestConfirm, onSelectVehicle, onSelectDriver, onRequestSalaryRaise }) {
   const [showVehicleSwap, setShowVehicleSwap] = useState(false);
   if (!driver && !inspectedVehicle) return null;
   const vehicle = driver ? vehicles.find((v) => v.id === driver.vehicleId) : inspectedVehicle;
@@ -482,6 +482,37 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
             />
           </div>
         )}
+
+        {/* V15.16:接单率拆解 — 让玩家归因「今天单少」是哪个变量在压 */}
+        {driver && (() => {
+          const breakdown = E.getDriverTryRateBreakdown(driver, reputation);
+          const fmt = (v) => v.toFixed(2);
+          return (
+            <div className="inspector-section">
+              <div className="inspector-section-title">今日接单率</div>
+              <div className="tryrate-card">
+                <div className="tryrate-final">
+                  <strong>{Math.round(breakdown.final * 100)}%</strong>
+                  {breakdown.capped && <span className="tryrate-cap-badge">封顶 99%</span>}
+                </div>
+                <div className="tryrate-formula">
+                  基础 {Math.round(breakdown.base * 100)}%
+                  <span className="tryrate-mul"> × </span>
+                  口碑 {fmt(breakdown.repMul)}
+                  <span className="tryrate-mul"> × </span>
+                  忠诚 {fmt(breakdown.loyaltyMul)}
+                  {breakdown.bonus !== 1.0 && (
+                    <>
+                      <span className="tryrate-mul"> × </span>
+                      <span className="tryrate-bonus">加成 {fmt(breakdown.bonus)}</span>
+                    </>
+                  )}
+                </div>
+                <div className="tryrate-hint">单数少时看这里:口碑/忠诚哪个低就是当前瓶颈</div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* V14.2: 选中空车时,车辆信息单独展示(无 hover 操作) */}
         {!driver && vd && (
