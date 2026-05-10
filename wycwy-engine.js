@@ -2939,6 +2939,8 @@
     }
 
     if (choice !== 'restructure' || debts.length === 0) return state;
+    // V15.16 audit fix:已经全部是重组债务时拒绝再次重组(防 UI 绕过 + 无限延期滚雪球)
+    if (debts.every((d) => d.type === 'restructure')) return state;
     const totalRepay = debts.reduce((sum, debt) => sum + debt.repay, 0);
     const remainingDaysSum = debts.reduce((sum, debt) => sum + Math.max(0, (debt.dueDay || state.day) - state.day), 0);
     const newPeriodDays = cap(remainingDaysSum, DEBT_RESTRUCTURE_MIN_DAYS, DEBT_RESTRUCTURE_MAX_DAYS);

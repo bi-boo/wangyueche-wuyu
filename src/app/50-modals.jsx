@@ -177,6 +177,10 @@ function DebtCrisisModal({ state, crisis, onResolve }) {
   const rawNewTotal = Math.ceil(totalAll * 1.05);
   const newStep = rawNewTotal <= 20000 ? 1000 : rawNewTotal <= 100000 ? 5000 : 10000;
   const newTotal = Math.ceil(rawNewTotal / newStep) * newStep;
+  // V15.16 audit fix:已经全部是重组债务时禁止再次重组(避免无限延期 +5% 滚雪球)
+  // 例:玩家已重组过 1 次,所有债务合并成 1 笔 restructure,再次到期还不上时
+  // 不应允许"再重组一次" — 那会让玩家无限延期游戏不结束。强制选「放弃经营」走 game over。
+  const isAllRestructured = debts.length > 0 && debts.every((d) => d.type === 'restructure');
   return (
     <div className="modal-overlay debt-crisis-overlay">
       <div className="modal debt-crisis-modal">
@@ -209,19 +213,33 @@ function DebtCrisisModal({ state, crisis, onResolve }) {
             ))}
           </div>
         </div>
-        <div className="debt-restructure-preview">
-          <span>债务重组</span>
-          <strong>合并为 ¥{newTotal.toLocaleString()} · {newDays} 天后到期</strong>
-          <em>全部未还债务打包,+5% 手续费;期限按剩余天数累加,最少 14 天、最多 60 天。</em>
-        </div>
+        {!isAllRestructured && (
+          <div className="debt-restructure-preview">
+            <span>债务重组</span>
+            <strong>合并为 ¥{newTotal.toLocaleString()} · {newDays} 天后到期</strong>
+            <em>全部未还债务打包,+5% 手续费;期限按剩余天数累加,最少 14 天、最多 60 天。</em>
+          </div>
+        )}
+        {isAllRestructured && (
+          <div className="debt-restructure-preview" style={{borderStyle: 'solid', borderColor: 'var(--warn)', background: 'color-mix(in srgb, var(--warn) 10%, var(--card) 90%)'}}>
+            <span style={{color: 'var(--warn)'}}>已重组过,无法再次重组</span>
+            <strong style={{color: 'var(--warn)', fontSize: 16}}>债务已是合并状态,只能选择放弃经营</strong>
+            <em>第二次重组会让滚雪球无限延期,游戏到此结束。</em>
+          </div>
+        )}
         <div className="modal-options debt-crisis-actions">
           <button className="modal-option danger-option" onClick={() => onResolve('bankrupt')}>
             <div className="modal-option-label">放弃经营</div>
             <div className="modal-option-effect">进入破产结算</div>
           </button>
-          <button className="modal-option primary-option" onClick={() => onResolve('restructure')}>
+          <button
+            className="modal-option primary-option"
+            onClick={() => onResolve('restructure')}
+            disabled={isAllRestructured}
+            title={isAllRestructured ? '已重组过,无法再次重组' : ''}
+          >
             <div className="modal-option-label">债务重组</div>
-            <div className="modal-option-effect">合并所有贷款,总待还 +5%</div>
+            <div className="modal-option-effect">{isAllRestructured ? '已重组过,选项不可用' : '合并所有贷款,总待还 +5%'}</div>
           </button>
         </div>
       </div>
