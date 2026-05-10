@@ -590,7 +590,7 @@
       desc: '一位女乘客投诉小张言语骚扰。小张说自己只是问了路况,他坚决否认。平台让你拿决定。',
       options: [
         { label: '相信司机,让平台彻查', detail: '口碑 −8,全员信任 +25', apply: () => ({ reputation: -8, trustLoyalty: 25 }) },
-        { label: '相信乘客,公开道歉 + 处罚司机', detail: '口碑 +5,所有司机忠诚 −20', apply: () => ({ reputation: 5, allLoyalty: -20 }) },
+        { label: '相信乘客,公开道歉 + 处罚司机', detail: '口碑 +5,所有司机忠诚 −40', apply: () => ({ reputation: 5, allLoyalty: -40 }) },
       ],
     },
     {
@@ -598,8 +598,8 @@
       unlockMission: 6,
       desc: '当地新规:60 岁以上司机不得继续注册接单。车队里老王 58,老周 56,都快踩线。',
       options: [
-        { label: '送他们去合规培训过渡', detail: '−¥1,500(培训费),所有司机忠诚 +15', apply: () => ({ funds: -1500, allLoyalty: 15 }) },
-        { label: '到时候直接劝退', detail: '钱保住,失去最强司机,所有司机忠诚 −15', apply: () => ({ loseBest: true, allLoyalty: -15 }) },
+        { label: '送他们去合规培训过渡', detail: '−¥1,500(培训费),所有司机忠诚 +20', apply: () => ({ funds: -1500, allLoyalty: 20 }) },
+        { label: '到时候直接劝退', detail: '钱保住,失去最强司机,所有司机忠诚 −20', apply: () => ({ loseBest: true, allLoyalty: -20 }) },
       ],
     },
     {
@@ -607,8 +607,8 @@
       unlockMission: 8,
       desc: '老张的平台账号被无故冻结,平台说要审查 7 天。他这一周没有收入。',
       options: [
-        { label: '让他正常申诉等结果', detail: '−¥2,000(车闲置),所有司机忠诚 +15(讲规矩)', apply: () => ({ funds: -2000, allLoyalty: 15 }) },
-        { label: '让他用别的号继续跑', detail: '钱保住,口碑 −10,所有司机忠诚 −10(违规风险)', apply: () => ({ reputation: -10, allLoyalty: -10 }) },
+        { label: '让他正常申诉等结果', detail: '−¥2,000(车闲置),所有司机忠诚 +20(讲规矩)', apply: () => ({ funds: -2000, allLoyalty: 20 }) },
+        { label: '让他用别的号继续跑', detail: '钱保住,口碑 −10,所有司机忠诚 −20(违规风险)', apply: () => ({ reputation: -10, allLoyalty: -20 }) },
       ],
     },
     {
@@ -616,8 +616,8 @@
       unlockMission: 8,
       desc: '车队成立至今没给司机交社保,司机们最近开始议论。老周老婆怀孕了,他直接问你能不能帮缴。',
       options: [
-        { label: '给全员补缴 + 以后正常缴', detail: '−¥3,500,所有司机忠诚 +30', apply: () => ({ funds: -3500, allLoyalty: 30 }) },
-        { label: '装作没听见,继续跑车', detail: '钱保住,所有司机忠诚 −25', apply: () => ({ allLoyalty: -25 }) },
+        { label: '给全员补缴 + 以后正常缴', detail: '−¥3,500,所有司机忠诚 +40', apply: () => ({ funds: -3500, allLoyalty: 40 }) },
+        { label: '装作没听见,继续跑车', detail: '钱保住,所有司机忠诚 −40', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
     {
@@ -626,7 +626,7 @@
       desc: '嘀嘀平台月底冲数,暗示愿意配合"循环跑"刷单的司机有额外补贴。这是违规但很普遍。',
       options: [
         { label: '配合冲一下业绩', detail: '+¥2,500,口碑 −10(被发现就完了)', apply: () => ({ funds: 2500, reputation: -10 }) },
-        { label: '严令车队不许参与', detail: '钱不变,所有司机忠诚 +10,口碑 +10', apply: () => ({ allLoyalty: 10, reputation: 10 }) },
+        { label: '严令车队不许参与', detail: '钱不变,所有司机忠诚 +20,口碑 +10', apply: () => ({ allLoyalty: 20, reputation: 10 }) },
       ],
     },
     {
@@ -635,7 +635,7 @@
       desc: '凌晨两点,小李在城郊接了一单,被乘客持刀抢走当天现金。人没事,钱没了。',
       options: [
         { label: '报警 + 公司补偿损失', detail: '−¥1,000,全员信任 +25', apply: () => ({ funds: -1000, trustLoyalty: 25 }) },
-        { label: '自认倒霉,劝他下次别接深夜', detail: '钱保住,所有司机忠诚 −25(寒心)', apply: () => ({ allLoyalty: -25 }) },
+        { label: '自认倒霉,劝他下次别接深夜', detail: '钱保住,所有司机忠诚 −40(寒心)', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
     {
@@ -644,7 +644,7 @@
       desc: '老周父亲深夜突发脑梗送医院。他来请假,说至少要七天陪护。',
       options: [
         { label: '全薪准假 + 慰问金', detail: '−¥2,000,全员信任 +30', apply: () => ({ funds: -2000, trustLoyalty: 30 }) },
-        { label: '不准假', detail: '钱保住,所有司机忠诚 −25', apply: () => ({ allLoyalty: -25 }) },
+        { label: '不准假', detail: '钱保住,所有司机忠诚 −40', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
     {
@@ -652,7 +652,7 @@
       unlockMission: 14,
       desc: '小张说送外卖比开网约车多挣两千,而且不用伺候人。他来跟你打招呼准备走。',
       options: [
-        { label: '加薪挽留', detail: '月薪 +¥1,200,司机留下且忠诚 +30', apply: () => ({ keepBest: true, salaryRaise: 1200 }) },
+        { label: '加薪挽留', detail: '月薪 +¥1,200,司机留下且忠诚 +40', apply: () => ({ keepBest: true, salaryRaise: 1200 }) },
         { label: '放他走', detail: '钱保住,失去最强司机', apply: () => ({ loseBest: true }) },
       ],
     },
@@ -663,8 +663,8 @@
       unlockMission: 0,
       desc: '今天下大雨,平台订单需求暴涨。要让司机出车吗?',
       options: [
-        { label: '全员出车抢单', detail: '订单 +60%,所有司机忠诚 −10(冒雨跑累)', apply: () => ({ orderBoost: 1.6, allLoyalty: -10 }) },
-        { label: '全员休息保人', detail: '今天放假,口碑 +5,所有司机忠诚 +10', apply: () => ({ reputation: 5, allLoyalty: 10 }) },
+        { label: '全员出车抢单', detail: '订单 +60%,所有司机忠诚 −20(冒雨跑累)', apply: () => ({ orderBoost: 1.6, allLoyalty: -20 }) },
+        { label: '全员休息保人', detail: '今天放假,口碑 +5,所有司机忠诚 +20', apply: () => ({ reputation: 5, allLoyalty: 20 }) },
       ],
     },
     {
@@ -673,7 +673,7 @@
       desc: '气象台发布 50 年一遇极端暴雨预警,部分路段已经积水到腰。这是该让车队完全停运的程度了。',
       options: [
         { label: '加入应急救援队送医送药', detail: '−¥2,000,口碑 +25', apply: () => ({ funds: -2000, reputation: 25 }) },
-        { label: '闷声继续抢单', detail: '+¥4,000,所有司机忠诚 −50(极端预警还硬抢,人心散了)', apply: () => ({ funds: 4000, allLoyalty: -50 }) },
+        { label: '闷声继续抢单', detail: '+¥4,000,所有司机忠诚 −60(极端预警还硬抢,人心散了)', apply: () => ({ funds: 4000, allLoyalty: -60 }) },
       ],
     },
 
@@ -683,8 +683,8 @@
       unlockMission: 9,
       desc: '一家演员经纪公司打电话来,看中车队的服务质量,想长期签约做艺人接送。一个月 ¥15,000 包月,但要求 24 小时待命。',
       options: [
-        { label: '签下来全力服务', detail: '+¥15,000 签约费,所有司机忠诚 −15(24h 待命强度大)', apply: () => ({ funds: 15000, allLoyalty: -15 }) },
-        { label: '婉拒,保持普通业务', detail: '所有司机忠诚 +10,口碑 +5', apply: () => ({ allLoyalty: 10, reputation: 5 }) },
+        { label: '签下来全力服务', detail: '+¥15,000 签约费,所有司机忠诚 −20(24h 待命强度大)', apply: () => ({ funds: 15000, allLoyalty: -20 }) },
+        { label: '婉拒,保持普通业务', detail: '所有司机忠诚 +20,口碑 +5', apply: () => ({ allLoyalty: 20, reputation: 5 }) },
       ],
     },
     {
@@ -703,8 +703,8 @@
       unlockMission: 0,
       desc: '春节又到了。司机们想回家,平台单量也凶。给红包?还是按平时来?',
       options: [
-        { label: '春节红包 + 帮买回家票', detail: '−¥3,000,所有司机忠诚 +40', apply: () => ({ funds: -3000, allLoyalty: 40 }) },
-        { label: '正常过节,自己想办法', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
+        { label: '春节红包 + 帮买回家票', detail: '−¥3,000,所有司机忠诚 +60', apply: () => ({ funds: -3000, allLoyalty: 60 }) },
+        { label: '正常过节,自己想办法', detail: '钱保住,所有司机忠诚 −20', apply: () => ({ allLoyalty: -20 }) },
       ],
     },
 
@@ -714,8 +714,8 @@
       unlockMission: 0,
       desc: '老张儿子要交学费,缺 ¥2,000,来找你借。',
       options: [
-        { label: '借给他', detail: '−¥2,000,所有司机忠诚 +30', choiceKey: 'help', apply: () => ({ funds: -2000, allLoyalty: 30 }) },
-        { label: '装作没看见', detail: '钱保住,所有司机忠诚 −20', choiceKey: 'refuse', apply: () => ({ allLoyalty: -20 }) },
+        { label: '借给他', detail: '−¥2,000,所有司机忠诚 +40', choiceKey: 'help', apply: () => ({ funds: -2000, allLoyalty: 40 }) },
+        { label: '装作没看见', detail: '钱保住,所有司机忠诚 −40', choiceKey: 'refuse', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
     {
@@ -724,8 +724,8 @@
       requireChainChoice: { borrow: 'help' },
       desc: '老张儿子终于要结婚了。婚礼办在老家,缺 ¥8,000 份子礼。老张抹不开面子,在车里吭哧了半天才开口。',
       options: [
-        { label: '借给他', detail: '−¥8,000,所有司机忠诚 +25', choiceKey: 'help', apply: () => ({ funds: -8000, allLoyalty: 25 }) },
-        { label: '婉拒,让他自己想办法', detail: '钱保住,所有司机忠诚 −15', choiceKey: 'refuse', apply: () => ({ allLoyalty: -15 }) },
+        { label: '借给他', detail: '−¥8,000,所有司机忠诚 +40', choiceKey: 'help', apply: () => ({ funds: -8000, allLoyalty: 40 }) },
+        { label: '婉拒,让他自己想办法', detail: '钱保住,所有司机忠诚 −20', choiceKey: 'refuse', apply: () => ({ allLoyalty: -20 }) },
       ],
     },
     {
@@ -734,8 +734,8 @@
       requireChainChoice: { borrow: 'refuse' },
       desc: '听说老张前阵子找隔壁车队的老板借了钱。最近你想跟他多聊几句,他都低头不接话。司机群里气氛冷下来了。',
       options: [
-        { label: '主动找老张谈,送一笔慰问', detail: '−¥3,000,关系修复,所有司机忠诚 +20', choiceKey: 'mend', apply: () => ({ funds: -3000, allLoyalty: 20 }) },
-        { label: '不管,各自跑车', detail: '钱保住,失去老张(司机离队),所有司机忠诚 −15', choiceKey: 'ignore', apply: () => ({ loseBest: true, allLoyalty: -15 }) },
+        { label: '主动找老张谈,送一笔慰问', detail: '−¥3,000,关系修复,所有司机忠诚 +40', choiceKey: 'mend', apply: () => ({ funds: -3000, allLoyalty: 40 }) },
+        { label: '不管,各自跑车', detail: '钱保住,失去老张(司机离队),所有司机忠诚 −20', choiceKey: 'ignore', apply: () => ({ loseBest: true, allLoyalty: -20 }) },
       ],
     },
     {
@@ -745,7 +745,7 @@
       desc: '老张老家批了宅基地,要盖房养老。缺 ¥20,000。这次他没张口,是他老婆在群里发来的语音。',
       options: [
         { label: '借给他,慢慢还', detail: '−¥20,000,全员信任 +30', apply: () => ({ funds: -20000, trustLoyalty: 30 }) },
-        { label: '婉拒,介绍他银行信用贷', detail: '钱保住,所有司机忠诚 −10', apply: () => ({ allLoyalty: -10 }) },
+        { label: '婉拒,介绍他银行信用贷', detail: '钱保住,所有司机忠诚 −20', apply: () => ({ allLoyalty: -20 }) },
       ],
     },
     // V15.16:borrow_cooled 已删,help→refuse 路径在 close 节点终结(玩家自己的态度反复,无需二次挽回机会)
@@ -769,7 +769,7 @@
       unlockMission: 13,
       desc: '隔壁滴答车队想用月薪 +¥1,500 挖你最强的司机。',
       options: [
-        { label: '加薪挽留', detail: '月薪 +¥1,500,司机留下且忠诚 +30', choiceKey: 'keep', apply: () => ({ keepBest: true, salaryRaise: 1500 }) },
+        { label: '加薪挽留', detail: '月薪 +¥1,500,司机留下且忠诚 +40', choiceKey: 'keep', apply: () => ({ keepBest: true, salaryRaise: 1500 }) },
         { label: '放走', detail: '钱保住,失去最强司机,口碑 −10', choiceKey: 'release', apply: () => ({ loseBest: true, reputation: -10 }) },
       ],
     },
@@ -781,8 +781,8 @@
       desc: '滴答这次出价翻倍 + ¥10,000 签约费。法务说"你给多少他才肯留"。这次给多少,你自己拿主意。',
       // 4 选项盲选(blindOptions=true):玩家选之前看不到具体后果,选完才揭晓
       options: [
-        { label: '+¥1,000', detail: '试探性加价', choiceKey: 1000, apply: () => ({ loseBest: true, allLoyalty: -10 }) },
-        { label: '+¥2,000', detail: '中规中矩加薪', choiceKey: 2000, apply: () => ({ loseBest: true, allLoyalty: -5 }) },
+        { label: '+¥1,000', detail: '试探性加价', choiceKey: 1000, apply: () => ({ loseBest: true, allLoyalty: -20 }) },
+        { label: '+¥2,000', detail: '中规中矩加薪', choiceKey: 2000, apply: () => ({ loseBest: true, allLoyalty: -20 }) },
         { label: '+¥3,000', detail: '诚意加价', choiceKey: 3000, apply: () => ({ keepBest: true, salaryRaise: 3000, markKeyDriver: true }) },
         { label: '+¥4,000', detail: '豪赌加价', choiceKey: 4000, apply: () => ({ keepBest: true, salaryRaise: 4000, markKeyDriver: true }) },
       ],
@@ -818,8 +818,8 @@
       unlockMission: 5,
       desc: '小李剐蹭了一辆豪车,对方索赔 ¥3,000。',
       options: [
-        { label: '公司全付', detail: '−¥3,000,所有司机忠诚 +20', choiceKey: 'cover', apply: () => ({ funds: -3000, allLoyalty: 20 }) },
-        { label: '让司机自付', detail: '钱保住,所有司机忠诚 −30', choiceKey: 'shift', apply: () => ({ allLoyalty: -30 }) },
+        { label: '公司全付', detail: '−¥3,000,所有司机忠诚 +40', choiceKey: 'cover', apply: () => ({ funds: -3000, allLoyalty: 40 }) },
+        { label: '让司机自付', detail: '钱保住,所有司机忠诚 −40', choiceKey: 'shift', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
     {
@@ -829,7 +829,7 @@
       desc: '小李路口转弯撞了一位骑电瓶车的大妈。大妈腿骨折,要住院。这次不是剐蹭,是真事故。',
       options: [
         { label: '车队全担医疗费 + 误工费', detail: '−¥15,000,全员信任 +25', choiceKey: 'cover', apply: () => ({ funds: -15000, trustLoyalty: 25 }) },
-        { label: '让司机一人负责到底', detail: '钱保住,所有司机忠诚 −35,口碑 −10', choiceKey: 'shift', apply: () => ({ allLoyalty: -35, reputation: -10 }) },
+        { label: '让司机一人负责到底', detail: '钱保住,所有司机忠诚 −40,口碑 −10', choiceKey: 'shift', apply: () => ({ allLoyalty: -40, reputation: -10 }) },
       ],
     },
     {
@@ -839,7 +839,7 @@
       desc: '上次让小李自付剐蹭费的事还没消化,这次他撞了行人保险又拒赔——保险公司说当时车队没担责导致维修流程不规范,赔不下来,¥15,000 全要车队出。',
       options: [
         { label: '公司咬牙担下来', detail: '−¥15,000,全员信任 +30', apply: () => ({ funds: -15000, trustLoyalty: 30 }) },
-        { label: '让小李分期偿还', detail: '钱保住,所有司机忠诚 −25', apply: () => ({ allLoyalty: -25 }) },
+        { label: '让小李分期偿还', detail: '钱保住,所有司机忠诚 −40', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
     {
@@ -848,7 +848,7 @@
       requireChainChoice: { accident_trust: 'cover' },
       desc: '上次撞行人那一万五,小李心里记着。今天他单独找你,说"老板,这辈子跟着您干,慢慢还"。',
       options: [
-        { label: '加薪留下', detail: '月薪 +¥600,全员忠诚 +20', apply: () => ({ keepBest: true, salaryRaise: 600, allLoyalty: 20 }) },
+        { label: '加薪留下', detail: '月薪 +¥600,全员忠诚 +40', apply: () => ({ keepBest: true, salaryRaise: 600, allLoyalty: 40 }) },
         { label: '平淡处理', detail: '不变,司机继续跑', apply: () => ({}) },
       ],
     },
