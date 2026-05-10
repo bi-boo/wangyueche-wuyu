@@ -5,33 +5,30 @@ function CrewCompact({ driver, vehicle, selected, linked, onClick }) {
     : !vehicle ? 'empty' : 'idle';
   const showWorkStatus = lightClass === 'empty';
   const loyaltyMeta = getLoyaltyMeta(driver);
-  // V14.27: 左侧车队只承载状态和累计值,收入动效统一放在地图里。
+  // V15.17:经典三段式 — 头像(left) + 名字+车型(center) + 状态/忠诚(right),
+  //         横向单行,跟打车软件司机卡视觉一致。
+  const orderText = vd ? getVehicleOrderSummary(vd) : null;
   return (
-    <div className={`compact-card crew-card ${selected ? 'selected' : ''} ${linked ? 'linked' : ''}`} onClick={onClick}>
-      <div className="crew-stack">
-        <div className="crew-entity crew-person">
-          <DriverAvatar avatar={driver.avatar} size={34} name={driver.name} />
-          <div className="crew-entity-copy">
-            <strong>{driver.name}</strong>
-          </div>
-        </div>
-        <div className={`crew-entity crew-vehicle ${vd ? '' : 'empty'}`}>
-          {vd ? <VehicleIcon template={vd} size={28} /> : <div className="crew-no-vehicle">无车</div>}
-          <div className={`crew-entity-copy ${vd ? 'vehicle-order-copy' : ''}`}>
-            {vd ? (
-              <span className="crew-order-summary" title={getVehicleOrderFullSummary(vd)}>
-                {getVehicleOrderSummary(vd)}
-              </span>
-            ) : (
-              <>
-                <strong>未配车</strong>
-                <span>选择空车</span>
-              </>
-            )}
-          </div>
-        </div>
+    <div className={`compact-card crew-card crew-card-row ${selected ? 'selected' : ''} ${linked ? 'linked' : ''}`} onClick={onClick}>
+      <div className="crew-row-avatar">
+        <DriverAvatar avatar={driver.avatar} size={36} name={driver.name} />
       </div>
-      <div className="crew-side">
+      <div className="crew-row-info">
+        <strong className="crew-row-name">{driver.name}</strong>
+        {vd ? (
+          <span className="crew-row-meta" title={`${vd.name} · 可接 ${getVehicleOrderFullSummary(vd)}`}>
+            <VehicleIcon template={vd} size={18} />
+            <span className="crew-row-order">{orderText}</span>
+          </span>
+        ) : (
+          <span className="crew-row-meta empty">
+            <span className="crew-row-no-vehicle">未配车</span>
+            <span className="crew-row-meta-divider">·</span>
+            <span className="crew-row-order">点击分配</span>
+          </span>
+        )}
+      </div>
+      <div className="crew-row-right">
         {showWorkStatus && (
           <span className={`crew-status-pill ${lightClass}`} title={status}>
             <i className={`cc-status-light ${lightClass}`} />
@@ -41,8 +38,6 @@ function CrewCompact({ driver, vehicle, selected, linked, onClick }) {
         <span className={`crew-loyalty-mini ${loyaltyMeta.cls}`} title={`${loyaltyMeta.label} · ${loyaltyMeta.effect}`}>
           忠诚 {driver.loyalty ?? 50}
         </span>
-        {/* V15.16 audit:已赚累计金额对玩家决策无意义,移除以减少视觉噪音 */}
-        {/* V15.16:调薪入口移到右侧 inspector 「能力训练」忠诚行,与车技/服务统一交互 */}
       </div>
     </div>
   );
@@ -117,31 +112,25 @@ function FleetPanel({
             />
           );
         })}
-        {/* V14.2: 空车作为虚拟卡片排在列表最后,点击进入 CrewInspector 分配司机 */}
+        {/* V14.2: 空车作为虚拟卡片排在列表最后,点击进入 CrewInspector 分配司机
+            V15.17:同步改为三段式 — 空头像位 + 车型 meta + 「空车」chip */}
         {emptyVehicles.map((v) => {
           const tpl = E.getVehicleData(v);
           const isSelected = selectedVehicleId === v.id;
           return (
-            <div key={`v-${v.id}`} className={`compact-card crew-card empty-vehicle-card ${isSelected ? 'selected' : ''}`}
+            <div key={`v-${v.id}`} className={`compact-card crew-card crew-card-row empty-vehicle-card ${isSelected ? 'selected' : ''}`}
                  onClick={() => onSelectVehicle(v.id)}>
-              <div className="crew-stack">
-                <div className="crew-entity crew-vehicle">
-                  <VehicleIcon template={tpl} size={28} />
-                  <div className="crew-entity-copy vehicle-order-copy">
-                    <span className="crew-order-summary" title={getVehicleOrderFullSummary(tpl)}>
-                      {getVehicleOrderSummary(tpl)}
-                    </span>
-                  </div>
-                </div>
-                <div className="crew-entity crew-person empty">
-                  <div className="crew-empty-avatar">空</div>
-                  <div className="crew-entity-copy">
-                    <strong>待配司机</strong>
-                    <span>点击分配</span>
-                  </div>
-                </div>
+              <div className="crew-row-avatar">
+                <div className="crew-empty-avatar">空</div>
               </div>
-              <div className="crew-side">
+              <div className="crew-row-info">
+                <strong className="crew-row-name">{tpl.name}</strong>
+                <span className="crew-row-meta" title={`${tpl.name} · 可接 ${getVehicleOrderFullSummary(tpl)}`}>
+                  <VehicleIcon template={tpl} size={18} />
+                  <span className="crew-row-order">{getVehicleOrderSummary(tpl)}</span>
+                </span>
+              </div>
+              <div className="crew-row-right">
                 <span className="crew-status-pill empty" title="空车">
                   <i className="cc-status-light empty" />
                   空车

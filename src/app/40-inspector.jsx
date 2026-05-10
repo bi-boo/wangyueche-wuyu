@@ -369,48 +369,45 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
       </div>
       <div className="inspector-scroll driver-inspector-grid">
         <div className="inspector-hero crew-hero">
-          <div className="crew-stack crew-overview-stack">
+          {/* V15.17:hero 车组概览也用三段式横向布局,跟左侧列表卡视觉一致 */}
+          <div className="crew-overview-row">
             {driver ? (
               <>
-                <div className="crew-entity crew-person">
-                  <DriverAvatar avatar={driver.avatar} size={34} name={driver.name} />
-                  <div className="crew-entity-copy">
-                    <strong>{driver.name}</strong>
-                    <span>{getDriverMetaLine(driver, `月薪 ¥${driver.salary.toLocaleString()}`)}</span>
-                  </div>
+                <div className="crew-row-avatar">
+                  <DriverAvatar avatar={driver.avatar} size={40} name={driver.name} />
                 </div>
-                <div className={`crew-entity crew-vehicle ${vd ? '' : 'empty'}`}>
-                  {vd ? <VehicleIcon template={vd} size={34} /> : <div className="crew-no-vehicle">无车</div>}
-                  <div className={`crew-entity-copy ${vd ? 'vehicle-order-copy' : ''}`}>
-                    {vd ? (
-                      <span className="crew-order-summary" title={`可接 ${getVehicleOrderFullSummary(vd)}`}>
-                        {getInspectorVehicleOrderSummary(vd)}{vehicle && vehicle.policyCertified ? ' · 合规已更新' : ''}
-                      </span>
-                    ) : (
-                      <>
-                        <strong>未配车</strong>
-                        <span>选择空车</span>
-                      </>
-                    )}
-                  </div>
+                <div className="crew-row-info">
+                  <strong className="crew-row-name">{driver.name}</strong>
+                  <span className="crew-row-sub">{getDriverMetaLine(driver, `月薪 ¥${driver.salary.toLocaleString()}`)}</span>
+                  {vd ? (
+                    <span className="crew-row-meta" title={`${vd.name} · 可接 ${getVehicleOrderFullSummary(vd)}`}>
+                      <VehicleIcon template={vd} size={20} />
+                      <span className="crew-row-vehicle-name">{vd.name}</span>
+                      <span className="crew-row-meta-divider">·</span>
+                      <span className="crew-row-order">{getInspectorVehicleOrderSummary(vd)}{vehicle && vehicle.policyCertified ? ' · 合规已更新' : ''}</span>
+                    </span>
+                  ) : (
+                    <span className="crew-row-meta empty">
+                      <span className="crew-row-no-vehicle">未配车</span>
+                      <span className="crew-row-meta-divider">·</span>
+                      <span className="crew-row-order">下方选择空车分配</span>
+                    </span>
+                  )}
                 </div>
               </>
             ) : (
               <>
-                <div className="crew-entity crew-vehicle">
-                  <VehicleIcon template={vd} size={34} />
-                  <div className="crew-entity-copy vehicle-order-copy">
-                    <span className="crew-order-summary" title={`可接 ${getVehicleOrderFullSummary(vd)}`}>
-                      {getInspectorVehicleOrderSummary(vd)}{vehicle && vehicle.policyCertified ? ' · 合规已更新' : ''}
-                    </span>
-                  </div>
-                </div>
-                <div className="crew-entity crew-person empty">
+                <div className="crew-row-avatar">
                   <div className="crew-empty-avatar">空</div>
-                  <div className="crew-entity-copy">
-                    <strong>待配司机</strong>
-                    <span>下方分配</span>
-                  </div>
+                </div>
+                <div className="crew-row-info">
+                  <strong className="crew-row-name">待配司机</strong>
+                  <span className="crew-row-meta" title={`可接 ${getVehicleOrderFullSummary(vd)}`}>
+                    <VehicleIcon template={vd} size={20} />
+                    <span className="crew-row-vehicle-name">{vd.name}</span>
+                    <span className="crew-row-meta-divider">·</span>
+                    <span className="crew-row-order">{getInspectorVehicleOrderSummary(vd)}{vehicle && vehicle.policyCertified ? ' · 合规已更新' : ''}</span>
+                  </span>
                 </div>
               </>
             )}

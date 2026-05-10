@@ -450,6 +450,95 @@
     white-space: nowrap;
   }
 
+  /* V15.17:车队卡片改方案 A 三段式横向布局
+     头像(left) + 名字+车型 meta(center) + 状态/忠诚(right) */
+  .crew-card.crew-card-row {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: auto !important;
+    padding: 10px 12px !important;
+  }
+  .crew-row-avatar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .crew-row-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .crew-row-name {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .crew-row-sub {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .crew-row-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--ink-3);
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .crew-row-meta .ph-vehicle {
+    flex-shrink: 0;
+  }
+  .crew-row-vehicle-name {
+    color: var(--ink-2);
+    font-weight: 800;
+  }
+  .crew-row-meta-divider {
+    color: var(--ink-3);
+    margin: 0 1px;
+    font-weight: 400;
+  }
+  .crew-row-order {
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .crew-row-meta.empty .crew-row-no-vehicle {
+    color: var(--ink-3);
+    font-weight: 800;
+  }
+  .crew-row-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  /* inspector hero 中的车组概览也用三段式,但更宽松 */
+  .crew-overview-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 4px 2px;
+  }
+  .crew-overview-row .crew-row-avatar {
+    /* 详情页头像稍大 */
+  }
+  .crew-overview-row .crew-row-name {
+    font-size: 16px;
+  }
+
   /* V14.26: 顶栏四项经营状态改成连续 HUD,减少胶囊碎片感 */
   /* V15.17:按可见 stat 数自适应宽度(避免渐进解锁时露深色背景) */
   .topbar-kpis {
