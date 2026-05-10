@@ -209,7 +209,8 @@ function getTrainingCost(training, currentValue) {
   return E.getTrainingCost ? E.getTrainingCost(training, currentValue) : training.cost;
 }
 
-function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, loyaltyMeta, onRequestSalaryRaise }) {
+// V15.17:canTrain 和 canRaiseSalary 控制车技/服务训练 + 按钮 / 忠诚行调薪 + 按钮的可见性
+function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, loyaltyMeta, onRequestSalaryRaise, canTrain = true, canRaiseSalary = true }) {
   // V14.65: 忠诚、车技、服务统一成同一种属性行;差异只体现在是否可主动训练。
   const goodRate = Math.round(E.getDriverGoodReviewRate(driver) * 100);
   const loyalty = Math.max(0, Math.min(100, driver.loyalty ?? 50));
@@ -265,7 +266,7 @@ function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, l
             <div className="driver-attr-meter" aria-label={`${row.label} ${row.value}/${row.limit}`}>
               <div className="driver-attr-fill" style={{transform: `scaleX(${row.pct / 100})`}} />
             </div>
-            {t ? (
+            {t && canTrain ? (
               <button
                 className="driver-attr-action"
                 disabled={!row.enough || row.maxed}
@@ -275,7 +276,7 @@ function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, l
               >
                 {row.maxed ? '满' : '+'}
               </button>
-            ) : row.type === 'loyalty' && onRequestSalaryRaise ? (
+            ) : row.type === 'loyalty' && canRaiseSalary && onRequestSalaryRaise ? (
               <button
                 type="button"
                 className="driver-attr-action"
@@ -338,7 +339,11 @@ function VehicleSwapModal({ driver, vehicles, drivers, dispatch, onClose }) {
   );
 }
 
-function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, reputation, requestConfirm, onSelectVehicle, onSelectDriver, onRequestSalaryRaise }) {
+function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, reputation, state, requestConfirm, onSelectVehicle, onSelectDriver, onRequestSalaryRaise }) {
+  // V15.17:渐进解锁判定 — 训练/调薪/接单率拆解按 gate 控制
+  const canTrain = E.isUIGateUnlocked(state, 'training_actions');
+  const canRaiseSalary = E.isUIGateUnlocked(state, 'salary_raise');
+  const showTryRateCard = E.isUIGateUnlocked(state, 'tryrate_card');
   const [showVehicleSwap, setShowVehicleSwap] = useState(false);
   if (!driver && !inspectedVehicle) return null;
   const vehicle = driver ? vehicles.find((v) => v.id === driver.vehicleId) : inspectedVehicle;
@@ -479,12 +484,15 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
               vehicleData={vd}
               loyaltyMeta={loyaltyMeta}
               onRequestSalaryRaise={onRequestSalaryRaise}
+              canTrain={canTrain}
+              canRaiseSalary={canRaiseSalary}
             />
           </div>
         )}
 
-        {/* V15.16:接单率拆解 — 让玩家归因「今天单少」是哪个变量在压 */}
-        {driver && (() => {
+        {/* V15.16:接单率拆解 — 让玩家归因「今天单少」是哪个变量在压
+            V15.17:m5(三车组)完成后才解锁,前期玩家不需要看公式 */}
+        {driver && showTryRateCard && (() => {
           const breakdown = E.getDriverTryRateBreakdown(driver, reputation);
           const fmt = (v) => v.toFixed(2);
           return (
