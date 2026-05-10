@@ -1236,11 +1236,75 @@
     },
   };
 
+  // V15.17:渐进解锁 — UI gate 配置
+  // 每个 gate 控制一个 UI 入口(按钮/区块)的可见性,触发条件分:
+  //   - mission:某主线任务完成时解锁
+  //   - day:游戏天数 >= 阈值时解锁
+  // gate 触发时弹 UnlockSplash 教学卡片,玩家点「知道了」永久可见
+  const UI_GATES = [
+    {
+      id: 'recruit_btn',
+      title: '招募新司机',
+      desc: '点击「+ 招募」抽取司机卡片,稀有度越高初始忠诚越低,但能力上限更高。',
+      hint: '车队左上角',
+      trigger: { type: 'mission', value: 'm1_first_order' },
+    },
+    {
+      id: 'shop_btn',
+      title: '购买新车',
+      desc: '点击「+ 买车」选购不同级别车辆。凯美瑞起可接专车订单,奔驰 E 才能接豪华车。',
+      hint: '车队左上角',
+      trigger: { type: 'mission', value: 'm2_first_day' },
+    },
+    {
+      id: 'supply_chip',
+      title: '供需指示器',
+      desc: '顶栏多了一个「供需」chip,看车队规模和片区订单密度的匹配关系,提醒你何时该扩车队。',
+      hint: '顶栏',
+      trigger: { type: 'mission', value: 'm2_first_day' },
+    },
+    {
+      id: 'training_actions',
+      title: '司机能力训练',
+      desc: '点开司机详情后能看到「车技」「服务」训练入口,花钱可提升属性以解锁专车/豪华车订单。',
+      hint: '右侧调度台 · 能力训练',
+      trigger: { type: 'mission', value: 'm5_third_crew' },
+    },
+    {
+      id: 'tryrate_card',
+      title: '接单率拆解',
+      desc: '司机详情下方显示「今日接单率」公式,基础 × 口碑 × 忠诚 × 加成。今天单少看这里就知道哪个变量在压。',
+      hint: '右侧调度台 · 司机详情',
+      trigger: { type: 'mission', value: 'm5_third_crew' },
+    },
+    {
+      id: 'salary_raise',
+      title: '调薪 — 高级留人手段',
+      desc: '司机忠诚行旁多了「+」按钮,可主动给司机加薪。高幅度调薪可突破忠诚普通上限直达 100。',
+      hint: '右侧调度台 · 忠诚行',
+      trigger: { type: 'mission', value: 'm6_service_training' },
+    },
+    {
+      id: 'risk_actions',
+      title: '风险操作',
+      desc: '司机详情底部出现「风险操作」折叠区,可解雇司机或卖车。慎用 — 解雇会扣司机情绪累积影响其他人。',
+      hint: '右侧调度台 · 司机详情底部',
+      trigger: { type: 'day', value: 60 },
+    },
+    {
+      id: 'investor_chip',
+      title: '投资人评估',
+      desc: '顶栏多了「距 Q1 review N 天」倒计时。投资人按 Q1/半年/Q3/年终评估你的资金、口碑和车组,不达标会逐步施压直至撤资。',
+      hint: '顶栏',
+      trigger: { type: 'day', value: 80 },
+    },
+  ];
+
   window.WYCWY_DATA = {
     GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES,
     TRAININGS, EVENTS, INVESTOR_PRESSURE, POLICY_EVENTS, INVESTOR_REVIEW,
     FIRST_NAMES, MISSIONS, ENDINGS,
     RECRUIT_TICKETS, RARITY_META, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES,
-    EVENT_NPCS,
+    EVENT_NPCS, UI_GATES,
   };
 })();

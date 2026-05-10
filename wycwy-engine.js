@@ -1,7 +1,7 @@
 /* 网约车物语 V3 - 游戏引擎 (reducer + 工具 + 任务系统) */
 (function () {
   const D = window.WYCWY_DATA;
-  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, INVESTOR_PRESSURE, POLICY_EVENTS, INVESTOR_REVIEW, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES } = D;
+  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, INVESTOR_PRESSURE, POLICY_EVENTS, INVESTOR_REVIEW, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES, UI_GATES } = D;
 
   let driverIdCounter = 100;
   let vehicleIdCounter = 100;
@@ -717,6 +717,10 @@
       currentMissionIdx: 0,
       completedMissionIds: [],
       newMissionComplete: null,
+      // V15.17:渐进解锁 — UI gate 状态(已解锁的入口 id 数组,持久化)
+      unlockedUIGates: [],
+      // 当前正在展示的解锁 splash 卡片队列(玩家点「知道了」后弹下一个)
+      activeUnlockSplash: null,
       // V14.10: 死亡条件计数器(连续天数)— 只剩资金破产
       negFundsDays: 0,
       // V5: 投资人压力事件队列
@@ -898,7 +902,17 @@
       notifications: savedState.notifications || [],
       newMissionComplete: null,
       newEndingUnlocked: null,
+      // V15.17:老存档加载时把已该解锁的 gate 静默标为已解锁,避免连环弹 splash
+      activeUnlockSplash: null,
     };
+    if (UI_GATES && UI_GATES.length > 0) {
+      const alreadyUnlocked = new Set(hydrated.unlockedUIGates || []);
+      for (const gate of UI_GATES) {
+        if (alreadyUnlocked.has(gate.id)) continue;
+        if (isUIGateTriggered(hydrated, gate)) alreadyUnlocked.add(gate.id);
+      }
+      hydrated.unlockedUIGates = [...alreadyUnlocked];
+    }
     hydrated = syncDebtLegacyFields(hydrated);
     // V15.16 fix:V15.16 之前的老存档没有 investorBoosted/investorPath 字段
     // 若加载时玩家已 day > 270,说明 Q3 评估理论上已"无感通过",标记为 settle 防止再次触发
@@ -979,8 +993,55 @@
         // 非 hidden 弹 MissionToast,等用户清后下次触发再继续检查
         s.newMissionComplete = mission;
         s = pushLog(s, `任务完成: ${mission.title}${rewardText} — ${reward.message || ''}`, 'event');
+        // V15.17:任务完成后立刻扫一次 UI gate(让 mission 触发型解锁能在同一帧弹 splash)
+        s = scanUIGates(s);
         return s;
       }
+    }
+    // V15.17:无任务完成也扫一次,处理 day 触发型 gate
+    s = scanUIGates(s);
+    return s;
+  }
+
+  // V15.17:渐进解锁 gate 状态机
+  function isUIGateUnlocked(state, gateId) {
+    return (state.unlockedUIGates || []).includes(gateId);
+  }
+
+  function isUIGateTriggered(state, gate) {
+    if (!gate || !gate.trigger) return false;
+    const { type, value } = gate.trigger;
+    if (type === 'mission') return (state.completedMissionIds || []).includes(value);
+    if (type === 'day') return (state.day || 0) >= value;
+    return false;
+  }
+
+  function unlockUIGate(state, gate) {
+    if (!gate || isUIGateUnlocked(state, gate.id)) return state;
+    let s = {
+      ...state,
+      unlockedUIGates: [...(state.unlockedUIGates || []), gate.id],
+    };
+    // 第一个解锁直接展示;后续解锁如果当前 splash 还在,排队等(用 log 兜底)
+    if (!s.activeUnlockSplash) {
+      s.activeUnlockSplash = gate;
+    } else {
+      // 尾队列由 scanUIGates 在下一帧重试时触发(简单策略,不维护显式 queue)
+    }
+    s = pushLog(s, `🔓 解锁:${gate.title} — ${gate.hint}`, 'event');
+    return s;
+  }
+
+  // 每帧/每 dispatch 后扫一遍 gate,把已经满足条件的解锁
+  function scanUIGates(state) {
+    if (!UI_GATES || UI_GATES.length === 0) return state;
+    let s = state;
+    for (const gate of UI_GATES) {
+      if (isUIGateUnlocked(s, gate.id)) continue;
+      if (!isUIGateTriggered(s, gate)) continue;
+      s = unlockUIGate(s, gate);
+      // 一帧只触发一个 splash,避免连环弹窗;其他 gate 下帧再触发
+      if (s.activeUnlockSplash && s.activeUnlockSplash.id === gate.id) break;
     }
     return s;
   }
@@ -1533,6 +1594,8 @@
     // V14.67: 城市口碑加上限,避免后期数字越界顶栏布局(0~9999)
     s.reputation = Math.max(0, Math.min(9999, s.reputation));
     s = checkMission(s);
+    // V15.17:每 tick 扫一次 UI gate(任务完成 / day 阈值都可能触发解锁)
+    s = scanUIGates(s);
     return s;
   }
 
@@ -3105,6 +3168,12 @@
       case 'CLEAR_FLOAT_GAIN': return { ...state, floatGains: state.floatGains.filter((g) => g.id !== action.id) };
       case 'CLEAR_NOTIF': return { ...state, notifications: state.notifications.filter((n) => n.id !== action.id) };
       case 'CLEAR_MISSION_COMPLETE': return { ...state, newMissionComplete: null };
+      // V15.17:关闭解锁 splash 后,扫一次 gate 看有没有排队的下一个解锁
+      case 'CLOSE_UNLOCK_SPLASH': {
+        let s = { ...state, activeUnlockSplash: null };
+        s = scanUIGates(s);
+        return s;
+      }
       case 'CLEAR_NEW_ENDING': return { ...state, newEndingUnlocked: null };
       // V14: 关闭月报弹窗 → 清零月度累计 + 月份计数 +1。
       // V14.67: 月结工资打负不再立即触发投资人事件,留 1 天缓冲让玩家先跑单挽救;
@@ -3249,6 +3318,7 @@
     getEventBusinessScale, scaleEventEffect,
     computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,
     getDriverTryRateBreakdown,
+    isUIGateUnlocked, UI_GATES,
     getTrainingCost,
     buildHourlySupply,
     gameReducer, makeInitialState, hydrateAutosaveState,
