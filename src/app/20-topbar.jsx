@@ -492,7 +492,16 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
         <h1>网约车物语 <span className="v">{APP_VERSION}</span></h1>
       </div>
       <div className="topbar-stats">
-        <div className={`topbar-kpis ${investorReviewVisible ? 'has-investor-review' : ''}`} aria-label="经营状态">
+        {(() => {
+        // V15.17:KPI 容器宽度按可见 stat 数自适应,避免渐进解锁时露出深色背景
+        const supplyVisible = E.isUIGateUnlocked(state, 'supply_chip');
+        const investorChipVisible = investorReviewVisible && E.isUIGateUnlocked(state, 'investor_chip');
+        const statCount = 3 + (supplyVisible ? 1 : 0) + (investorChipVisible ? 1 : 0);
+        // has-investor-review class 仅在 chip 真渲染时加(原条件包括 gate 未解锁的情况,会让 grid 错变 5 列)
+        return (
+        <div className={`topbar-kpis ${investorChipVisible ? 'has-investor-review' : ''}`}
+             data-stat-count={statCount}
+             aria-label="经营状态">
           <div className="ts-stat topbar-stat time-stat has-help" tabIndex="0" aria-describedby="time-help-popover" title="时间规则">
             <span className="ts-label">时间</span>
             <strong className="ts-value time-value">第 {state.day} 日 {hourText}</strong>
@@ -596,6 +605,8 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
           {/* V15.17:投资人 chip 同时受 gate 解锁(day 80)和 investorReviewVisible(撤资/收尾后隐藏)双重控制 */}
           {investorReviewVisible && E.isUIGateUnlocked(state, 'investor_chip') && <InvestorReviewStat state={state} />}
         </div>
+        );
+        })()}
         <div className="topbar-settings" aria-label="系统菜单">
           <button
             className="topbar-menu-btn"

@@ -451,6 +451,7 @@
   }
 
   /* V14.26: 顶栏四项经营状态改成连续 HUD,减少胶囊碎片感 */
+  /* V15.17:按可见 stat 数自适应宽度(避免渐进解锁时露深色背景) */
   .topbar-kpis {
     grid-template-columns: minmax(174px, 1.18fr) minmax(150px, 0.95fr) minmax(108px, 0.72fr) minmax(154px, 1fr) !important;
     gap: 0 !important;
@@ -459,6 +460,14 @@
     background: var(--ink);
     border: 2px solid var(--ink);
     box-shadow: 3px 3px 0 rgba(42,35,32,0.18);
+  }
+  .topbar-kpis[data-stat-count="3"] {
+    grid-template-columns: minmax(174px, 1.18fr) minmax(150px, 0.95fr) minmax(108px, 0.72fr) !important;
+    max-width: 580px !important;
+  }
+  .topbar-kpis[data-stat-count="5"] {
+    grid-template-columns: minmax(174px, 1.18fr) minmax(150px, 0.95fr) minmax(108px, 0.72fr) minmax(154px, 1fr) minmax(140px, 1fr) !important;
+    max-width: 940px !important;
   }
 
   .topbar-stat {
