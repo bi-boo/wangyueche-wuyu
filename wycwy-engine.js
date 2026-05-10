@@ -867,7 +867,8 @@
     hydrated = syncDebtLegacyFields(hydrated);
     // V15.16 fix:V15.16 之前的老存档没有 investorBoosted/investorPath 字段
     // 若加载时玩家已 day > 270,说明 Q3 评估理论上已"无感通过",标记为 settle 防止再次触发
-    if (hydrated.day > 270 && !hydrated.investorBoosted) {
+    // V15.16 audit fix:加 !investorPath 检查,避免覆盖脏存档里已存的 'ipo' 路径
+    if (hydrated.day > 270 && !hydrated.investorBoosted && !hydrated.investorPath) {
       hydrated.investorBoosted = true;
       hydrated.investorPath = 'settle';
       hydrated.reviewCounter = Math.max(hydrated.reviewCounter || 0, 3);
@@ -1702,19 +1703,26 @@
   }
 
   // 判断 KPI 是否达标。stage = 'q1' | 'h1' | 'q3'(y1 仪式感事件,无 KPI)
-  // threshold 'two_of_three' = 资金/口碑/车组三选二;'all' = 全部满足 + 关键车型
+  // V15.16 audit fix:
+  // - threshold 'two_of_three':车组必须达标 + 资金/口碑至少 1 项达标(避免"永远不抓口碑"退化策略)
+  // - 0 司机 0 车直接 fail(避免"无车队也算合格"漏洞)
+  // - platformChoseSelfop 玩家 funds 阈值提高 25%(自营无抽成,收入提升 25% 应对应抬高门槛)
   function evaluateInvestorKPI(s, stage) {
     const kpi = INVESTOR_REVIEW.kpi[stage];
     if (!kpi) return true;
     const crews = countOperatingCrews(s);
-    const fundsPass = (s.funds || 0) >= kpi.funds;
+    // 0 车队直接 fail — 经营游戏核心是车队,无车队不算合格
+    if (crews === 0) return false;
+    // 自营玩家无抽成,收入 +25%,KPI funds 阈值同步抬高(避免门槛实质降档)
+    const fundsThreshold = s.platformChoseSelfop ? Math.round(kpi.funds * 1.25) : kpi.funds;
+    const fundsPass = (s.funds || 0) >= fundsThreshold;
     const repPass = (s.reputation || 0) >= kpi.reputation;
     const crewsPass = crews >= kpi.crews;
     const airportPass = !kpi.requireAirport || hasOrderTypeCrew(s, 'airport');
     const luxuryPass = !kpi.requireLuxury || hasOrderTypeCrew(s, 'luxury');
     if (kpi.threshold === 'two_of_three') {
-      const passCount = (fundsPass ? 1 : 0) + (repPass ? 1 : 0) + (crewsPass ? 1 : 0);
-      return passCount >= 2 && airportPass && luxuryPass;
+      // 车组必须达标(扩张是经营游戏 Pillar)+ 资金/口碑至少 1 项达标
+      return crewsPass && (fundsPass || repPass) && airportPass && luxuryPass;
     }
     return fundsPass && repPass && crewsPass && airportPass && luxuryPass;
   }
@@ -1934,6 +1942,10 @@
     // 检查破产倒计时(扣款若导致 funds < 0)
     if (s.funds < GAME.DEATH_FUNDS_THRESHOLD) {
       s.negFundsDays = Math.max(1, s.negFundsDays || 0);
+      // V15.16 audit fix:review 扣款致 funds 转负时,标记 INVESTOR_PRESSURE 已"消耗"
+      // 避免下次 endOfDay 同时触发 review + V14 投资人压力弹窗(系统打架)
+      // review 已经接管了"投资人施压"叙事,V14 弹窗在此场景冗余
+      s.investorPressureFired = true;
     }
     return openDueMonthlyReport(s);
   }
