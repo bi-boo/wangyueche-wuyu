@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>事件设计大表 V15.7</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>事件设计大表 · 实时版</title>
 <style>
   :root {
     --bg: #F4E4BC;
@@ -19,989 +22,434 @@
     --green-soft: #D6EBC4;
     --warn: #E84545;
     --warn-soft: #FFD6D6;
-    --gold: #FFD93D;
-    --gold-soft: #FFF1B0;
+    --blue-soft: #DCE8F5;
     --border: #2A2320;
     --border-soft: rgba(42,35,32,0.18);
     --hairline: rgba(42,35,32,0.10);
     --ui-radius: 2px;
-    --shadow-md: 3px 3px 0 var(--border-soft), 0 8px 20px rgba(42,35,32,0.10);
+    --shadow: 3px 3px 0 var(--border-soft), 0 8px 20px rgba(42,35,32,0.10);
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 32px 24px 64px;
+    margin: 0;
+    padding: 24px 24px 64px;
     background: var(--bg);
     color: var(--ink);
-    font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
-    font-size: 14px; line-height: 1.6;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
     background-image:
       repeating-linear-gradient(0deg, transparent 0, transparent 16px, rgba(42,35,32,0.025) 16px, rgba(42,35,32,0.025) 17px),
       repeating-linear-gradient(90deg, transparent 0, transparent 16px, rgba(42,35,32,0.025) 16px, rgba(42,35,32,0.025) 17px);
   }
-  .container { max-width: 1320px; margin: 0 auto; }
-  h1 {
-    font-size: 28px; margin: 0 0 6px; font-weight: 800;
+  .container { max-width: 1480px; margin: 0 auto; }
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin: -24px -24px 20px;
+    padding: 18px 24px 14px;
+    background: color-mix(in srgb, var(--bg) 92%, white 8%);
+    border-bottom: 2px solid var(--border-soft);
+    backdrop-filter: blur(8px);
   }
-  .subtitle {
-    color: var(--ink-2); font-size: 14px; margin-bottom: 32px;
-  }
-  h2 {
-    font-size: 20px; margin: 36px 0 14px; font-weight: 800;
-    padding-left: 12px; border-left: 4px solid var(--accent);
-  }
-  h2 .h2-sub {
-    font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 12px;
-  }
-  .meta {
-    display: flex; gap: 16px; flex-wrap: wrap;
-    background: var(--card);
-    padding: 14px 18px;
+  .top-inner { max-width: 1480px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; }
+  h1 { margin: 0 0 4px; font-size: 26px; line-height: 1.2; }
+  .subtitle { color: var(--ink-2); font-size: 13px; }
+  .actions { display: flex; gap: 8px; align-items: center; }
+  .search {
+    width: 260px;
+    padding: 8px 10px;
+    border: 2px solid var(--border);
     border-radius: var(--ui-radius);
-    box-shadow: var(--shadow-md);
-    margin-bottom: 24px;
-    font-size: 13px;
+    background: var(--card);
+    color: var(--ink);
+    font: inherit;
   }
-  .meta b { color: var(--accent-deep); }
-
+  button {
+    padding: 8px 12px;
+    border: 2px solid var(--border);
+    border-radius: var(--ui-radius);
+    background: var(--accent);
+    color: var(--ink);
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 var(--border);
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .metric {
+    background: var(--card);
+    border: 1.5px solid var(--border-soft);
+    border-radius: var(--ui-radius);
+    box-shadow: var(--shadow);
+    padding: 12px 14px;
+  }
+  .metric span { display: block; color: var(--ink-3); font-size: 12px; }
+  .metric strong { display: block; font-size: 24px; line-height: 1.2; margin-top: 3px; }
+  h2 {
+    margin: 30px 0 12px;
+    padding-left: 12px;
+    border-left: 4px solid var(--accent);
+    font-size: 20px;
+  }
+  .note {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--ui-radius);
+    color: var(--ink-2);
+  }
   table {
     width: 100%;
     border-collapse: collapse;
     background: var(--card);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow);
     border-radius: var(--ui-radius);
     overflow: hidden;
+    margin-bottom: 20px;
   }
-  thead {
-    background: var(--ink);
-    color: var(--card);
-  }
-  thead th {
-    padding: 12px 10px;
-    font-weight: 700;
-    font-size: 13px;
+  thead { background: var(--ink); color: var(--card); }
+  th {
+    padding: 10px 9px;
     text-align: left;
-    letter-spacing: 0.5px;
+    font-size: 12px;
+    white-space: nowrap;
   }
-  tbody tr {
+  td {
+    padding: 9px;
+    vertical-align: top;
     border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
   }
   tbody tr:nth-child(even) { background: var(--sub); }
   tbody tr:hover { background: var(--accent-soft); }
-  tbody td {
-    padding: 10px;
-    font-size: 13px;
-    vertical-align: top;
+  code {
+    font-family: "JetBrains Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--accent-deep);
+    background: rgba(255,255,255,0.58);
+    padding: 1px 4px;
+    border-radius: var(--ui-radius);
   }
-  tbody td.num { text-align: center; font-weight: 700; color: var(--ink-3); width: 40px; }
-  tbody td.id-col { font-family: "JetBrains Mono", "Menlo", monospace; font-size: 12px; color: var(--accent-deep); white-space: nowrap; }
-  tbody td.unlock { text-align: center; font-weight: 800; font-size: 16px; }
-
+  .id { white-space: nowrap; }
+  .muted { color: var(--ink-3); }
   .tag {
     display: inline-block;
-    padding: 2px 8px;
+    padding: 1px 6px;
     border-radius: var(--ui-radius);
+    background: var(--blue-soft);
+    color: #2C5A8E;
+    border: 1px solid rgba(44,90,142,0.22);
+    font-weight: 800;
     font-size: 11px;
-    font-weight: 700;
-    background: var(--sub);
-    color: var(--ink);
-    border: 1px solid var(--border-soft);
     white-space: nowrap;
   }
-  .tag-tianqi  { background: #DCE8F5; color: #2C5A8E; border-color: #B0C9E5; }
-  .tag-hangye  { background: #F5E0DC; color: #A04C36; border-color: #E5BFB6; }
-  .tag-renshi  { background: #E5DEF2; color: #5B3F94; border-color: #C9BCE0; }
-  .tag-yunqi   { background: #FFEFB0; color: #8B6700; border-color: #F0D870; }
-  .tag-jianguan{ background: #FFE0E0; color: #B22222; border-color: #F0B0B0; }
-  .tag-jieri   { background: #E5F0DC; color: #4A7A2A; border-color: #C0DCA0; }
-  .tag-jingzheng{background: #FFD6BC; color: #B85728; border-color: #F0AC80; }
-  .tag-weiji   { background: var(--warn-soft); color: var(--warn); border-color: rgba(232,69,69,0.4); }
-
-  .deal {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: var(--ui-radius);
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  .deal-keep    { background: var(--green-soft); color: var(--green); border: 1px solid rgba(95,173,65,0.4); }
-  .deal-chain   { background: var(--accent-soft); color: var(--accent-deep); border: 1px solid rgba(212,98,31,0.4); }
-  .deal-split   { background: var(--gold-soft); color: #8B6700; border: 1px solid rgba(255,217,61,0.5); }
-  .deal-delete  { background: var(--warn-soft); color: var(--warn); border: 1px solid rgba(232,69,69,0.4); }
-  .deal-new     { background: #E0F0FF; color: #2C5A8E; border: 1px solid rgba(44,90,142,0.4); }
-
-  .delta-up   { color: var(--warn); font-weight: 700; margin-left: 4px; }
-  .delta-down { color: var(--green); font-weight: 700; margin-left: 4px; }
-
-  .arrow { color: var(--ink-3); font-weight: 600; padding: 0 4px; }
-
-  .legend {
-    display: flex; gap: 16px; flex-wrap: wrap;
-    padding: 12px 16px;
-    background: var(--card);
-    border: 1.5px solid var(--border-soft);
-    border-radius: var(--ui-radius);
-    margin-bottom: 16px;
-    font-size: 12px;
-  }
-  .legend > span { display: flex; align-items: center; gap: 6px; }
-
-  .chain-block {
-    background: var(--card);
-    border-radius: var(--ui-radius);
-    box-shadow: var(--shadow-md);
-    padding: 18px 20px;
-    margin-bottom: 20px;
-    border-left: 4px solid var(--accent);
-  }
-  .chain-title {
-    font-size: 17px; font-weight: 800; margin-bottom: 4px;
-  }
-  .chain-axis {
-    font-size: 12px; color: var(--ink-3); margin-bottom: 14px;
-  }
-  .chain-block table { box-shadow: none; }
-  .chain-block thead { background: var(--ink-2); }
-  .chain-block tbody td { font-size: 12.5px; }
-
-  .scene { font-style: italic; color: var(--ink-2); }
-
-  .opt-a, .opt-b {
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  .tag.good { background: var(--green-soft); color: var(--green); }
+  .tag.neutral { background: var(--sub); color: var(--ink-2); }
+  .options { display: grid; gap: 5px; }
+  .option {
     padding: 6px 8px;
-    border-radius: var(--ui-radius);
-    font-size: 12px;
-    line-height: 1.5;
+    border-left: 3px solid var(--accent);
+    background: rgba(255,255,255,0.48);
   }
-  .opt-a { background: rgba(95,173,65,0.10); border-left: 3px solid var(--green); }
-  .opt-b { background: rgba(232,69,69,0.10); border-left: 3px solid var(--warn); }
-
-  .stage-id { font-family: "JetBrains Mono", "Menlo", monospace; font-size: 11px; color: var(--accent-deep); }
-  .next { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
-  .next code { background: var(--sub); padding: 1px 4px; border-radius: 2px; font-size: 11px; color: var(--accent-deep); }
-
-  .note-block {
-    background: var(--accent-soft);
-    border-left: 4px solid var(--accent);
-    padding: 14px 18px;
-    border-radius: var(--ui-radius);
-    margin: 24px 0;
-    font-size: 13px;
-    line-height: 1.7;
+  .option b { color: var(--ink); }
+  .small { font-size: 12px; color: var(--ink-2); }
+  .empty {
+    padding: 30px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    color: var(--ink-3);
+    text-align: center;
+  }
+  @media (max-width: 980px) {
+    body { padding: 16px; }
+    .top { margin: -16px -16px 16px; padding: 16px; }
+    .top-inner { grid-template-columns: 1fr; }
+    .summary { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+    .actions { align-items: stretch; }
+    .search { width: 100%; }
   }
 </style>
+<script>
+  window.WYCWY_PREVIEW_VERSION = new URLSearchParams(window.location.search).get('_t') || String(Date.now());
+  document.write('<script src="./wycwy-data.js?v=' + window.WYCWY_PREVIEW_VERSION + '"><\/script>');
+</script>
 </head>
 <body>
+<div class="top">
+  <div class="top-inner">
+    <div>
+      <h1>事件设计大表 · 实时版</h1>
+      <div class="subtitle">直接读取当前 <code>wycwy-data.js</code>。游戏事件数据改了,刷新本页就是最新表。</div>
+    </div>
+    <div class="actions">
+      <input id="search" class="search" placeholder="搜索 id / 标题 / tag / 文案" />
+      <button id="reloadBtn" type="button">刷新数据</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
-
-<h1>事件设计大表</h1>
-<div class="subtitle">V15.7 草案 · 25 个事件 ID · 4 条真分支链式 · 阶段化按 mission 完成数解锁</div>
-
-<div class="meta">
-  <span><b>当前事件总数</b>:25</span>
-  <span><b>真分支链式</b>:4 条(borrow / platform / rival / accident)</span>
-  <span><b>原 chain 拆出</b>:6 个独立段(rain×2 / celeb×2 / newyear×2)</span>
-  <span><b>删除</b>:1 条(newpolicy 已被 V15 政策事件覆盖)</span>
-  <span><b>阶段标识</b>:unlockMission = 完成第 N 个任务后才能触发</span>
+  <div id="summary" class="summary"></div>
+  <div id="content"></div>
 </div>
 
-<div class="legend">
-  <span><span class="deal deal-keep">保留</span> V7 单段事件不动</span>
-  <span><span class="deal deal-chain">保留链式</span> 改造为真分支结构</span>
-  <span><span class="deal deal-split">拆段</span> chain 各 stage 独立成单段</span>
-  <span><span class="deal deal-delete">删除</span> 直接移除</span>
-  <span><span class="deal deal-new">新增</span> 拆 chain 后新生成的 ID</span>
-  <span><span class="delta-up">↑n</span> 推荐位置比之前晚</span>
-  <span><span class="delta-down">↓n</span> 推荐位置比之前早</span>
-</div>
+<script>
+(function () {
+  const D = window.WYCWY_DATA || {};
+  const content = document.getElementById('content');
+  const summary = document.getElementById('summary');
+  const searchInput = document.getElementById('search');
+  const reloadBtn = document.getElementById('reloadBtn');
 
-<h2>表 A:完整事件清单 <span class="h2-sub">25 个事件 ID,按 unlockMission 升序</span></h2>
+  const TRUE_CHAINS = ['borrow', 'platform', 'rival', 'accident'];
+  const CHAIN_NAMES = {
+    borrow: '老张借钱',
+    platform: '平台抽成',
+    rival: '竞品挖人',
+    accident: '司机事故',
+  };
 
-<table>
-  <thead>
-    <tr>
-      <th style="width:40px">#</th>
-      <th style="width:170px">事件 ID</th>
-      <th style="width:170px">名称</th>
-      <th style="width:80px">标签</th>
-      <th style="width:110px">处理决策</th>
-      <th style="width:90px;text-align:center">unlockMission</th>
-      <th>核心冲突 / 备注</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="num">1</td>
-      <td class="id-col">oil_price</td>
-      <td><b>油价又涨了</b></td>
-      <td><span class="tag tag-hangye">行业</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">0</td>
-      <td>开局成本压力起点。司机要求补贴 vs 自己消化。</td>
-    </tr>
-    <tr>
-      <td class="num">2</td>
-      <td class="id-col">back_pain</td>
-      <td><b>小李的腰又犯了</b></td>
-      <td><span class="tag tag-renshi">人事</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">0</td>
-      <td>早期人情教学。给假 vs 让司机硬撑。</td>
-    </tr>
-    <tr>
-      <td class="num">3</td>
-      <td class="id-col">borrow_seed</td>
-      <td><b>老张找你借 ¥2k</b></td>
-      <td><span class="tag tag-renshi">人事</span></td>
-      <td><span class="deal deal-chain">保留链式</span></td>
-      <td class="unlock">0</td>
-      <td><b>真分支:借/不借决定 borrow_close 或 borrow_distance</b>(详见表 B1)</td>
-    </tr>
-    <tr>
-      <td class="num">4</td>
-      <td class="id-col">rain_base</td>
-      <td><b>暴雨天来了</b></td>
-      <td><span class="tag tag-tianqi">天气</span></td>
-      <td><span class="deal deal-split">拆段</span></td>
-      <td class="unlock">0</td>
-      <td>原 rain chain stage 0 拆为单段。全员出车 vs 放假。</td>
-    </tr>
-    <tr>
-      <td class="num">5</td>
-      <td class="id-col">newyear_base</td>
-      <td><b>春节将至</b></td>
-      <td><span class="tag tag-jieri">节日</span></td>
-      <td><span class="deal deal-split">拆段</span></td>
-      <td class="unlock">0</td>
-      <td>原 newyear chain stage 0 拆为单段。发红包 vs 正常过节。</td>
-    </tr>
-    <tr>
-      <td class="num">6</td>
-      <td class="id-col">ride_cancel_chain</td>
-      <td><b>司机被连续取消单罚款</b></td>
-      <td><span class="tag tag-hangye">行业</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">3</td>
-      <td>跑过几天才会感受到派单算法压力。</td>
-    </tr>
-    <tr>
-      <td class="num">7</td>
-      <td class="id-col">celeb_base</td>
-      <td><b>明星打到你家车</b></td>
-      <td><span class="tag tag-yunqi">运气</span></td>
-      <td><span class="deal deal-split">拆段</span></td>
-      <td class="unlock">3</td>
-      <td>原 celeb chain stage 0 拆为单段。配合宣传 vs 低调处理。</td>
-    </tr>
-    <tr>
-      <td class="num">8</td>
-      <td class="id-col">accident_seed</td>
-      <td><b>小李剐蹭豪车 ¥3k</b></td>
-      <td><span class="tag tag-renshi">人事</span></td>
-      <td><span class="deal deal-chain">保留链式</span></td>
-      <td class="unlock">5 <span class="delta-down">↓6</span></td>
-      <td><b>你说要早一点,从原 m11 提到 m5</b>。真分支:公司付/司机付决定后续(详见表 B4)</td>
-    </tr>
-    <tr>
-      <td class="num">9</td>
-      <td class="id-col">complaint_harass</td>
-      <td><b>司机被投诉骚扰女乘客</b></td>
-      <td><span class="tag tag-weiji">危机</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">5</td>
-      <td>三车组规模才会有真实投诉。</td>
-    </tr>
-    <tr>
-      <td class="num">10</td>
-      <td class="id-col">aging_test</td>
-      <td><b>网约车司机年龄新规</b></td>
-      <td><span class="tag tag-jianguan">监管</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">6</td>
-      <td>服务训练后,合规意识起。</td>
-    </tr>
-    <tr>
-      <td class="num">11</td>
-      <td class="id-col">newyear_spring_rush</td>
-      <td><b>春运抢票热点</b></td>
-      <td><span class="tag tag-jieri">节日</span></td>
-      <td><span class="deal deal-new">新增(拆)</span></td>
-      <td class="unlock">6</td>
-      <td>原 newyear chain stage 1。车队帮买票 vs 让司机自己想办法。</td>
-    </tr>
-    <tr>
-      <td class="num">12</td>
-      <td class="id-col">platform_pressure</td>
-      <td><b>平台抽成压力(可重复)</b></td>
-      <td><span class="tag tag-hangye">行业</span></td>
-      <td><span class="deal deal-chain">保留链式</span></td>
-      <td class="unlock">8 <span class="delta-up">↑3</span></td>
-      <td><b>长线引导玩家攒钱</b>:重复触发,每次抽成 +5%,直到玩家攒够自营成本永久解决。<b>仅影响抽成,不影响忠诚/口碑</b>(详见表 B2)</td>
-    </tr>
-    <tr>
-      <td class="num">13</td>
-      <td class="id-col">account_freeze</td>
-      <td><b>平台账号被冻结</b></td>
-      <td><span class="tag tag-jianguan">监管</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">8</td>
-      <td>中段监管事件。</td>
-    </tr>
-    <tr>
-      <td class="num">14</td>
-      <td class="id-col">social_lapse</td>
-      <td><b>司机社保断缴了</b></td>
-      <td><span class="tag tag-renshi">人事</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">8</td>
-      <td>中段合规人情。</td>
-    </tr>
-    <tr>
-      <td class="num">15</td>
-      <td class="id-col">cheating_data</td>
-      <td><b>平台诱导刷单冲业绩</b></td>
-      <td><span class="tag tag-hangye">行业</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">9</td>
-      <td>玩家有规模后才会被诱惑刷数据。</td>
-    </tr>
-    <tr>
-      <td class="num">16</td>
-      <td class="id-col">celeb_pack</td>
-      <td><b>经纪公司想包车</b></td>
-      <td><span class="tag tag-yunqi">运气</span></td>
-      <td><span class="deal deal-new">新增(拆)</span></td>
-      <td class="unlock">9</td>
-      <td>原 celeb chain stage 1。签长期 vs 维持普通业务。</td>
-    </tr>
-    <tr>
-      <td class="num">17</td>
-      <td class="id-col">rain_storm_metro</td>
-      <td><b>暴雨夜地铁停运</b></td>
-      <td><span class="tag tag-tianqi">天气</span></td>
-      <td><span class="deal deal-new">新增(拆)</span></td>
-      <td class="unlock">10</td>
-      <td>原 rain chain stage 1。死撑抢单 vs 免费送社区。</td>
-    </tr>
-    <tr>
-      <td class="num">18</td>
-      <td class="id-col">night_robbery</td>
-      <td><b>司机半夜被抢</b></td>
-      <td><span class="tag tag-weiji">危机</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">11</td>
-      <td>夜单接得多才暴露安全风险。</td>
-    </tr>
-    <tr>
-      <td class="num">19</td>
-      <td class="id-col">family_emergency</td>
-      <td><b>老周父亲住院</b></td>
-      <td><span class="tag tag-renshi">人事</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">12</td>
-      <td>中后期人情借款。</td>
-    </tr>
-    <tr>
-      <td class="num">20</td>
-      <td class="id-col">newyear_return_block</td>
-      <td><b>突发返乡限制</b></td>
-      <td><span class="tag tag-jieri">节日</span></td>
-      <td><span class="deal deal-new">新增(拆)</span></td>
-      <td class="unlock">12</td>
-      <td>原 newyear chain stage 2。补偿留岗 vs 让司机自行解决。</td>
-    </tr>
-    <tr>
-      <td class="num">21</td>
-      <td class="id-col">rival_seed</td>
-      <td><b>滴答挖你最强司机</b></td>
-      <td><span class="tag tag-jingzheng">竞争</span></td>
-      <td><span class="deal deal-chain">保留链式</span></td>
-      <td class="unlock">13 <span class="delta-up">↑2</span></td>
-      <td><b>钥匙司机机制</b>:m14 stage 用 4 选项盲选加薪,后两个档位才能留人 + 解锁钥匙事件,带朋友车队加入(详见表 B3)</td>
-    </tr>
-    <tr>
-      <td class="num">22</td>
-      <td class="id-col">celeb_paparazzi</td>
-      <td><b>八卦记者跟拍司机</b></td>
-      <td><span class="tag tag-yunqi">运气</span></td>
-      <td><span class="deal deal-new">新增(拆)</span></td>
-      <td class="unlock">13</td>
-      <td>原 celeb chain stage 2。签保密协议 vs 默许收钱。</td>
-    </tr>
-    <tr>
-      <td class="num">23</td>
-      <td class="id-col">quit_temptation</td>
-      <td><b>司机想转行送外卖</b></td>
-      <td><span class="tag tag-renshi">人事</span></td>
-      <td><span class="deal deal-keep">保留</span></td>
-      <td class="unlock">14</td>
-      <td>后期留人压力。</td>
-    </tr>
-    <tr>
-      <td class="num">24</td>
-      <td class="id-col">rain_red_alert</td>
-      <td><b>50 年一遇红色预警</b></td>
-      <td><span class="tag tag-tianqi">天气</span></td>
-      <td><span class="deal deal-new">新增(拆)</span></td>
-      <td class="unlock">14</td>
-      <td>原 rain chain stage 2。应急救援 vs 闷声抢单。</td>
-    </tr>
-    <tr>
-      <td class="num">25</td>
-      <td class="id-col">newpolicy</td>
-      <td><s>网约车新政</s></td>
-      <td><span class="tag tag-jianguan">监管</span></td>
-      <td><span class="deal deal-delete">删除</span></td>
-      <td class="unlock">—</td>
-      <td>已被 V15 监管整改政策事件完全覆盖,删除避免重复。</td>
-    </tr>
-    <tr>
-      <td class="num">26</td>
-      <td class="id-col">rain (chain wrapper)</td>
-      <td><s>暴雨 chain 容器</s></td>
-      <td><span class="tag tag-tianqi">天气</span></td>
-      <td><span class="deal deal-delete">删除</span></td>
-      <td class="unlock">—</td>
-      <td>chainStages 已拆出 base / storm_metro / red_alert,容器删除。</td>
-    </tr>
-    <tr>
-      <td class="num">27</td>
-      <td class="id-col">celeb (chain wrapper)</td>
-      <td><s>明星 chain 容器</s></td>
-      <td><span class="tag tag-yunqi">运气</span></td>
-      <td><span class="deal deal-delete">删除</span></td>
-      <td class="unlock">—</td>
-      <td>chainStages 已拆出 base / pack / paparazzi,容器删除。</td>
-    </tr>
-    <tr>
-      <td class="num">28</td>
-      <td class="id-col">newyear (chain wrapper)</td>
-      <td><s>春节 chain 容器</s></td>
-      <td><span class="tag tag-jieri">节日</span></td>
-      <td><span class="deal deal-delete">删除</span></td>
-      <td class="unlock">—</td>
-      <td>chainStages 已拆出 base / spring_rush / return_block,容器删除。</td>
-    </tr>
-  </tbody>
-</table>
+  function esc(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
-<div class="note-block">
-  <b>关于"事件总数 25 个"的口径说明:</b>
-  表 A 共 28 行,其中 4 行是删除(newpolicy + rain/celeb/newyear 三个 chain 容器)。剩 24 行 + 4 个 chain 后续段（borrow_close/distance、platform_fight/selfop、rival_loyal/bleed、accident_trust/breach 等,见表 B 子表）= 实际可被触发的独立事件 ID 共约 35 个。
-  <br><br>
-  <b>事件池过滤逻辑(伪代码):</b>
-  <code>EVENTS.filter(e =&gt; e.unlockMission &lt;= state.completedMissionIds.length &amp;&amp; (!e.requireChainChoice || state.chainChoices[e.chain] === e.requireChainChoice))</code>
-</div>
+  function money(value) {
+    const num = Number(value || 0);
+    return '¥' + Math.round(num).toLocaleString();
+  }
 
-<h2>表 B:4 条真分支链式结构 <span class="h2-sub">前置选项决定后续走哪条分支</span></h2>
+  function code(value) {
+    if (value === undefined || value === null || value === '') return '<span class="muted">-</span>';
+    return '<code>' + esc(value) + '</code>';
+  }
 
-<div class="chain-block">
-  <div class="chain-title">B1. borrow · 老张借钱</div>
-  <div class="chain-axis">关系信任轴 · 人际叙事最强 · 决定老张去留</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A(温情)</th>
-        <th>选项 B(冷淡)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">borrow_seed</span></td>
-        <td>unlockMission ≥ 0</td>
-        <td class="scene">老张缺 ¥2k 学费</td>
-        <td><div class="opt-a"><b>借给他</b><br>-¥2k,全员忠诚 +30<div class="next">→ 解锁 <code>borrow_close</code></div></div></td>
-        <td><div class="opt-b"><b>装作没看见</b><br>钱保住,全员忠诚 -20<div class="next">→ 解锁 <code>borrow_distance</code></div></div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">borrow_close</span></td>
-        <td>mission ≥ 5 + chainChoices.borrow == 'help'</td>
-        <td class="scene">老张儿子要结婚,缺 ¥8k 份子礼</td>
-        <td><div class="opt-a"><b>借给他</b><br>-¥8k,全员忠诚 +25<div class="next">→ 解锁 <code>borrow_intimate</code></div></div></td>
-        <td><div class="opt-b"><b>婉拒</b><br>钱保住,全员忠诚 -15<div class="next">→ 解锁 <code>borrow_cooled</code></div></div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">borrow_distance</span></td>
-        <td>mission ≥ 5 + chainChoices.borrow == 'refuse'</td>
-        <td class="scene">老张找别人借去了,司机群里气氛冷</td>
-        <td><div class="opt-a"><b>去和老张谈</b><br>-¥3k,关系修复</div></td>
-        <td><div class="opt-b"><b>不管</b><br>钱保住,老张离队</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">borrow_intimate</span></td>
-        <td>mission ≥ 11 + close 选了借</td>
-        <td class="scene">老张老家盖房 ¥20k</td>
-        <td><div class="opt-a"><b>借给他,慢慢还</b><br>-¥20k,全员信任 +30</div></td>
-        <td><div class="opt-b"><b>介绍信用贷</b><br>钱保住,全员忠诚 -10</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">borrow_cooled</span></td>
-        <td>mission ≥ 11 + close 选了拒</td>
-        <td class="scene">老张主动提辞职</td>
-        <td><div class="opt-a"><b>挽留涨薪</b><br>月薪 +¥800,全员忠诚 +15</div></td>
-        <td><div class="opt-b"><b>同意离队</b><br>钱保住,失去老张</div></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  function getChainFamily(event) {
+    const id = event.id || '';
+    for (const family of TRUE_CHAINS) {
+      if (id === family || id.startsWith(family + '_') || event.chain === family || (event.chain || '').startsWith(family + '_')) {
+        return family;
+      }
+    }
+    return '';
+  }
 
-<div class="chain-block">
-  <div class="chain-title">B2. platform_pressure · 平台抽成压力</div>
-  <div class="chain-axis">长线引导轴 · 单一事件重复触发 · 玩家看见门槛 → 攒钱 → 解锁 · <b>仅影响抽成,不影响忠诚/口碑</b></div>
+  function formatRequire(value) {
+    if (!value) return '';
+    return Object.entries(value).map(([key, val]) => {
+      const shown = Array.isArray(val) ? '[' + val.join(', ') + ']' : val;
+      return key + ' = ' + shown;
+    }).join('; ');
+  }
 
-  <div style="background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 10px 14px; margin-bottom: 14px; border-radius: var(--ui-radius); font-size: 13px;">
-    <b>设计意图</b>:不再是 chain 的 3 段顺序触发,而是同一事件按冷却重复触发。每次玩家看到自营门槛(¥180k)但攒不够,只能选硬扛——这构成了"看见门槛 → 攒钱 → 第 N 次终于能解锁"的长线节奏。一旦玩家选了"自营",事件永久完结,抽成归 0。
-    <br><br>
-    <b>抽成阶梯</b>:首次 20% → 选硬扛后 25% → 第 2 次硬扛 30% → 第 3 次硬扛 35% → 第 4 次硬扛 40%(封顶)。玩家拖得越久压力越大。
-    <br><br>
-    <b>触发频率建议</b>:每 30-40 天 cooldown,unlockMission ≥ 8 后开始计时。
-  </div>
+  function triggerText(event) {
+    const parts = ['完成任务数 ≥ ' + (event.unlockMission || 0)];
+    const req = formatRequire(event.requireChainChoice);
+    if (req) parts.push('前置选择: ' + req);
+    if (event.requireKeyDriverAlive === true) parts.push('钥匙司机在编');
+    if (event.requireKeyDriverAlive === false) parts.push('钥匙司机已离队');
+    if (event.requireFunds) parts.push('资金 ≥ ' + money(event.requireFunds));
+    if (event.blindOptions) parts.push('盲选:选前隐藏后果');
+    if (event.skipScale) parts.push('不按规模缩放');
+    return parts.join('<br>');
+  }
 
-  <table>
-    <thead>
-      <tr>
-        <th style="width:160px">段 ID</th>
-        <th style="width:240px">触发条件</th>
-        <th style="width:240px">场景文案模板</th>
-        <th>选项 A(硬扛)</th>
-        <th>选项 B(自营,完结)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">platform_pressure</span></td>
-        <td>
-          unlockMission ≥ 8<br>
-          + 距上次触发 ≥ 30 天<br>
-          + 玩家未选过自营
-        </td>
-        <td class="scene">"滴答出行宣布抽成从 X% 涨到 Y%。你的法务说要么忍,要么自建小程序甩开它。"</td>
-        <td><div class="opt-a"><b>硬扛新抽成</b><br>抽成 +5%(封顶 40%)<br>事件下次仍会触发<div class="next">无忠诚/口碑变化</div></div></td>
-        <td><div class="opt-b"><b>搞自营小程序 -¥180k</b><br>资金 -¥180k(资金不足时禁用)<br>抽成永久 0%<div class="next">→ 该事件永不再触发</div></div></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  function optionText(options) {
+    if (!Array.isArray(options) || options.length === 0) return '<span class="muted">无选项</span>';
+    return '<div class="options">' + options.map((opt, idx) => {
+      const choice = opt.choiceKey !== undefined ? ' <span class="small">choiceKey=' + esc(JSON.stringify(opt.choiceKey)) + '</span>' : '';
+      const detail = opt.detail ? '<div class="small">' + esc(opt.detail) + '</div>' : '';
+      return '<div class="option"><b>' + (idx + 1) + '. ' + esc(opt.label || '选项') + '</b>' + choice + detail + '</div>';
+    }).join('') + '</div>';
+  }
 
-<div class="chain-block">
-  <div class="chain-title">B3. rival · 竞品挖人(钥匙司机机制)</div>
-  <div class="chain-axis">留人压力轴 · 4 选项盲选 + 钥匙事件 · 月薪 = 给个人的钱,不影响全员忠诚</div>
+  function searchTextEvent(event) {
+    return [
+      event.id, event.title, event.tag, event.desc, event.chain,
+      formatRequire(event.requireChainChoice),
+      ...(event.options || []).flatMap((opt) => [opt.label, opt.detail]),
+    ].join(' ').toLowerCase();
+  }
 
-  <div style="background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 10px 14px; margin-bottom: 14px; border-radius: var(--ui-radius); font-size: 13px;">
-    <b>核心机制</b>:玩家在 stage 1 用月薪买"钥匙司机"标签,stage 2 用钥匙司机解锁高额奖励事件(零成本获得专车队)。
-    <br><br>
-    <b>盲选设计</b>:rival_pricing 4 个选项的代价/结果在玩家选择前都不可见(detail 文案不暴露后果),让玩家凭直觉押注。
-    <br><br>
-    <b>钥匙司机 buff</b>:被加薪 ¥3k/¥4k 留下的司机,后续所有"全员忠诚衰减"事件(裁员/事故等)对他效果减半。
-  </div>
+  function rowEvent(event, idx) {
+    const family = getChainFamily(event);
+    return '<tr data-search="' + esc(searchTextEvent(event)) + '">' +
+      '<td class="muted">' + (idx + 1) + '</td>' +
+      '<td class="id">' + code(event.id) + '</td>' +
+      '<td><b>' + esc(event.title) + '</b><div class="small">' + esc(event.desc || '') + '</div></td>' +
+      '<td><span class="tag">' + esc(event.tag || '-') + '</span></td>' +
+      '<td>' + (event.unlockMission || 0) + '</td>' +
+      '<td>' + (family ? '<span class="tag good">' + esc(CHAIN_NAMES[family] || family) + '</span><br>' : '') + code(event.chain) + '</td>' +
+      '<td>' + triggerText(event) + '<div class="small">冷却 ' + (event.cooldown || '-') + ' 天</div></td>' +
+      '<td>' + optionText(event.options) + '</td>' +
+    '</tr>';
+  }
 
-  <table>
-    <thead>
-      <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A</th>
-        <th>选项 B</th>
-        <th>选项 C</th>
-        <th>选项 D</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">rival_seed</span></td>
-        <td>unlockMission ≥ 13</td>
-        <td class="scene">滴答挖你最强司机,月薪 +¥1.5k</td>
-        <td colspan="2"><div class="opt-a"><b>加薪挽留</b><br>月薪 +¥1.5k<div class="next">→ 解锁 <code>rival_pricing</code></div></div></td>
-        <td colspan="2"><div class="opt-b"><b>放走</b><br>失去最强司机,口碑 -10<div class="next">→ chain 完结</div></div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">rival_pricing</span><br><span style="font-size:10px;color:var(--ink-3)">(4 选项盲选)</span></td>
-        <td>mission ≥ 14<br>+ chainChoices.rival_seed == 'keep'</td>
-        <td class="scene">滴答出价更狠了:翻倍 + ¥10k 签约费。法务说"你给多少他才肯留"</td>
-        <td>
-          <div class="opt-b" style="border-left-color: var(--warn);">
-            <b>+¥1,000</b><br>
-            <span style="color:var(--ink-3);font-size:11px">(玩家看到的描述:"试探性加价")</span>
-            <div class="next" style="color:var(--warn)">实际:司机走 + 全员忠诚 -10<br>→ chain 完结</div>
-          </div>
-        </td>
-        <td>
-          <div class="opt-b" style="border-left-color: var(--warn);">
-            <b>+¥2,000</b><br>
-            <span style="color:var(--ink-3);font-size:11px">(玩家看到:"中规中矩加薪")</span>
-            <div class="next" style="color:var(--warn)">实际:司机走 + 全员忠诚 -5<br>→ chain 完结</div>
-          </div>
-        </td>
-        <td>
-          <div class="opt-a">
-            <b>+¥3,000</b><br>
-            <span style="color:var(--ink-3);font-size:11px">(玩家看到:"诚意加价")</span>
-            <div class="next" style="color:var(--green)">司机留下 · 月薪永久 +¥3k<br>+ 钥匙司机标签 · 衰减减半<br>→ 解锁 <code>rival_friends_join</code>(3 人)</div>
-          </div>
-        </td>
-        <td>
-          <div class="opt-a">
-            <b>+¥4,000</b><br>
-            <span style="color:var(--ink-3);font-size:11px">(玩家看到:"豪赌加价")</span>
-            <div class="next" style="color:var(--green)">司机留下 · 月薪永久 +¥4k<br>+ 钥匙司机标签 · 衰减减半<br>→ 解锁 <code>rival_friends_join</code>(<b>5 人</b>)</div>
-          </div>
-        </td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">rival_friends_join</span><br><span style="font-size:10px;color:var(--ink-3)">(钥匙事件)</span></td>
-        <td>mission ≥ 15<br>+ chainChoices.rival_pricing ∈ {3000, 4000}<br>(无论钥匙司机是否仍在编)</td>
-        <td class="scene">[钥匙司机名] 找上你:"我以前在滴答的老兄弟想跳槽,他们自带专车,问我你这边靠不靠谱"</td>
-        <td colspan="3">
-          <div class="opt-a">
-            <b>[钥匙司机仍在] 欢迎加入</b><br>
-            +¥3k 选项 → 0 成本获得 <b>3 名专车司机 + 3 辆凯美瑞</b><br>
-            +¥4k 选项 → 0 成本获得 <b>5 名专车司机 + 5 辆凯美瑞</b>
-            <div class="next">价值评估:相当于免费送 3-5 个完整车组(每组 ¥30k+)</div>
-          </div>
-        </td>
-        <td>
-          <div class="opt-b" style="border-left-color: var(--warn);">
-            <b>[钥匙司机已离队]</b><br>
-            "听说他们要找熟人引荐,你这边没合适人脉"<br>
-            <button style="margin-top: 4px; padding: 2px 8px; font-size: 11px; background: var(--sub); border: 1px solid var(--border-soft);">知道了</button>
-            <div class="next" style="color:var(--warn)">无法获得任何人/车<br>玩家会反思:当初留下他就好了</div>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  function renderEventTable(title, note, events) {
+    const rows = events
+      .slice()
+      .sort((a, b) => (a.unlockMission || 0) - (b.unlockMission || 0) || String(a.id).localeCompare(String(b.id)))
+      .map(rowEvent)
+      .join('');
+    return '<h2>' + esc(title) + '</h2>' +
+      (note ? '<div class="note">' + note + '</div>' : '') +
+      '<table><thead><tr>' +
+      '<th>#</th><th style="width:180px">事件 ID</th><th>标题与描述</th><th>标签</th><th>任务</th><th>链路</th><th>触发逻辑</th><th>选项与效果</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
 
-  <div style="background: var(--sub); padding: 10px 14px; margin-top: 12px; border-radius: var(--ui-radius); font-size: 12px; color: var(--ink-2);">
-    <b>"钥匙司机离队"判定</b>:rival_friends_join 触发时检查 <code>state.drivers.find(d =&gt; d.id === keyDriverId)</code>。如果司机因后续事件(投资人压力裁员/玩家主动解雇/忠诚过低离队)不在编,则走"机会流失"分支——这种情况下事件依然要弹窗展示给玩家,目的是制造反思感。
-  </div>
-</div>
+  function renderPolicyTable() {
+    const rows = (D.POLICY_EVENTS || []).flatMap((eventDef) => {
+      return (eventDef.schedule || []).map((item) => {
+        const stage = item.type === 'verdict' ? 'verdict_pass / verdict_fine / verdict_ban' : item.stage;
+        const stageData = eventDef.stages?.[item.stage] || {};
+        return '<tr data-search="' + esc([eventDef.id, eventDef.title, item.stage, item.type, stageData.title, stageData.tag].join(' ').toLowerCase()) + '">' +
+          '<td>' + item.atDay + '</td>' +
+          '<td>' + code(eventDef.id) + '</td>' +
+          '<td>' + code(stage) + '</td>' +
+          '<td><span class="tag warn">' + esc(item.type) + '</span></td>' +
+          '<td><b>' + esc(stageData.title || eventDef.title) + '</b><div class="small">' + esc(stageData.desc || '') + '</div></td>' +
+          '<td>' + optionText(stageData.options || [{ label: stageData.buttonLabel || '知道了', detail: '' }]) + '</td>' +
+        '</tr>';
+      });
+    }).join('');
+    return '<h2>政策事件时间线</h2>' +
+      '<div class="note">这部分来自 <code>POLICY_EVENTS</code>,按游戏绝对天数触发,独立于随机事件抽签。</div>' +
+      '<table><thead><tr><th>Day</th><th>事件</th><th>阶段</th><th>类型</th><th>弹窗内容</th><th>选项</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
 
-<div class="chain-block">
-  <div class="chain-title">B4. accident · 司机事故</div>
-  <div class="chain-axis">信任责任轴 · 安全合规 · 决定车队信任度</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A(担责)</th>
-        <th>选项 B(撇清)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">accident_seed</span></td>
-        <td>unlockMission ≥ 5</td>
-        <td class="scene">小李剐蹭豪车,索赔 ¥3k</td>
-        <td><div class="opt-a"><b>公司全付</b><br>-¥3k,全员忠诚 +20<div class="next">→ 解锁 <code>accident_trust</code></div></div></td>
-        <td><div class="opt-b"><b>司机自付</b><br>钱保住,全员忠诚 -30<div class="next">→ 解锁 <code>accident_breach</code></div></div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">accident_trust</span></td>
-        <td>mission ≥ 10 + chainChoices.accident == 'cover'</td>
-        <td class="scene">小李撞行人骨折,医疗费 ¥15k</td>
-        <td><div class="opt-a"><b>车队全担医疗 + 误工</b><br>-¥15k,全员信任 +25,口碑 +10<div class="next">→ 解锁 <code>accident_loyalty</code></div></div></td>
-        <td><div class="opt-b"><b>让司机一人扛</b><br>钱保住,全员忠诚 -35,口碑 -10</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">accident_breach</span></td>
-        <td>mission ≥ 10 + chainChoices.accident == 'shift'</td>
-        <td class="scene">小李保险拒赔,¥15k 转嫁回车队</td>
-        <td><div class="opt-a"><b>公司咬牙担下</b><br>-¥15k,全员信任 +30</div></td>
-        <td><div class="opt-b"><b>让小李分期偿还</b><br>钱保住,全员忠诚 -25</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">accident_loyalty</span></td>
-        <td>mission ≥ 13 + chainChoices.accident_trust == 'cover'</td>
-        <td class="scene">小李主动提"我留下还您一辈子"</td>
-        <td><div class="opt-a"><b>加薪留下</b><br>月薪 +¥600,全员忠诚 +20</div></td>
-        <td><div class="opt-b"><b>平淡处理</b><br>不变</div></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  function kpiText(kpi) {
+    if (!kpi) return '<span class="muted">无硬 KPI</span>';
+    const parts = [
+      '资金 ≥ ' + money(kpi.funds),
+      '口碑 ≥ ' + kpi.reputation,
+      '车组 ≥ ' + kpi.crews,
+    ];
+    if (kpi.requireAirport) parts.push('需要专车车组');
+    if (kpi.requireLuxury) parts.push('需要豪华车组');
+    parts.push(kpi.threshold === 'two_of_three' ? '判定:车组必达 + 资金/口碑至少 1 项' : '判定:全部满足');
+    return parts.join('<br>');
+  }
 
-<h2>表 C:候选新链式 <span class="h2-sub">5 条 V15.x+ 储备 · 待 review,确认后再开发</span></h2>
+  function renderInvestorReviewTable() {
+    const review = D.INVESTOR_REVIEW || {};
+    const stageRows = Object.entries(review.stages || {}).map(([stageKey, stage]) => {
+      return '<tr data-search="' + esc(['investor_review', stageKey, stage.title, stage.tag, stage.desc].join(' ').toLowerCase()) + '">' +
+        '<td>' + code(stageKey) + '</td>' +
+        '<td><span class="tag">' + esc(stage.tag || '-') + '</span></td>' +
+        '<td><b>' + esc(stage.title || '') + '</b><div class="small">' + esc(stage.desc || '') + '</div></td>' +
+        '<td>' + optionText(stage.options || [{ label: stage.buttonLabel || '知道了', detail: '' }]) + '</td>' +
+      '</tr>';
+    }).join('');
+    const scheduleRows = (review.schedule || []).map((item) => {
+      return '<tr data-search="' + esc(['investor_review', item.stage, item.type].join(' ').toLowerCase()) + '">' +
+        '<td>' + item.atDay + '</td>' +
+        '<td>' + code(item.stage) + '</td>' +
+        '<td><span class="tag warn">' + esc(item.type) + '</span></td>' +
+        '<td>' + kpiText(review.kpi?.[item.stage]) + '</td>' +
+      '</tr>';
+    }).join('');
+    return '<h2>投资人 Review</h2>' +
+      '<div class="note">这部分来自 <code>INVESTOR_REVIEW</code>,按 Day 90 / 180 / 270 / 360 检查经营结果。弹窗预览页会把每个分支单独列出来。</div>' +
+      '<table><thead><tr><th>Day</th><th>检查点</th><th>类型</th><th>KPI 逻辑</th></tr></thead><tbody>' + scheduleRows + '</tbody></table>' +
+      '<table><thead><tr><th>Stage</th><th>Tag</th><th>弹窗文案</th><th>选项</th></tr></thead><tbody>' + stageRows + '</tbody></table>';
+  }
 
-<div class="note-block">
-  下面 5 条链式都是<b>带新机制</b>的提议(不是简单的"二选一"):
-  <ul style="margin-top:8px;padding-left:20px;line-height:1.8">
-    <li><b>C1 media 媒体公关</b> — 危机管理早晚做差很多;新增 <code>mediaFriend</code> 状态,后续危机能被压稿化解</li>
-    <li><b>C2 union 工会运动</b> — 集体劳动关系;新增 <code>unionPower 0~3</code>,影响所有"全员忠诚"事件倍率(双刃剑)</li>
-    <li><b>C3 franchise 加盟商</b> — 横向扩张;新增 <code>franchiseCount</code>,被动月收入 + 持续维护成本</li>
-    <li><b>C4 vip_client 大客户依赖</b> — B 端依赖度;新增 <code>vipClientId / vipLoyalty</code>,大客户流失断崖</li>
-    <li><b>C5 mass_quit 集体跳槽</b> — 凝聚力危机;新增 <code>teamCohesion</code>,极端时刻领导力倾向选择</li>
-  </ul>
-</div>
+  function renderMissionGateTable() {
+    const missionRows = (D.MISSIONS || []).map((mission, idx) => {
+      return '<tr data-search="' + esc([mission.id, mission.title, mission.desc, mission.hint].join(' ').toLowerCase()) + '">' +
+        '<td>' + (idx + 1) + '</td>' +
+        '<td>' + code(mission.id) + '</td>' +
+        '<td><b>' + esc(mission.title) + '</b><div class="small">' + esc(mission.desc || '') + '</div></td>' +
+        '<td>' + (mission.hidden ? '<span class="tag neutral">静默</span>' : '<span class="tag good">主线可见</span>') + '</td>' +
+        '<td>' + money(mission.reward?.funds) + '<div class="small">' + esc(mission.reward?.message || '') + '</div></td>' +
+      '</tr>';
+    }).join('');
+    const gateRows = (D.UI_GATES || []).map((gate) => {
+      const trigger = gate.trigger ? gate.trigger.type + ' = ' + gate.trigger.value : '-';
+      return '<tr data-search="' + esc([gate.id, gate.title, gate.desc, gate.hint, trigger].join(' ').toLowerCase()) + '">' +
+        '<td>' + code(gate.id) + '</td>' +
+        '<td><b>' + esc(gate.title) + '</b><div class="small">' + esc(gate.desc || '') + '</div></td>' +
+        '<td>' + code(trigger) + '</td>' +
+        '<td>' + esc(gate.hint || '') + '</td>' +
+      '</tr>';
+    }).join('');
+    return '<h2>任务与渐进解锁</h2>' +
+      '<div class="note">这张表用于看“什么时候会开放什么 UI”。主线任务来自 <code>MISSIONS</code>,入口解锁来自 <code>UI_GATES</code>。</div>' +
+      '<table><thead><tr><th>#</th><th>任务 ID</th><th>任务</th><th>展示</th><th>奖励</th></tr></thead><tbody>' + missionRows + '</tbody></table>' +
+      '<table><thead><tr><th>Gate ID</th><th>解锁内容</th><th>触发</th><th>位置</th></tr></thead><tbody>' + gateRows + '</tbody></table>';
+  }
 
-<div class="chain-block">
-  <div class="chain-title">C1. media · 媒体公关链(舆情放大器轴)</div>
-  <div class="chain-axis">机制:state 新增 <code>mediaFriend: bool</code> · 后续危机事件被媒体盟友"压稿"化解</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A</th>
-        <th>选项 B</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">media_seed</span></td>
-        <td>unlockMission ≥ 4</td>
-        <td class="scene">一名乘客在小红书发帖:"打了你家车,司机一路抽烟、骂街"。帖子几百赞了,司机辩称"乘客先骂"。</td>
-        <td><div class="opt-a"><b>公开道歉 + 退款 + 解雇该司机</b><br>-¥500,失去最强司机,全员忠诚 -10,口碑 +10<div class="next">→ 解锁 <code>media_pr</code></div></div></td>
-        <td><div class="opt-b"><b>观望,等舆情自然平息</b><br>钱保住,全员忠诚 +5(讲义气),口碑 -5<div class="next">→ 解锁 <code>media_storm</code></div></div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">media_pr</span></td>
-        <td>mission ≥ 8 + chainChoices.media == 'apologize'</td>
-        <td class="scene">本地都市报记者主动联系:"想做个专访,讲讲你怎么做到不爆雷"。</td>
-        <td><div class="opt-a"><b>接受专访</b><br>-¥3k 公关费,口碑 +25,<b>获得 mediaFriend 标签</b><div class="next">→ 解锁 <code>media_crisis_resolve</code></div></div></td>
-        <td><div class="opt-b"><b>婉拒,继续低调</b><br>无变化</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">media_storm</span></td>
-        <td>mission ≥ 8 + chainChoices.media == 'wait'</td>
-        <td class="scene">帖子被搬运到知乎/微博,标题"网约车司机骂街:某车队成黑车窝点",十几家自媒体跟进。</td>
-        <td><div class="opt-a"><b>请专业公关公司 -¥15k</b><br>平息舆情,口碑 +5(为时已晚)</div></td>
-        <td><div class="opt-b"><b>硬扛</b><br>每天 -¥500 持续 30 天,口碑 -10</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">media_crisis_resolve</span></td>
-        <td>mission ≥ 12 + state.mediaFriend == true</td>
-        <td class="scene">监管风声紧,媒体圈在挖网约车黑料。专访那位记者主动来电:"要不要我帮你写一篇正面稿?"</td>
-        <td><div class="opt-a"><b>接受 -¥2k 请客</b><br>未来 90 天监管事件触发时获得"行业典范"标签,口碑扣减 -50%</div></td>
-        <td><div class="opt-b"><b>自己处理</b><br>保持中立</div></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  function renderSummary() {
+    const events = D.EVENTS || [];
+    const chainEvents = events.filter(getChainFamily).length;
+    const visibleMissions = (D.MISSIONS || []).filter((mission) => !mission.hidden).length;
+    const hiddenMissions = (D.MISSIONS || []).filter((mission) => mission.hidden).length;
+    const metrics = [
+      ['随机事件', events.length],
+      ['链式事件段', chainEvents],
+      ['政策事件', (D.POLICY_EVENTS || []).length],
+      ['投资人阶段', Object.keys(D.INVESTOR_REVIEW?.stages || {}).length],
+      ['主线任务', visibleMissions + ' + ' + hiddenMissions + ' 静默'],
+      ['UI 解锁', (D.UI_GATES || []).length],
+    ];
+    summary.innerHTML = metrics.map(([label, value]) => '<div class="metric"><span>' + esc(label) + '</span><strong>' + esc(value) + '</strong></div>').join('');
+  }
 
-<div class="chain-block">
-  <div class="chain-title">C2. union · 工会运动链(集体劳动关系轴)</div>
-  <div class="chain-axis">机制:state 新增 <code>unionPower: 0~3</code> · 影响所有"全员忠诚"事件倍率(双刃剑)</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A</th>
-        <th>选项 B(C)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">union_seed</span></td>
-        <td>unlockMission ≥ 7</td>
-        <td class="scene">茶水间几个老司机围着小李的手机看视频:"某城市网约车司机集体维权,月薪涨 30%"。看完默不作声散开。</td>
-        <td><div class="opt-a"><b>主动召开座谈,鼓励组建司机协会</b><br>-¥3k 场地茶歇,月度运营 +¥800,<b>unionPower +1</b>,全员忠诚 +30<div class="next">→ 解锁 <code>union_bargain</code></div></div></td>
-        <td><div class="opt-b"><b>警告煽动者,强势压制</b><br>钱保住,全员忠诚 -25<div class="next">→ 解锁 <code>union_strike</code></div></div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">union_bargain</span></td>
-        <td>mission ≥ 11 + chainChoices.union == 'support'</td>
-        <td class="scene">司机选出 3 个代表来谈:"基础月薪上调 ¥600"。语气客气,但你知道这就是底线。</td>
-        <td colspan="2">
-          <div class="opt-a"><b>A:全部接受</b> — 全员月薪 +¥600,<b>unionPower +1</b>,全员忠诚 +25</div>
-          <div class="opt-a" style="border-left-color: var(--accent); margin-top: 4px;"><b>B:折中(薪 +¥300 + 餐补 +¥200)</b> — unionPower 持平,全员忠诚 +10</div>
-          <div class="opt-b" style="margin-top: 4px;"><b>C:拒绝,关系破裂</b> — <b>unionPower -2</b>,全员忠诚 -30</div>
-        </td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">union_strike</span></td>
-        <td>mission ≥ 11 + chainChoices.union == 'oppose'</td>
-        <td class="scene">车队群里 8 个司机集体宣布:今天起停止接单,要求重新谈判。</td>
-        <td><div class="opt-a"><b>紧急加薪 + 道歉</b><br>-¥5k 一次性,全员月薪 +¥800,<b>unionPower +1</b>(被迫高位),罢工平息</div></td>
-        <td><div class="opt-b"><b>解雇煽动者杀鸡儆猴</b><br>失去 1-2 名司机,口碑 -15,<b>unionPower -1</b>,罢工平息但全员忠诚 -25</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">union_consolidate</span></td>
-        <td>mission ≥ 14 + state.unionPower ≥ 2</td>
-        <td class="scene">代表们提议:"借鉴别家成功经验,搞个内部小金库,司机互助?"</td>
-        <td><div class="opt-a"><b>拨款支持 -¥10k 一次性,月度 -¥500</b><br><b>unionPower +1(最高)</b>,未来所有"全员忠诚 +X"事件效果 ×1.5</div></td>
-        <td><div class="opt-b"><b>婉拒,保持现状</b><br>不变</div></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  function render() {
+    const events = D.EVENTS || [];
+    const chainBuckets = {};
+    const singleEvents = [];
+    events.forEach((event) => {
+      const family = getChainFamily(event);
+      if (family) {
+        if (!chainBuckets[family]) chainBuckets[family] = [];
+        chainBuckets[family].push(event);
+      } else {
+        singleEvents.push(event);
+      }
+    });
 
-<div class="chain-block">
-  <div class="chain-title">C3. franchise · 加盟商链(横向扩张轴)</div>
-  <div class="chain-axis">机制:state 新增 <code>franchiseCount: int</code> · 月度被动收入 + 持续维护成本(被动收益 vs 持续注意力消耗)</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A</th>
-        <th>选项 B(C)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">franchise_seed</span></td>
-        <td>unlockMission ≥ 9</td>
-        <td class="scene">河北保定一位小车队主王老板:"我有 5 辆车,想加盟你的品牌。我们出车出人,你出系统和品牌,月给你抽 8% 加盟费。"</td>
-        <td><div class="opt-a"><b>接受合作</b><br>-¥5k 设备培训,月度运营 +¥1k,<b>每月被动 +¥3k</b>,franchiseCount = 1<div class="next">→ 解锁 <code>franchise_dispute</code></div></div></td>
-        <td><div class="opt-b"><b>婉拒,集中资源</b><br>无变化</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">franchise_dispute</span></td>
-        <td>mission ≥ 12 + chainChoices.franchise == 'accept'</td>
-        <td class="scene">王老板手下司机被乘客投诉收黑钱,投诉单挂着你家品牌。媒体追问"XXX 究竟管不管加盟商?"</td>
-        <td colspan="2">
-          <div class="opt-a"><b>A:高调处理 -¥8k</b> — 解雇司机+退款,franchiseCount 保持,声誉 +10</div>
-          <div class="opt-b" style="margin-top: 4px;"><b>B:冷处理,让加盟商自己摆平</b> — 口碑 -15,franchiseCount 保持</div>
-          <div class="opt-b" style="border-left-color: var(--warn); margin-top: 4px;"><b>C:终止加盟合同 -¥5k 违约金</b> — franchiseCount = 0,加盟收入终止</div>
-        </td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">franchise_expand</span></td>
-        <td>mission ≥ 14 + chainChoices.franchise_dispute ∈ {'high_profile', 'hands_off'}</td>
-        <td class="scene">3 家其他城市小车队主想加盟。</td>
-        <td colspan="2">
-          <div class="opt-a"><b>A:全部接受 -¥15k</b> — 月度运营 +¥3k,franchiseCount = 4,月被动 +¥10k</div>
-          <div class="opt-a" style="border-left-color: var(--accent); margin-top: 4px;"><b>B:精挑细选 -¥6k</b> — 月度运营 +¥1k,franchiseCount = 2,月被动 +¥6k</div>
-          <div class="opt-b" style="margin-top: 4px;"><b>C:暂停扩张</b> — 维持现状</div>
-        </td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">franchise_brand_check</span></td>
-        <td>mission ≥ 15 + state.franchiseCount ≥ 2</td>
-        <td class="scene">新规要求"品牌方对所有挂牌车辆负完全责任",加盟商出问题你担连带。</td>
-        <td><div class="opt-a"><b>全员合规升级 -¥30k</b><br>月度运营 +¥3k,franchise 模式继续</div></td>
-        <td><div class="opt-b"><b>剥离加盟业务 -¥10k 剥离成本</b><br>franchiseCount = 0,监管风险归 0</div></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+    renderSummary();
+    let html = '';
+    html += renderEventTable('随机事件 · 单段', '来自 <code>EVENTS</code> 中未归入四条真分支链式的事件。触发仍走每 7 天抽签、unlockMission 和冷却过滤。', singleEvents);
+    TRUE_CHAINS.forEach((family) => {
+      html += renderEventTable('链式事件 · ' + (CHAIN_NAMES[family] || family), '同一链路下的后续段靠 <code>chainChoices</code>、钥匙司机状态等条件过滤,不是旧版 chainStages 顺序推进。', chainBuckets[family] || []);
+    });
+    html += renderPolicyTable();
+    html += renderInvestorReviewTable();
+    html += renderMissionGateTable();
+    content.innerHTML = html || '<div class="empty">没有读取到事件数据</div>';
+    applyFilter();
+  }
 
-<div class="chain-block">
-  <div class="chain-title">C4. vip_client · 大客户依赖链(B 端依赖轴)</div>
-  <div class="chain-axis">机制:state 新增 <code>vipClientId / vipLoyalty</code> · 大客户在则月稳定 +¥X,流失则断崖式下跌</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A</th>
-        <th>选项 B(C)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">vip_seed</span></td>
-        <td>unlockMission ≥ 8</td>
-        <td class="scene">本地律所合伙人陈律师每天打两趟你家车,主动提:"月付 ¥5k 包月,你给我固定一个司机一辆车?"</td>
-        <td><div class="opt-a"><b>接受协议 + VIP 服务</b><br>占用 1 司机 + 1 车专属,<b>月被动 +¥5k</b>,vipClientId = 'mr_chen'<div class="next">→ 解锁 <code>vip_test</code></div></div></td>
-        <td><div class="opt-b"><b>婉拒,保持公平派单</b><br>无变化</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">vip_test</span></td>
-        <td>mission ≥ 12 + chainChoices.vip_client == 'accept'</td>
-        <td class="scene">陈律师朋友圈:"老板提了新车,偶尔被 Camry 接也是没办法。"助理问要不要给他专门买奔驰 E。</td>
-        <td colspan="2">
-          <div class="opt-a"><b>A:买奔驰 E 专门给他</b> — 奔驰 E 一辆 + 高级司机,vipLoyalty +30,月付涨到 ¥8k</div>
-          <div class="opt-a" style="border-left-color: var(--accent); margin-top: 4px;"><b>B:服务培训软处理 -¥1k</b> — vipLoyalty +10</div>
-          <div class="opt-b" style="margin-top: 4px;"><b>C:坚持原车型</b> — vipLoyalty -20</div>
-        </td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">vip_loyalty</span></td>
-        <td>mission ≥ 14 + chainChoices.vip_test ∈ {'upgrade', 'soft_serve'}</td>
-        <td class="scene">陈律师在律所午餐推荐你的车队,3 位合伙人想签同款长期协议。</td>
-        <td><div class="opt-a"><b>扩展 VIP 服务(接 3 位)</b><br>占用 3 司机 + 3 车,<b>月被动 +¥18k</b>,vip 体系建立</div></td>
-        <td><div class="opt-b"><b>婉拒,保持原协议</b><br>陈律师可能感到失望</div></td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">vip_loss</span></td>
-        <td>mission ≥ 14 + chainChoices.vip_test == 'stay_firm'</td>
-        <td class="scene">陈律师没打招呼直接终止协议,朋友圈发"换了别家平台"。月被动 ¥5k 收入消失。</td>
-        <td><div class="opt-a"><b>分析失败原因 -¥3k 流程升级</b><br>未来 VIP 协议成功率 +20%</div></td>
-        <td><div class="opt-b"><b>算了,回归散单</b><br>保持灵活性</div></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  function applyFilter() {
+    const q = (searchInput.value || '').trim().toLowerCase();
+    document.querySelectorAll('tbody tr[data-search]').forEach((row) => {
+      row.style.display = !q || row.dataset.search.includes(q) ? '' : 'none';
+    });
+  }
 
-<div class="chain-block">
-  <div class="chain-title">C5. mass_quit · 集体跳槽链(凝聚力危机轴)</div>
-  <div class="chain-axis">机制:state 新增 <code>teamCohesion: int</code> · 极端时刻 3 选项领导力倾向(讨好 / 强硬 / 整合)</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:140px">段 ID</th>
-        <th style="width:200px">触发条件</th>
-        <th style="width:240px">场景</th>
-        <th>选项 A</th>
-        <th>选项 B</th>
-        <th>选项 C</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="stage-id">mass_quit_seed</span></td>
-        <td>unlockMission ≥ 10</td>
-        <td class="scene">早上你打开车队群,看到 3 条退群提示——老张、小李、老周一夜被滴答挖走(加薪 +¥3k + 签约金 ¥10k)。剩下的司机看着群,没人说话。</td>
-        <td>
-          <div class="opt-a"><b>紧急全员加薪</b><br>-¥5k,全员月薪 +¥600,<br>teamCohesion +30<div class="next">→ <code>mass_quit_followup</code> 'concede'</div></div>
-        </td>
-        <td>
-          <div class="opt-b"><b>解雇引荐者杀鸡儆猴</b><br>再失去 1 名司机,口碑 -10,<br>teamCohesion -20<div class="next">→ <code>mass_quit_followup</code> 'crack'</div></div>
-        </td>
-        <td>
-          <div class="opt-a" style="border-left-color: var(--accent);"><b>开诚布公团建</b><br>-¥3k 团建,暂停 1 天运营,<br>teamCohesion +20<div class="next">→ <code>mass_quit_followup</code> 'team'</div></div>
-        </td>
-      </tr>
-      <tr>
-        <td><span class="stage-id">mass_quit_followup</span></td>
-        <td>mission ≥ 12 + chainChoices.mass_quit ∈ all</td>
-        <td class="scene">老张找到你说:"滴答那边累得要死,完全不像他们承诺的。我能回来吗?"<br>(若选 'team' 选项,这种"老员工请求回归"场景以更高概率触发,呼应"开诚布公"的剧情奖励)</td>
-        <td>
-          <div class="opt-a"><b>欢迎回归</b><br>老张回归,全员忠诚 +20</div>
-        </td>
-        <td>
-          <div class="opt-a" style="border-left-color: var(--accent);"><b>试用期 / 降薪 1 月</b><br>老张回归但忠诚 -15,全员忠诚 +10(讲规矩)</div>
-        </td>
-        <td>
-          <div class="opt-b"><b>拒绝</b><br>全员忠诚 -10(兔死狐悲)</div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <div style="background: var(--sub); padding: 10px 14px; margin-top: 12px; border-radius: var(--ui-radius); font-size: 12px; color: var(--ink-2);">
-    <b>设计意图:</b> mass_quit 不是"分多段慢节奏 chain",而是<b>极端时刻一次性高烈度选择</b>。teamCohesion 数值在后续所有"全员忠诚"事件里影响倍率(类似 unionPower 但只有一次性获得机会)。考验玩家的领导力倾向 — 选 A 讨好型、选 B 强硬型、选 C 整合型,各有不同后续 buff。
-  </div>
-</div>
+  searchInput.addEventListener('input', applyFilter);
+  reloadBtn.addEventListener('click', () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('_t', Date.now());
+    window.location.href = url.toString();
+  });
 
-<h2>调整提示 <span class="h2-sub">告诉我你想改的具体内容</span></h2>
-
-<div class="note-block">
-  <b>你可以这样反馈:</b>
-  <br>
-  ① "把 #11 newyear_spring_rush 调到 m4" — 改具体事件的 unlockMission<br>
-  ② "把 borrow 的 close 段挪到 m6" — 改链式段的触发节点<br>
-  ③ "把 #6 ride_cancel_chain 删了,这事不重要" — 删某个事件<br>
-  ④ "B4 加一个 stage,小李康复后送锦旗" — 补链式分支<br>
-  ⑤ "整体改:m8 之前太密了,稀释一下" — 整体节奏调整
-  <br><br>
-  确认无问题后我开始两步落地:
-  <br>
-  <b>PR-1</b>:数据层重构(数据迁移 + unlockMission 字段 + 删 newpolicy + 拆 6 个独立段)
-  <br>
-  <b>PR-2</b>:引擎层(unlockMission 过滤 + chainChoices state + 4 条真分支链式逻辑)
-</div>
-
-</div>
+  render();
+})();
+</script>
 </body>
 </html>
