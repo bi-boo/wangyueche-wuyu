@@ -132,10 +132,6 @@ function getEventOptionDetail(option, effect) {
   return option.detail;
 }
 
-function detailLooksLikeNumericEffect(detail) {
-  return /[¥+\-−]|忠诚|信任|口碑|抽成|事故|订单|失去|留队|合规/.test(detail || '');
-}
-
 function formatOrderBoostText(effect) {
   if (!effect.orderBoost || effect.orderBoost === 1) return '';
   const percent = Math.round(Math.abs(effect.orderBoost - 1) * 100);
@@ -143,6 +139,11 @@ function formatOrderBoostText(effect) {
   return effect.orderBoost > 1
     ? `接单收入临时提高 ${percent}%${duration}`
     : `接单收入临时降低 ${percent}%${duration}`;
+}
+
+function getEffectVehicleName(effect) {
+  const vehicle = D.VEHICLES?.find((v) => v.id === effect?.vehicleType);
+  return vehicle?.name || '车辆';
 }
 
 // V14: 投资人压力多选弹窗 — 三个开关任意组合 + 兜底「靠流水硬扛」单选
@@ -464,22 +465,58 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
         <div className="modal-options">
           {event.options.map((o, i) => {
             const eff = previewEventEffect(event, o, state);
-            const hasImmediateEffect = Object.keys(eff).some((key) => key !== 'eventScale' && key !== 'previewError');
-            const nextFunds = eff.funds !== undefined && state ? state.funds + eff.funds : null;
             const bestDriver = getBestDriverForEvent(state);
             const salaryAfter = bestDriver && eff.salaryRaise ? bestDriver.salary + eff.salaryRaise : null;
             const salaryDaily = eff.salaryRaise ? Math.round(eff.salaryRaise / 30) : 0;
-            const optionDetail = getEventOptionDetail(o, eff);
-            const showNoImmediateEffect = !hasImmediateEffect && !detailLooksLikeNumericEffect(optionDetail);
+            const optionDetail = event.blindOptions ? (o.detail || '') : getEventOptionDetail(o, eff);
             const orderBoostText = formatOrderBoostText(eff);
             const disabledReason = getEventOptionDisabledReason(o, state);
+            const effectPreviewItems = [];
+            const addPreview = (content, className = '') => {
+              effectPreviewItems.push(<span key={effectPreviewItems.length} className={className}>{content}</span>);
+            };
+            if (disabledReason) addPreview(disabledReason, 'negative');
+            if (eff.funds !== undefined) {
+              addPreview(`资金 ${eff.funds > 0 ? '+' : ''}${eff.funds.toLocaleString()}`, eff.funds < 0 ? 'negative' : 'positive');
+            }
+            if (eff.reputation !== undefined) {
+              addPreview(`口碑 ${eff.reputation > 0 ? '+' : ''}${eff.reputation}`, eff.reputation < 0 ? 'negative' : 'positive');
+            }
+            if (eff.allLoyalty !== undefined) {
+              addPreview(`全员忠诚 ${eff.allLoyalty > 0 ? '+' : ''}${eff.allLoyalty}`, eff.allLoyalty < 0 ? 'negative' : 'positive');
+            }
+            if (eff.trustLoyalty !== undefined) {
+              addPreview(`全员信任 ${eff.trustLoyalty > 0 ? '+' : ''}${eff.trustLoyalty}`, eff.trustLoyalty < 0 ? 'negative' : 'positive');
+            }
+            if (eff.salaryRaise && eff.keepBest && bestDriver) {
+              addPreview(`${bestDriver.name} 月薪 +¥${eff.salaryRaise} → ¥${salaryAfter}`, 'negative');
+              addPreview(`日成本约 +¥${salaryDaily}`, 'negative');
+              addPreview(`${bestDriver.name} 留队 · 忠诚 +30`, 'positive');
+            }
+            if (orderBoostText) addPreview(orderBoostText, eff.orderBoost < 1 ? 'negative' : 'positive');
+            if (eff.commissionRate !== undefined) addPreview(`平台抽成调整为 ${Math.round(eff.commissionRate * 100)}%`);
+            if (eff.certifyFleet) addPreview('当前车辆合规升级', 'positive');
+            if (eff.addDrivers) addPreview(`新增司机 +${eff.addDrivers}`, 'positive');
+            if (eff.addVehicles) addPreview(`${getEffectVehicleName(eff)} +${eff.addVehicles}`, 'positive');
+            if (eff.accidentRisk) {
+              addPreview(
+                `${Math.round(eff.accidentRisk.chance * 100)}% 事故风险` +
+                `${eff.accidentRisk.funds ? ` · 修车 ${eff.accidentRisk.funds.toLocaleString()}` : ''}` +
+                `${eff.accidentRisk.allLoyalty ? ` · 全员忠诚 ${eff.accidentRisk.allLoyalty}` : ''}` +
+                `${eff.accidentRisk.trustLoyalty ? ` · 全员信任 ${eff.accidentRisk.trustLoyalty}` : ''}` +
+                `${eff.accidentRisk.reputation ? ` · 口碑 ${eff.accidentRisk.reputation}` : ''}`,
+                'negative'
+              );
+            }
+            if (eff.loseBest) addPreview(formatLoseBestPreview(eff, bestDriver), 'negative');
+            if (eff.previewError) addPreview('事件预览异常,请选择其他方案', 'negative');
             // V15.x: blindOptions 事件(如 rival_pricing 4 选项盲选)隐藏 effect chips,选完才揭晓
             if (event.blindOptions) {
               return (
                 <button key={i} className="modal-option" disabled={!!disabledReason} onClick={() => onResolve(i)}>
                   <div className="modal-option-label">{o.label}</div>
                   {optionDetail && <div className="modal-option-effect">{optionDetail}</div>}
-                  {disabledReason && <div className="event-effect-preview"><span className="negative">{disabledReason}</span></div>}
+                  {disabledReason && <div className="event-effect-preview">{effectPreviewItems}</div>}
                 </button>
               );
             }
@@ -487,59 +524,7 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
               <button key={i} className="modal-option" disabled={!!disabledReason} onClick={() => onResolve(i)}>
                 <div className="modal-option-label">{o.label}</div>
                 {optionDetail && <div className="modal-option-effect">{optionDetail}</div>}
-                <div className="event-effect-preview">
-                  {disabledReason && <span className="negative">{disabledReason}</span>}
-                  {eff.funds !== undefined && (
-                    <span className={eff.funds < 0 ? 'negative' : 'positive'}>
-                      资金 {eff.funds > 0 ? '+' : ''}{eff.funds.toLocaleString()}
-                    </span>
-                  )}
-                  {eff.reputation !== undefined && (
-                    <span className={eff.reputation < 0 ? 'negative' : 'positive'}>
-                      口碑 {eff.reputation > 0 ? '+' : ''}{eff.reputation}
-                    </span>
-                  )}
-                  {eff.allLoyalty !== undefined && (
-                    <span className={eff.allLoyalty < 0 ? 'negative' : 'positive'}>
-                      全员忠诚 {eff.allLoyalty > 0 ? '+' : ''}{eff.allLoyalty}
-                    </span>
-                  )}
-                  {eff.trustLoyalty !== undefined && (
-                    <span className={eff.trustLoyalty < 0 ? 'negative' : 'positive'}>
-                      全员信任 {eff.trustLoyalty > 0 ? '+' : ''}{eff.trustLoyalty}
-                    </span>
-                  )}
-                  {eff.salaryRaise && eff.keepBest && bestDriver && (
-                    <>
-                      <span className="negative">
-                        {bestDriver.name} 月薪 +¥{eff.salaryRaise} → ¥{salaryAfter}
-                      </span>
-                      <span className="negative">日成本约 +¥{salaryDaily}</span>
-                      <span className="positive">{bestDriver.name} 留队 · 忠诚 +30</span>
-                    </>
-                  )}
-                  {orderBoostText && (
-                    <span className={eff.orderBoost < 1 ? 'negative' : 'positive'}>
-                      {orderBoostText}
-                    </span>
-                  )}
-                  {eff.commissionRate !== undefined && (
-                    <span>平台抽成调整为 {Math.round(eff.commissionRate * 100)}%</span>
-                  )}
-                  {eff.certifyFleet && <span className="positive">当前车辆合规升级</span>}
-                  {eff.accidentRisk && (
-                    <span className="negative">
-                      {Math.round(eff.accidentRisk.chance * 100)}% 事故风险
-                      {eff.accidentRisk.funds ? ` · 修车 ${eff.accidentRisk.funds.toLocaleString()}` : ''}
-                      {eff.accidentRisk.allLoyalty ? ` · 全员忠诚 ${eff.accidentRisk.allLoyalty}` : ''}
-                      {eff.accidentRisk.trustLoyalty ? ` · 全员信任 ${eff.accidentRisk.trustLoyalty}` : ''}
-                      {eff.accidentRisk.reputation ? ` · 口碑 ${eff.accidentRisk.reputation}` : ''}
-                    </span>
-                  )}
-                  {eff.loseBest && <span className="negative">{formatLoseBestPreview(eff, bestDriver)}</span>}
-                  {eff.previewError && <span className="negative">事件预览异常,请选择其他方案</span>}
-                  {showNoImmediateEffect && <span>无立即数值变化</span>}
-                </div>
+                {effectPreviewItems.length > 0 && <div className="event-effect-preview">{effectPreviewItems}</div>}
               </button>
             );
           })}

@@ -430,15 +430,15 @@ V15.x 重构(替代 V10.10 的 chainStages 顺序触发):
 - **删除 chainStages 容器机制**:不再按"chainCount % 3"顺序解锁 stage,改用 `chainChoices` 真分支
 - **unlockMission 阶段化**:每个事件标 `unlockMission: N`,完成第 N 个任务后才进入抽签池
 - **4 条真分支链式**(`borrow`/`platform`/`rival`/`accident`):上一段选项决定下一段走哪条
-- **拆段**:`rain`/`celeb`/`newyear` 三个旧 chain 拆为 9 个独立单段事件
+- **单段事件补厚**:`rain`/`celeb`/`festival` 等事件独立触发,并补充机场、推流、发票、直播、充电、截图外传等经营压力事件
 - **删除**:`newpolicy`(已被 V15 监管整改政策事件覆盖)
-- 事件总数:35 个独立 ID,事件池过滤靠 unlockMission + requireChainChoice + requireKeyDriverAlive
+- 事件总数:32 个独立 ID,事件池过滤靠 unlockMission + requireChainChoice + requireKeyDriverAlive
 
 ### 4 条真分支链式
 
 | chain | 角色 | 段数 | 关键机制 |
 |---|---|---|---|
-| `borrow` 老张借钱 | 关系信任轴 | 5 | seed → close/distance → intimate/cooled |
+| `borrow` 老张借钱 | 关系信任轴 | 4 | seed → close/distance → intimate |
 | `platform` 平台抽成 | 长线攒钱引导 | 1(可重复) | 抽成 +5%/次封顶 40%,选自营 −¥180k 永久完结 |
 | `rival` 竞品挖人 | 钥匙司机机制 | 4 | seed → pricing 4 选项盲选 → friends_join 成功/失败 |
 | `accident` 司机事故 | 信任责任轴 | 4 | seed → trust/breach → loyalty |
@@ -519,20 +519,21 @@ EVENTS.filter(e =>
 | `platformDone` | 设置 state.platformChoseSelfop = true |
 | `loseDriverName` / `loseBestLabel` | 人物链事件可指定离队司机和预览/日志文案,避免 NPC 叙事透出随机司机名 |
 
-### 35 个事件按 unlockMission 分布
+### 32 个事件按 unlockMission 分布
 
 | unlockMission | 对应里程碑 | 该阶段事件 |
 |---|---|---|
 | 0 | 开局 | rain_base、newyear_base、borrow_seed |
-| 3 | m3 三辆车 | celeb_base |
+| 4 | m4 稳定运营 | airport_queue_side_deal |
 | 5 | m5 三车组 | accident_seed、complaint_harass、borrow_close、borrow_distance |
 | 6 | m6 服务训练 | aging_test |
-| 8 | m8 车技 35 | platform_pressure、account_freeze、social_lapse |
+| 7 | m7 初步扩张 | traffic_package |
+| 8 | m8 车技 35 | platform_pressure、account_freeze、social_lapse、fake_invoice_ring |
 | 9 | m9 凯美瑞 | cheating_data、celeb_pack |
-| 10 | m10 口碑 180 | accident_trust、accident_breach |
-| 11 | m11 第一单专车 | night_robbery、borrow_intimate |
+| 10 | m10 口碑 180 | accident_trust、accident_breach、driver_livestream |
+| 11 | m11 第一单专车 | night_robbery、charging_queue_clash、borrow_intimate |
 | 12 | m12 五车组 | family_emergency |
-| 13 | m13 奔驰 E | rival_seed、celeb_paparazzi、accident_loyalty |
+| 13 | m13 奔驰 E | rival_seed、celeb_paparazzi、dashboard_screenshot、accident_loyalty |
 | 14 | m14 车技 70 | quit_temptation、rain_red_alert、rival_pricing |
 | 15 | m15 口碑 520 | rival_friends_join_success、rival_friends_join_lost |
 

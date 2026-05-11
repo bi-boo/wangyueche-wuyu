@@ -656,6 +656,60 @@
         { label: '放他走', detail: '钱保住,失去最强司机', apply: () => ({ loseBest: true }) },
       ],
     },
+    {
+      id: 'airport_queue_side_deal', title: '机场排队有人递话', tag: '行业', emoji: 'biz', cooldown: 35,
+      unlockMission: 4,
+      desc: '机场排队区有人拉你进"保底单群":交一笔茶水费,夜里大单优先推给你家车。规则灰得发亮。',
+      options: [
+        { label: '先试一个月', detail: '+¥3,000,口碑 −10,所有司机忠诚 −10', apply: () => ({ funds: 3000, reputation: -10, allLoyalty: -10 }) },
+        { label: '不碰灰色单群', detail: '口碑 +8,所有司机忠诚 +10', apply: () => ({ reputation: 8, allLoyalty: 10 }) },
+      ],
+    },
+    {
+      id: 'traffic_package', title: '平台推流量包', tag: '行业', emoji: 'biz', cooldown: 35,
+      unlockMission: 7,
+      desc: '平台运营说最近自然流量紧,建议你买"黄金曝光位"。名字像广告,账单是真钱。',
+      options: [
+        { label: '买一周曝光位', detail: '资金 −¥5,000,接单收入 +30%(7 天)', apply: () => ({ funds: -5000, orderBoost: 1.3, boostDuration: 7 }) },
+        { label: '靠服务分慢慢熬', detail: '口碑 +5,所有司机忠诚 +10', apply: () => ({ reputation: 5, allLoyalty: 10 }) },
+      ],
+    },
+    {
+      id: 'fake_invoice_ring', title: '乘客想虚开发票', tag: '监管', emoji: 'gov', cooldown: 35,
+      unlockMission: 8,
+      desc: '一个企业客户要你把几单车费合成大额发票,愿意额外给手续费。司机觉得这是顺手钱,财务说别碰。',
+      options: [
+        { label: '配合做一单', detail: '+¥3,000,口碑 −15', apply: () => ({ funds: 3000, reputation: -15 }) },
+        { label: '拒绝并留记录', detail: '口碑 +8,全员信任 +10', apply: () => ({ reputation: 8, trustLoyalty: 10 }) },
+      ],
+    },
+    {
+      id: 'driver_livestream', title: '司机开直播接单', tag: '运气', emoji: 'star', cooldown: 35,
+      unlockMission: 10,
+      desc: '小吴一边跑车一边直播,镜头里全是城市夜景和乘客背影。粉丝涨得很快,投诉入口也离得很近。',
+      options: [
+        { label: '允许试播,但签隐私约定', detail: '+¥3,500,口碑 −8,所有司机忠诚 +10', apply: () => ({ funds: 3500, reputation: -8, allLoyalty: 10 }) },
+        { label: '直接叫停', detail: '口碑 +8,所有司机忠诚 −10', apply: () => ({ reputation: 8, allLoyalty: -10 }) },
+      ],
+    },
+    {
+      id: 'charging_queue_clash', title: '充电站排队打起来了', tag: '危机', emoji: 'crash', cooldown: 35,
+      unlockMission: 11,
+      desc: '新能源车越来越多,司机在充电站排队排到火大。今天你家司机和隔壁车队吵起来,差点动手。',
+      options: [
+        { label: '包下夜间固定桩位', detail: '资金 −¥6,000,所有司机忠诚 +20,接单收入 +10%(5 天)', apply: () => ({ funds: -6000, allLoyalty: 20, orderBoost: 1.1, boostDuration: 5 }) },
+        { label: '让他们自己协调', detail: '资金不变,所有司机忠诚 −20', apply: () => ({ allLoyalty: -20 }) },
+      ],
+    },
+    {
+      id: 'dashboard_screenshot', title: '后台数据被截图外传', tag: '危机', emoji: 'biz', cooldown: 40,
+      unlockMission: 13,
+      desc: '有人把你后台的司机收入截图发到群里,标题是"老板到底抽了多少"。数字不完整,情绪很完整。',
+      options: [
+        { label: '开会把账摊开讲', detail: '口碑 −5,全员信任 +20', apply: () => ({ reputation: -5, trustLoyalty: 20 }) },
+        { label: '先查是谁截的图', detail: '口碑 −10,所有司机忠诚 −20', apply: () => ({ reputation: -10, allLoyalty: -20 }) },
+      ],
+    },
 
     // ============ rain chain 拆段(独立单段) ============
     {
@@ -697,13 +751,13 @@
       ],
     },
 
-    // ============ newyear 单事件 ============
+    // ============ festival 单事件 ============
     {
-      id: 'newyear_base', title: '春节将至', tag: '节日', emoji: 'festival', cooldown: 60,
+      id: 'newyear_base', title: '中秋将至', tag: '节日', emoji: 'festival', cooldown: 60,
       unlockMission: 0,
-      desc: '春节又到了。司机们想回家,平台单量也凶。给红包?还是按平时来?',
+      desc: '中秋快到了。司机们想回家团圆,平台单量也在涨。给过节红包,还是按平时来?',
       options: [
-        { label: '春节红包 + 帮买回家票', detail: '−¥3,000,所有司机忠诚 +60', apply: () => ({ funds: -3000, allLoyalty: 60 }) },
+        { label: '中秋红包 + 帮买回家票', detail: '−¥3,000,所有司机忠诚 +60', apply: () => ({ funds: -3000, allLoyalty: 60 }) },
         { label: '正常过节,自己想办法', detail: '钱保住,所有司机忠诚 −20', apply: () => ({ allLoyalty: -20 }) },
       ],
     },
@@ -778,7 +832,7 @@
       unlockMission: 14,
       requireChainChoice: { rival: 'keep' },
       blindOptions: true,
-      desc: '滴答这次出价翻倍 + ¥10,000 签约费。法务说"你给多少他才肯留"。这次给多少,你自己拿主意。',
+      desc: '滴答把月薪报价抬高了,还承诺一笔签约费。司机没直接答应,只把话递回来:你这边愿意加多少?给少了他可能走,给多了你要长期背成本。',
       // 4 选项盲选(blindOptions=true):玩家选之前看不到具体后果,选完才揭晓
       options: [
         { label: '+¥1,000', detail: '试探性加价', choiceKey: 1000, apply: () => ({ loseBest: true, allLoyalty: -20 }) },
@@ -792,9 +846,9 @@
       unlockMission: 15,
       requireChainChoice: { rival_pricing: [3000, 4000] },
       requireKeyDriverAlive: true,
-      desc: '钥匙司机找上你:"我以前在滴答的老兄弟想跳槽,他们自带专车,问你这边靠不靠谱"',
+      desc: '之前被你加薪留下的王牌司机找上你:"我以前在滴答的老兄弟想跳槽,他们自带专车,问你这边靠不靠谱。"',
       options: [
-        { label: '欢迎加入', detail: '+¥3k 选项 → 0 成本获得 3 司机 + 3 凯美瑞;+¥4k 选项 → 5 司机 + 5 凯美瑞', apply: (s) => {
+        { label: '欢迎加入', detail: '他们愿意带车入队,先让几个人试跑。', apply: (s) => {
           const choice = (s && s.chainChoices && s.chainChoices.rival_pricing) || 3000;
           const count = choice === 4000 ? 5 : 3;
           return { addDrivers: count, addVehicles: count, vehicleType: 'camry' };
@@ -806,7 +860,7 @@
       unlockMission: 15,
       requireChainChoice: { rival_pricing: [3000, 4000] },
       requireKeyDriverAlive: false,
-      desc: '听说滴答 3 个专车司机想跳槽,要找熟人引荐。可你这边没合适人脉——上次没留住他,这条路也断了。',
+      desc: '听说滴答几个专车司机想跳槽,要找熟人引荐。可你这边没人能递这句话,这条路也断了。',
       options: [
         { label: '知道了', detail: '机会流失,无奖励', apply: () => ({}) },
       ],
@@ -1272,8 +1326,8 @@
     },
     {
       id: 'tryrate_card',
-      title: '接单率拆解',
-      desc: '司机详情下方显示「今日接单率」公式,基础 × 口碑 × 忠诚 × 加成。今天单少看这里就知道哪个变量在压。',
+      title: '接单诊断',
+      desc: '这不是一个需要天天盯的考核指标。单少时再看它:到底是城市口碑不够、司机忠诚低,还是司机背景加成不足。',
       hint: '右侧调度台 · 司机详情',
       trigger: { type: 'mission', value: 'm5_third_crew' },
     },
