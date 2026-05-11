@@ -1239,3 +1239,133 @@
   .topbar-stat.ir-stat--boosted .ts-value { color: var(--ink) !important; }
 
   /* 状态 5(撤资 / 选稳着先 → 单元从 DOM 移除,无需 CSS) */
+
+  /* V15.17: 政策弹窗专属样式。避免通用 .modal-option 的重黑边框套进复合决策卡。 */
+  .policy-decision-modal .modal-options {
+    gap: 12px;
+  }
+  .policy-decision-card {
+    background: color-mix(in srgb, var(--sub) 54%, var(--card) 46%);
+    border: 2px solid color-mix(in srgb, var(--ink) 42%, var(--bg-deep) 58%);
+    border-radius: var(--ui-radius);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
+    overflow: hidden;
+  }
+  .policy-decision-main {
+    display: block;
+    width: 100%;
+    padding: 13px 16px 12px;
+    text-align: left;
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    cursor: pointer;
+  }
+  .policy-decision-card:hover,
+  .policy-decision-card:focus-within {
+    border-color: var(--ink);
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.28);
+  }
+  .policy-decision-main:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: -5px;
+  }
+  .policy-decision-card .event-effect-preview {
+    margin-top: 9px;
+  }
+  .policy-decision-toggle {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    padding: 10px 16px 12px;
+    background: color-mix(in srgb, var(--accent-soft) 38%, var(--card) 62%);
+    border-top: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .policy-decision-toggle input {
+    width: 15px;
+    height: 15px;
+    margin: 2px 0 0;
+    accent-color: var(--accent);
+  }
+  .policy-decision-toggle-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+  .policy-decision-toggle-copy strong {
+    font-size: 14px;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+  .policy-decision-toggle-copy > span {
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--ink-3);
+  }
+
+  .policy-effect-list {
+    display: grid;
+    gap: 7px;
+    margin: 0 0 12px;
+  }
+  .policy-effect-heading {
+    font-size: 14px;
+    line-height: 1.2;
+    color: var(--ink-2);
+    font-weight: 800;
+    margin: 0 0 1px;
+  }
+  .policy-effect-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 42px;
+    padding: 9px 12px;
+    background: color-mix(in srgb, var(--sub) 62%, var(--card) 38%);
+    border: 1.5px solid color-mix(in srgb, var(--ink) 22%, var(--bg-deep) 78%);
+    border-radius: var(--ui-radius);
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.08);
+    font-size: 14px;
+  }
+  .policy-effect-row.negative {
+    background: color-mix(in srgb, var(--warn) 9%, var(--card) 91%);
+    border-color: color-mix(in srgb, var(--warn) 34%, var(--ink) 14%, var(--bg-deep) 52%);
+  }
+  .policy-effect-row.positive {
+    background: color-mix(in srgb, var(--green) 10%, var(--card) 90%);
+    border-color: color-mix(in srgb, var(--green) 36%, var(--ink) 12%, var(--bg-deep) 52%);
+  }
+  .policy-effect-label {
+    min-width: 0;
+    color: var(--ink);
+    font-weight: 800;
+  }
+  .policy-effect-value {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .policy-effect-row.negative .policy-effect-value {
+    color: var(--warn);
+  }
+  .policy-effect-row.positive .policy-effect-value {
+    color: var(--green);
+  }
+  .policy-footer-note {
+    margin: 4px 0 12px;
+    padding: 10px 12px;
+    color: var(--ink-2);
+    background: color-mix(in srgb, var(--accent-soft) 44%, var(--card) 56%);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 32%, var(--ink) 12%, var(--bg-deep) 56%);
+    border-radius: var(--ui-radius);
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.55;
+    white-space: pre-line;
+  }

@@ -563,37 +563,24 @@ function PolicyNoticeModal({ event, state, onResolve }) {
         </div>
         {/* V15.16 audit:政策事件是叙事/信息性事件,不需要展示玩家当前数据(无决策权衡需要参考) */}
         {previews.length > 0 && (
-          <div className="policy-effect-list" style={{margin: '0 0 12px', display: 'flex', flexDirection: 'column', gap: 6}}>
+          <div className="policy-effect-list">
             {(event.policyStage === 'verdict_ban' || event.policyStage === 'verdict_fine') && (
-              <div style={{fontSize: 14, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2}}>
+              <div className="policy-effect-heading">
                 处罚清单
               </div>
             )}
             {previews.map((eff, i) => {
-              const sideColor = eff.tone === 'negative' ? 'var(--warn)' : eff.tone === 'positive' ? 'var(--green)' : 'var(--ink-3)';
-              const valueColor = eff.tone === 'negative' ? 'var(--warn)' : eff.tone === 'positive' ? 'var(--green)' : 'var(--ink)';
               return (
-                <div key={i} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 14px',
-                  background: 'var(--sub)',
-                  border: '1.5px solid var(--border-soft)',
-                  borderLeft: `4px solid ${sideColor}`,
-                  borderRadius: 'var(--ui-radius)',
-                  fontSize: 14,
-                }}>
-                  <span style={{fontWeight: 700, color: 'var(--ink)'}}>{eff.label}</span>
-                  <strong style={{fontWeight: 800, color: valueColor, whiteSpace: 'nowrap'}}>{eff.value}</strong>
+                <div key={i} className={`policy-effect-row ${eff.tone || ''}`}>
+                  <span className="policy-effect-label">{eff.label}</span>
+                  <strong className="policy-effect-value">{eff.value}</strong>
                 </div>
               );
             })}
           </div>
         )}
         {footerNote && (
-          <div style={{margin: '4px 0 12px', padding: '10px 12px', fontSize: 14, color: 'var(--ink-2)', background: 'var(--accent-soft)', borderLeft: '3px solid var(--accent)', borderRadius: 'var(--ui-radius)', whiteSpace: 'pre-line', lineHeight: 1.55}}>
+          <div className="policy-footer-note">
             {footerNote}
           </div>
         )}
@@ -664,26 +651,11 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
             return (
               <div
                 key={opt.id}
-                className="policy-decision-card"
-                style={{
-                  marginBottom: 12,
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  borderRadius: 8,
-                  overflow: 'hidden',
-                  background: '#fff',
-                }}
+                className={`policy-decision-card policy-decision-${opt.id}`}
               >
                 <button
-                  className="modal-option"
+                  className="policy-decision-main"
                   onClick={() => onResolve(opt.id, toggleVal)}
-                  style={{
-                    width: '100%',
-                    margin: 0,
-                    border: 'none',
-                    borderRadius: 0,
-                    background: 'transparent',
-                    textAlign: 'left',
-                  }}
                 >
                   <div className="modal-option-label">{opt.label}</div>
                   {opt.detail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{opt.detail}</div>}
@@ -692,16 +664,6 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
                 {hasExtra && (
                   <label
                     className="policy-decision-toggle"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 10,
-                      padding: '10px 16px',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      background: 'rgba(255, 180, 70, 0.10)',
-                      borderTop: '1px dashed rgba(0,0,0,0.12)',
-                    }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <input
@@ -711,11 +673,10 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
                         ...extraToggles,
                         [opt.id]: { ...(extraToggles[opt.id] || {}), [opt.extraToggle.id]: e.target.checked },
                       })}
-                      style={{marginTop: 3}}
                     />
-                    <span style={{flex: 1, display: 'flex', flexDirection: 'column', gap: 3}}>
+                    <span className="policy-decision-toggle-copy">
                       <strong>{opt.extraToggle.label}</strong>
-                      <span style={{fontSize: 12, color: 'var(--ink-3, #888)'}}>
+                      <span>
                         一次性 <span className="positive">+¥{loanAmount.toLocaleString()}</span> · 90 天后一次还本付息 <span className="negative">¥{loanRepay.toLocaleString()}</span>
                       </span>
                     </span>
