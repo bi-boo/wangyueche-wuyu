@@ -579,7 +579,7 @@
   //   - requireChainChoice:此事件必须满足的 chainChoices 前置条件
   //   - requireKeyDriverAlive:钥匙司机必须在编(true) / 已离队(false)
   //   - options[i].choiceKey:玩家选此项时写入 chainChoices[chain] 的值
-  //   - options[i].apply 返回 effect 中可包含:markKeyDriver / platformDone / addDrivers / addVehicles
+  //   - options[i].apply 返回 effect 中可包含:markKeyDriver / platformDone / addDrivers / addVehicles / loseDriverName / loseBestLabel
   const EVENTS = [
     // ============ V7 单段事件(unlockMission 阶段化) ============
     // V15.16:删 oil_price / back_pain / ride_cancel_chain ——
@@ -735,7 +735,7 @@
       desc: '听说老张前阵子找隔壁车队的老板借了钱。最近你想跟他多聊几句,他都低头不接话。司机群里气氛冷下来了。',
       options: [
         { label: '主动找老张谈,送一笔慰问', detail: '−¥3,000,关系修复,所有司机忠诚 +40', choiceKey: 'mend', apply: () => ({ funds: -3000, allLoyalty: 40 }) },
-        { label: '不管,各自跑车', detail: '钱保住,失去老张(司机离队),所有司机忠诚 −20', choiceKey: 'ignore', apply: () => ({ loseBest: true, allLoyalty: -20 }) },
+        { label: '不管,各自跑车', detail: '钱保住,失去老张(司机离队),所有司机忠诚 −20', choiceKey: 'ignore', apply: () => ({ loseBest: true, loseDriverName: '老张', loseBestLabel: '老张离队', allLoyalty: -20 }) },
       ],
     },
     {

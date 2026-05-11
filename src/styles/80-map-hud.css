@@ -1235,8 +1235,8 @@
     display: grid;
     grid-template-columns: 208px minmax(0, 1fr);
     align-items: end;
-    min-height: 252px;
-    margin: -54px 0 0 -42px;
+    min-height: 222px;
+    margin: -78px 0 0 -42px;
   }
   .event-npc-frame {
     position: relative;
@@ -1244,8 +1244,8 @@
     align-self: end;
     z-index: 3;
     width: 248px;
-    height: 282px;
-    margin: 0 -22px -6px 0;
+    height: 286px;
+    margin: 0 -18px -4px 0;
     pointer-events: none;
     overflow: visible;
   }
@@ -1262,11 +1262,11 @@
   }
   .event-npc-frame img {
     position: absolute;
-    left: 0;
+    left: -8px;
     bottom: 0;
     z-index: 1;
-    width: 272px;
-    height: 272px;
+    width: 292px;
+    height: 292px;
     object-fit: contain;
     object-position: center bottom;
     filter: drop-shadow(4px 4px 0 rgba(42,35,32,0.24));
@@ -1283,19 +1283,9 @@
     background: #FFF8E7;
     border: 3px solid var(--ink);
     box-shadow: 4px 4px 0 rgba(42,35,32,0.24);
-    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
   }
   .event-dialog-card::before {
-    content: "";
-    position: absolute;
-    left: -12px;
-    top: 38px;
-    width: 18px;
-    height: 18px;
-    background: #FFF8E7;
-    border-left: 3px solid var(--ink);
-    border-bottom: 3px solid var(--ink);
-    transform: rotate(45deg);
+    content: none;
   }
   .event-dialog-meta {
     display: flex;
@@ -1410,8 +1400,8 @@
     }
     .event-dialog-shell {
       grid-template-columns: 108px minmax(0, 1fr);
-      min-height: 150px;
-      margin: -22px 0 0 -8px;
+      min-height: 138px;
+      margin: -34px 0 0 -8px;
     }
     .event-npc-frame {
       width: 116px;
@@ -1419,20 +1409,14 @@
       margin: 0 -8px -3px 0;
     }
     .event-npc-frame img {
-      width: 128px;
-      height: 128px;
+      left: -4px;
+      width: 142px;
+      height: 142px;
     }
     .event-dialog-card {
       min-height: 104px;
-      margin-top: 34px;
+      margin-top: 42px;
       padding: 10px 11px 12px 12px;
-      border-width: 2px;
-    }
-    .event-dialog-card::before {
-      left: -8px;
-      top: 32px;
-      width: 13px;
-      height: 13px;
       border-width: 2px;
     }
   }

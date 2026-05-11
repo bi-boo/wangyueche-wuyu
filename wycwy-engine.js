@@ -651,7 +651,7 @@
     logIdCounter = 0;
     actionHistoryIdCounter = 0;
     const initialNames = new Set();
-    const d1 = genUniqueDriver({ background: BACKGROUNDS[0] }, initialNames);
+    const d1 = genUniqueDriver({ background: BACKGROUNDS[0], name: '老张' }, initialNames);
     const d2 = genUniqueDriver({ background: BACKGROUNDS[3] }, initialNames);
     const v1 = genVehicle(VEHICLES[0]);
     const v2 = genVehicle(VEHICLES[0]);
@@ -2830,6 +2830,13 @@
       const pool = candidates.length > 0 ? candidates : (drivers || []);
       return [...pool].sort((a, b) => sumStats(b.stats) - sumStats(a.stats))[0];
     }
+    function pickLoseBestTarget(drivers, keyIds, effect) {
+      const keySet = new Set(keyIds || []);
+      const named = effect?.loseDriverName
+        ? (drivers || []).find((d) => d.name === effect.loseDriverName && !keySet.has(d.id))
+        : null;
+      return named || pickBestExcludingKey(drivers, keyIds);
+    }
     if (eff.salaryRaise && eff.keepBest) {
       const best = pickBestExcludingKey(s.drivers, s.keyDriverIds);
       if (best) {
@@ -2849,10 +2856,10 @@
       }
     }
     if (eff.loseBest) {
-      const best = pickBestExcludingKey(s.drivers, s.keyDriverIds);
+      const best = pickLoseBestTarget(s.drivers, s.keyDriverIds, eff);
       if (best && s.drivers.length > 1) {
         s.drivers = s.drivers.filter((d) => d.id !== best.id);
-        s = pushLog(s, `${best.name} 被竞品挖走了!`, 'warn');
+        s = pushLog(s, eff.loseBestLabel || `${best.name} 被竞品挖走了!`, 'warn');
       }
     }
     // V15.x: rival_friends_join_success 钥匙事件奖励 — 给玩家送 N 个司机 + N 辆车

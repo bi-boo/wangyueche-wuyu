@@ -517,6 +517,7 @@ EVENTS.filter(e =>
 | `markKeyDriver` | 把 keepBest 选中的司机加入 keyDriverIds |
 | `addDrivers` / `addVehicles` / `vehicleType` | rival_friends_join_success 送 N 个司机/N 辆车 |
 | `platformDone` | 设置 state.platformChoseSelfop = true |
+| `loseDriverName` / `loseBestLabel` | 人物链事件可指定离队司机和预览/日志文案,避免 NPC 叙事透出随机司机名 |
 
 ### 35 个事件按 unlockMission 分布
 

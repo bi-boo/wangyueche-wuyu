@@ -121,6 +121,11 @@ function getBestDriverForEvent(state) {
   return [...state.drivers].sort((a, b) => total(b) - total(a))[0];
 }
 
+function formatLoseBestPreview(effect, bestDriver) {
+  if (effect?.loseBestLabel) return effect.loseBestLabel;
+  return `失去最强司机${bestDriver ? ` ${bestDriver.name}` : ''}`;
+}
+
 function getEventOptionDetail(option, effect) {
   if (!option || !option.detail) return '';
   if (effect.eventScale || effect.orderBoost) return '';
@@ -531,7 +536,7 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
                       {eff.accidentRisk.reputation ? ` · 口碑 ${eff.accidentRisk.reputation}` : ''}
                     </span>
                   )}
-                  {eff.loseBest && <span className="negative">失去最强司机{bestDriver ? ` ${bestDriver.name}` : ''}</span>}
+                  {eff.loseBest && <span className="negative">{formatLoseBestPreview(eff, bestDriver)}</span>}
                   {eff.previewError && <span className="negative">事件预览异常,请选择其他方案</span>}
                   {showNoImmediateEffect && <span>无立即数值变化</span>}
                 </div>
