@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>事件弹窗预览(实时数据 Storybook)</title>
-<!-- 预览页直接读取当前 data / engine / JSX,每次刷新都用新查询参数绕开本地缓存 -->
+<!-- 预览页直接读取当前 data / engine。弹窗渲染器内置在本页,确保 file:// 双击也能预览。 -->
 <script>
   window.WYCWY_PREVIEW_VERSION = new URLSearchParams(window.location.search).get('_t') || String(Date.now());
   [
@@ -144,16 +144,6 @@
   ['wycwy-data.js', 'wycwy-engine.js'].forEach((src) => {
     document.write('<script src="' + src + '?v=' + window.WYCWY_PREVIEW_VERSION + '"><\/script>');
   });
-  [
-    'src/app/00-runtime.jsx',
-    'src/app/10-icons.jsx',
-    'src/app/20-topbar.jsx',
-    'src/app/30-fleet.jsx',
-    'src/app/40-inspector.jsx',
-    'src/app/50-modals.jsx',
-  ].forEach((src) => {
-    document.write('<script type="text/babel" src="' + src + '?v=' + window.WYCWY_PREVIEW_VERSION + '"><\/script>');
-  });
 </script>
 
 <script type="text/babel">
@@ -173,12 +163,289 @@
           color: '#664d03', fontSize: 14, lineHeight: 1.6,
         }}>
           <div style={{fontSize: 16, fontWeight: 600, marginBottom: 12}}>⚠ 组件 <code>{name}</code> 未定义</div>
-          <div>这通常是浏览器缓存了旧版 <code>50-modals.jsx</code> 导致的。请按以下方式强制刷新:</div>
+          <div>当前预览页没有拿到 <code>{name}</code>。如果你看到这条提示,说明内置预览渲染器也没有启动,请重新打开本文件或检查控制台报错。</div>
           <ul style={{marginTop: 8, paddingLeft: 20}}>
-            <li><b>Mac Chrome / Safari</b>:右键页面"刷新"按钮 → 选"清空缓存并硬性重新加载"</li>
-            <li><b>快捷键</b>:Cmd + Shift + R(或 Cmd + Option + E 清缓存后再刷)</li>
-            <li><b>实在不行</b>:开 DevTools(F12) → Network → 勾选 "Disable cache" → 刷新</li>
+            <li>确认同目录下存在 <code>wycwy-data.js</code> 和 <code>wycwy-engine.js</code></li>
+            <li>刷新后仍异常时,查看 DevTools Console 的第一条红色报错</li>
           </ul>
+        </div>
+      </div>
+    );
+  }
+
+  function formatMoney(value) {
+    return `¥${Math.round(value || 0).toLocaleString()}`;
+  }
+
+  function formatSignedNumber(value) {
+    return `${value > 0 ? '+' : ''}${value}`;
+  }
+
+  function getToneByValue(value) {
+    if (value > 0) return 'positive';
+    if (value < 0) return 'negative';
+    return '';
+  }
+
+  function PreviewResourceSnapshot({ state, thirdLabel = '司机/车辆', thirdValue = null, thirdTone = '' }) {
+    const assigned = (state.drivers || []).filter((driver) => driver.vehicleId).length;
+    const totalVehicles = (state.vehicles || []).length;
+    const metrics = [
+      { label: '资金', value: formatMoney(state.funds), tone: state.funds < 0 ? 'danger' : '' },
+      { label: '口碑', value: state.reputation },
+    ];
+    if (thirdLabel && thirdValue !== null) {
+      metrics.push({ label: thirdLabel, value: thirdValue, tone: thirdTone });
+    }
+    metrics.push({ label: '司机/车辆', value: `${assigned}/${totalVehicles}` });
+    return (
+      <div className="event-resource-snapshot" aria-label="当前经营状态">
+        {metrics.map((metric) => (
+          <div key={metric.label}>
+            <span>{metric.label}</span>
+            <strong className={metric.tone || ''}>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function summarizeApplyEffect(option, state) {
+    if (typeof option?.apply !== 'function') return [];
+    try {
+      const effect = option.apply(state) || {};
+      const items = [];
+      const add = (text, tone = '') => items.push({ text, tone });
+      if (effect.funds !== undefined) add(`资金 ${effect.funds > 0 ? '+' : ''}${formatMoney(effect.funds).replace('¥-', '-¥')}`, getToneByValue(effect.funds));
+      if (effect.reputation !== undefined) add(`口碑 ${formatSignedNumber(effect.reputation)}`, getToneByValue(effect.reputation));
+      if (effect.allLoyalty !== undefined) add(`全员忠诚 ${formatSignedNumber(effect.allLoyalty)}`, getToneByValue(effect.allLoyalty));
+      if (effect.trustLoyalty !== undefined) add(`全员信任 ${formatSignedNumber(effect.trustLoyalty)}`, getToneByValue(effect.trustLoyalty));
+      if (effect.salaryRaise) add(`月薪 +${formatMoney(effect.salaryRaise)}`, 'negative');
+      if (effect.orderBoost) add(`订单量 ${Math.round(effect.orderBoost * 100)}%${effect.boostDuration ? `(${effect.boostDuration} 天)` : ''}`, effect.orderBoost >= 1 ? 'positive' : 'negative');
+      if (effect.addDrivers) add(`新增司机 +${effect.addDrivers}`, 'positive');
+      if (effect.addVehicles) add(`新增车辆 +${effect.addVehicles}`, 'positive');
+      if (effect.certifyFleet) add('当前车辆合规升级', 'positive');
+      if (effect.platformDone) add('后续不再涨抽成', 'positive');
+      if (effect.commissionRate !== undefined) add(`平台抽成 ${Math.round(effect.commissionRate * 100)}%`);
+      if (effect.keepBest) add('关键司机留队', 'positive');
+      if (effect.loseBest) add(effect.loseBestLabel || '失去关键司机', 'negative');
+      if (effect.accidentRisk) add(`${Math.round((effect.accidentRisk.chance || 0) * 100)}% 事故风险`, 'negative');
+      return items;
+    } catch (err) {
+      return [{ text: '预览效果计算失败,以实际游戏结算为准', tone: 'negative' }];
+    }
+  }
+
+  function PreviewEffectChips({ items }) {
+    if (!items || !items.length) return null;
+    return (
+      <div className="event-effect-preview">
+        {items.map((item, idx) => (
+          <span key={idx} className={item.tone || ''}>{item.text}</span>
+        ))}
+      </div>
+    );
+  }
+
+  function PreviewInvestorPressureModal({ event, state, onResolve }) {
+    const [fire, setFire] = useState(false);
+    const [sell, setSell] = useState(false);
+    const [debt, setDebt] = useState(false);
+    const plan = E.getInvestorPressurePlan ? E.getInvestorPressurePlan(state) : null;
+    const fireDisabled = !plan || !plan.fireDrivers?.length;
+    const sellDisabled = !plan || !plan.sellVehicles?.length;
+    const daysLeft = Math.max(0, (D.GAME?.DEATH_FUNDS_DAYS || 5) + (state.bankruptcyGraceBonus || 0) - (state.negFundsDays || 0));
+    const anyPicked = fire || sell || debt;
+    const fireNames = (plan?.fireDrivers || []).slice(0, 3).map((driver) => driver.name).join('、');
+    const sellNames = (plan?.sellVehicles || []).slice(0, 3).map((vehicle) => {
+      const tpl = E.getVehicleData ? E.getVehicleData(vehicle) : null;
+      return tpl?.name || vehicle.name || vehicle.templateId;
+    }).join('、');
+    return (
+      <div className="modal-overlay">
+        <div className="modal event-modal">
+          <div className="event-modal-header">
+            <div className="modal-tag">{event.tag}事件</div>
+            <div className="modal-title">{event.title}</div>
+            <div className="modal-desc">{event.desc}</div>
+          </div>
+          <PreviewResourceSnapshot state={state} thirdLabel="距破产" thirdValue={`${daysLeft} 天`} thirdTone="danger" />
+          <div className="investor-choices">
+            <label className={`investor-choice ${fireDisabled ? 'disabled' : ''}`}>
+              <input type="checkbox" checked={fire} disabled={fireDisabled} onChange={(e) => setFire(e.target.checked)} />
+              <div className="investor-choice-body">
+                <div className="investor-choice-label">{fireDisabled ? '裁员止血 — 当前不可裁' : `裁撤 ${plan.fireDrivers.length} 名高薪司机`}</div>
+                {!fireDisabled && <div className="investor-choice-detail">{fireNames} · 月省 {formatMoney(plan.monthlySavings)} · 破产宽容 +{plan.fireGraceDays} 天</div>}
+              </div>
+            </label>
+            <label className={`investor-choice ${sellDisabled ? 'disabled' : ''}`}>
+              <input type="checkbox" checked={sell} disabled={sellDisabled} onChange={(e) => setSell(e.target.checked)} />
+              <div className="investor-choice-body">
+                <div className="investor-choice-label">{sellDisabled ? '卖车回血 — 当前不可卖' : `卖出 ${plan.sellVehicles.length} 辆高价车辆`}</div>
+                {!sellDisabled && <div className="investor-choice-detail">{sellNames} · 立刻 +{formatMoney(plan.sellRefund)}(60% 残值)</div>}
+              </div>
+            </label>
+            <label className="investor-choice">
+              <input type="checkbox" checked={debt} onChange={(e) => setDebt(e.target.checked)} />
+              <div className="investor-choice-body">
+                <div className="investor-choice-label">借高利贷 {formatMoney(plan?.debtPrincipal || 10000)}</div>
+                <div className="investor-choice-detail">{plan?.debtPeriodDays || 30} 天后还 {formatMoney(plan?.debtRepay || 12000)}</div>
+              </div>
+            </label>
+          </div>
+          <div className="investor-actions">
+            <button className="btn btn-primary" disabled={!anyPicked} onClick={() => onResolve({ fire, sell, debt })}>提交方案{anyPicked ? '' : ' (至少选 1 项)'}</button>
+            <div className="investor-divider">或</div>
+            <button className="btn btn-ghost" disabled={anyPicked} onClick={() => onResolve({ holdOn: true })}>不采取措施,靠流水回正</button>
+            <div className="investor-hold-note">若 <strong>{daysLeft} 天内资金没有回正</strong>,投资人撤资,游戏结束。</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function PreviewEventModal({ event, state, onResolve, onResolveInvestor }) {
+    if (!event) return <ComponentMissingError name="EventModal" />;
+    if (event.multiChoice) {
+      return <PreviewInvestorPressureModal event={event} state={state} onResolve={onResolveInvestor} />;
+    }
+    if (event.isPolicyEvent) {
+      return <PreviewPolicyNoticeModal event={event} state={state} onResolve={onResolve} />;
+    }
+    return (
+      <div className="modal-overlay">
+        <div className="modal event-modal">
+          <div className="event-modal-header">
+            <div className="modal-tag">{event.tag}事件</div>
+            <div className="modal-title">{event.title}</div>
+            <div className="modal-desc">{event.desc}</div>
+          </div>
+          <PreviewResourceSnapshot state={state} />
+          <div className="modal-options">
+            {(event.options || []).map((option, idx) => {
+              const effectItems = event.blindOptions ? [] : summarizeApplyEffect(option, state);
+              return (
+                <button key={idx} className="modal-option" onClick={() => onResolve(idx)}>
+                  <div className="modal-option-label">{option.label}</div>
+                  {option.detail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{option.detail}</div>}
+                  <PreviewEffectChips items={effectItems} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function PreviewPolicyNoticeModal({ event, state, onResolve }) {
+    const previews = event.policyEffectPreview || [];
+    const footerNote = event.policyFooterNote || '';
+    const buttonLabel = event.options?.[0]?.label || '知道了';
+    const isBan = event.policyStage === 'verdict_ban';
+    return (
+      <div className="modal-overlay">
+        <div className={`modal event-modal policy-notice-modal ${isBan ? 'policy-notice-ban' : ''}`}>
+          <div className="event-modal-header">
+            <div className="modal-tag">{event.tag || '政策事件'}</div>
+            <div className="modal-title">{event.title}</div>
+            <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{event.desc}</div>
+          </div>
+          {previews.length > 0 && (
+            <div className="policy-effect-list">
+              {(event.policyStage === 'verdict_ban' || event.policyStage === 'verdict_fine') && (
+                <div className="policy-effect-heading">处罚清单</div>
+              )}
+              {previews.map((eff, idx) => (
+                <div key={idx} className={`policy-effect-row ${eff.tone || ''}`}>
+                  <span className="policy-effect-label">{eff.label}</span>
+                  <strong className="policy-effect-value">{eff.value}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+          {footerNote && <div className="policy-footer-note">{footerNote}</div>}
+          <div className="modal-options">
+            <button className="modal-option" onClick={() => onResolve(0)}>
+              <div className="modal-option-label">{buttonLabel}</div>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function PreviewPolicyDecisionModal({ decision, state, onResolve }) {
+    const [extraToggles, setExtraToggles] = useState({});
+    const r0 = decision.refMonthlyRevenue || 0;
+    const params = decision.params || {};
+    const startupFee = Math.round(r0 * (params.A_STARTUP_FEE_PCT || 0.40));
+    const schedule = params.COMPLIANCE_SCHEDULE_PCT || [0.25, 0.20, 0.15, 0.10];
+    const complianceFirstPct = Math.round((schedule[0] || 0.25) * 100);
+    const complianceFloorPct = Math.round((schedule[schedule.length - 1] || 0.10) * 100);
+    const loanAmount = Math.round(r0 * (params.B_LOAN_PCT || 1.00));
+    const loanInterest = Math.round(loanAmount * (params.B_LOAN_RATE || 0.10) * ((params.B_LOAN_DUE_DAYS || 90) / 365));
+    const loanRepay = loanAmount + loanInterest;
+    const renderDecisionEffects = (optId) => {
+      if (optId === 'A') {
+        return (
+          <PreviewEffectChips items={[
+            { text: `立即扣 ${formatMoney(startupFee)}`, tone: 'negative' },
+            { text: `月合规成本:首月 ${complianceFirstPct}% → 稳定后 ${complianceFloorPct}%`, tone: 'negative' },
+            { text: '30 天内招募/购车 5 天冷却', tone: 'negative' },
+          ]} />
+        );
+      }
+      if (optId === 'B') {
+        return (
+          <PreviewEffectChips items={[
+            { text: '订单量 +25%', tone: 'positive' },
+            { text: '单均利润 +15%', tone: 'positive' },
+            { text: '持续 30 天' },
+          ]} />
+        );
+      }
+      return null;
+    };
+    return (
+      <div className="modal-overlay">
+        <div className="modal event-modal policy-decision-modal">
+          <div className="event-modal-header">
+            <div className="modal-tag">{decision.tag || '政策决策'}</div>
+            <div className="modal-title">{decision.title}</div>
+            <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{decision.desc}</div>
+          </div>
+          <PreviewResourceSnapshot state={state} />
+          <div className="modal-options">
+            {(decision.options || []).map((opt) => {
+              const toggleVal = extraToggles[opt.id] || {};
+              return (
+                <div key={opt.id} className={`policy-decision-card policy-decision-${opt.id}`}>
+                  <button className="policy-decision-main" onClick={() => onResolve(opt.id, toggleVal)}>
+                    <div className="modal-option-label">{opt.label}</div>
+                    {opt.detail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{opt.detail}</div>}
+                    {renderDecisionEffects(opt.id)}
+                  </button>
+                  {opt.extraToggle && (
+                    <label className="policy-decision-toggle" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={!!toggleVal[opt.extraToggle.id]}
+                        onChange={(e) => setExtraToggles({
+                          ...extraToggles,
+                          [opt.id]: { ...(extraToggles[opt.id] || {}), [opt.extraToggle.id]: e.target.checked },
+                        })}
+                      />
+                      <span className="policy-decision-toggle-copy">
+                        <strong>{opt.extraToggle.label}</strong>
+                        <span>一次性 <span className="positive">+{formatMoney(loanAmount)}</span> · 90 天后还本付息 <span className="negative">{formatMoney(loanRepay)}</span></span>
+                      </span>
+                    </label>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
@@ -563,31 +830,23 @@
           })()}
           {!built && <div className="sb-stage-empty">请从左侧选一个事件预览</div>}
           {built && built.type === 'policyDecision' && (
-            typeof PolicyDecisionModal === 'function' ? (
-              <PolicyDecisionModal
-                key={`pd_${activeId}_${r0}`}
-                decision={built.decision}
-                state={MOCK_STATE}
-                onResolve={(c, t) => console.log('选了', c, t)}
-              />
-            ) : (
-              <ComponentMissingError name="PolicyDecisionModal" />
-            )
+            <PreviewPolicyDecisionModal
+              key={`pd_${activeId}_${r0}`}
+              decision={built.decision}
+              state={MOCK_STATE}
+              onResolve={(c, t) => console.log('选了', c, t)}
+            />
           )}
           {built && built.type === 'policyNotice' && (
-            typeof PolicyNoticeModal === 'function' ? (
-              <PolicyNoticeModal
-                key={`pn_${activeId}_${r0}`}
-                event={built.event}
-                state={MOCK_STATE}
-                onResolve={(idx) => console.log('点击关闭', idx)}
-              />
-            ) : (
-              <ComponentMissingError name="PolicyNoticeModal" />
-            )
+            <PreviewPolicyNoticeModal
+              key={`pn_${activeId}_${r0}`}
+              event={built.event}
+              state={MOCK_STATE}
+              onResolve={(idx) => console.log('点击关闭', idx)}
+            />
           )}
           {built && built.type === 'event' && (
-            <EventModal
+            <PreviewEventModal
               key={`ev_${activeId}`}
               event={built.event}
               state={built.event.id === 'snow_night_breakthrough' ? SNOW_RESCUE_MOCK_STATE : MOCK_STATE}
@@ -596,7 +855,7 @@
             />
           )}
           {built && built.type === 'investor' && (
-            <EventModal
+            <PreviewEventModal
               key={`inv_${activeId}`}
               event={built.event}
               state={INVESTOR_MOCK_STATE}
@@ -605,7 +864,7 @@
             />
           )}
           {built && built.type === 'investorReview' && (
-            <EventModal
+            <PreviewEventModal
               key={`review_${activeId}`}
               event={built.event}
               state={INVESTOR_REVIEW_MOCK_STATE}
