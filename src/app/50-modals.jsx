@@ -121,11 +121,6 @@ function getBestDriverForEvent(state) {
   return [...state.drivers].sort((a, b) => total(b) - total(a))[0];
 }
 
-function formatLoseBestPreview(effect, bestDriver) {
-  if (effect?.loseBestLabel) return effect.loseBestLabel;
-  return `失去最强司机${bestDriver ? ` ${bestDriver.name}` : ''}`;
-}
-
 function getEventOptionDetail(option, hasVisibleEffectPreview = false) {
   if (!option || !option.detail) return '';
   if (hasVisibleEffectPreview) return '';
@@ -491,7 +486,6 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
             if (eff.salaryRaise && eff.keepBest && bestDriver) {
               addPreview(`${bestDriver.name} 月薪 +¥${eff.salaryRaise} → ¥${salaryAfter}`, 'negative');
               addPreview(`日成本约 +¥${salaryDaily}`, 'negative');
-              addPreview(`${bestDriver.name} 留队 · 忠诚 +30`, 'positive');
             }
             if (orderBoostText) addPreview(orderBoostText, eff.orderBoost < 1 ? 'negative' : 'positive');
             if (eff.commissionRate !== undefined) addPreview(`平台抽成调整为 ${Math.round(eff.commissionRate * 100)}%`);
@@ -509,7 +503,6 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
                 'negative'
               );
             }
-            if (eff.loseBest) addPreview(formatLoseBestPreview(eff, bestDriver), 'negative');
             if (eff.previewError) addPreview('事件预览异常,请选择其他方案', 'negative');
             const optionDetail = event.isInvestorReview
               ? ''

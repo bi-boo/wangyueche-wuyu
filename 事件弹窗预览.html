@@ -227,8 +227,6 @@
       if (effect.certifyFleet) add('当前车辆合规升级', 'positive');
       if (effect.platformDone) add('后续不再涨抽成', 'positive');
       if (effect.commissionRate !== undefined) add(`平台抽成 ${Math.round(effect.commissionRate * 100)}%`);
-      if (effect.keepBest) add('关键司机留队', 'positive');
-      if (effect.loseBest) add(effect.loseBestLabel || '失去关键司机', 'negative');
       if (effect.accidentRisk) add(`${Math.round((effect.accidentRisk.chance || 0) * 100)}% 事故风险`, 'negative');
       return items;
     } catch (err) {
