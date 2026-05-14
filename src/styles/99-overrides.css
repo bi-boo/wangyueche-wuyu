@@ -1327,18 +1327,18 @@
     min-height: 42px;
     padding: 9px 12px;
     background: color-mix(in srgb, var(--sub) 62%, var(--card) 38%);
-    border: 1.5px solid color-mix(in srgb, var(--ink) 22%, var(--bg-deep) 78%);
+    border: 1px solid color-mix(in srgb, var(--ink) 8%, var(--bg-deep) 92%);
     border-radius: var(--ui-radius);
-    box-shadow: 1px 1px 0 rgba(42,35,32,0.08);
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.05);
     font-size: 14px;
   }
   .policy-effect-row.negative {
     background: color-mix(in srgb, var(--warn) 9%, var(--card) 91%);
-    border-color: color-mix(in srgb, var(--warn) 34%, var(--ink) 14%, var(--bg-deep) 52%);
+    border-color: color-mix(in srgb, var(--warn) 28%, var(--card) 72%);
   }
   .policy-effect-row.positive {
     background: color-mix(in srgb, var(--green) 10%, var(--card) 90%);
-    border-color: color-mix(in srgb, var(--green) 36%, var(--ink) 12%, var(--bg-deep) 52%);
+    border-color: color-mix(in srgb, var(--green) 30%, var(--card) 70%);
   }
   .policy-effect-label {
     min-width: 0;

@@ -219,33 +219,55 @@
     return map[stageKey] || stageKey;
   }
 
-  // V15.x:按 id 前缀分组 — 4 个真分支链式归"链式"组,其他归"单段"组
-  const TRUE_CHAINS = ['borrow', 'platform', 'rival', 'accident'];
-  function getChainGroup(eventId) {
-    for (const chain of TRUE_CHAINS) {
-      if (eventId === chain || eventId.startsWith(chain + '_')) return chain;
+  const CHAIN_GROUP_ORDER = ['borrow', 'accident', 'rival', 'complaint_harass'];
+  const CHAIN_GROUP_LABELS = {
+    borrow: '链式 · borrow 老张借钱',
+    accident: '链式 · accident 司机事故',
+    rival: '链式 · rival 竞品挖人(钥匙司机)',
+    complaint_harass: '链式 · complaint 投诉反转',
+  };
+  const PHASE_LABELS = { early: '早期', mid: '中期', late: '后期' };
+  const PHASE_ORDER = { early: 1, mid: 2, late: 3 };
+
+  function getChainGroup(ev) {
+    if (!ev || (ev.eventType !== 'chain' && !ev.chainId)) return null;
+    return ev.chainId || ev.chain || null;
+  }
+
+  function getEventStageTag(ev) {
+    if (ev.scripted || ev.eventType === 'scripted') return `脚本 · ${ev.tag}`;
+    if (ev.eventType === 'chain' || ev.chainId) {
+      return `最早D${ev.minDay || 0} · S${ev.stage || 1} · ${ev.tag}`;
     }
-    return null;
+    const phase = PHASE_LABELS[ev.phase || 'early'] || '早期';
+    return `${phase} · 最早D${ev.minDay || 0} · ${ev.tag}`;
   }
 
   function buildRandomEventSidebarItems() {
     const allEvents = D.EVENTS || [];
-    const chainGroups = {};   // { borrow: [...], platform: [...], rival: [...], accident: [...] }
+    const chainGroups = {};
     const single = [];
-    const sortByMission = (a, b) => {
+    const scripted = [];
+    const sortBySchedule = (a, b) => {
       const ea = allEvents.find(e => e.id === a.eventId);
       const eb = allEvents.find(e => e.id === b.eventId);
-      return (ea.unlockMission || 0) - (eb.unlockMission || 0);
+      return (ea.minDay || 0) - (eb.minDay || 0)
+        || (PHASE_ORDER[ea.phase || 'early'] || 1) - (PHASE_ORDER[eb.phase || 'early'] || 1)
+        || (ea.stage || 0) - (eb.stage || 0);
     };
     allEvents.forEach((ev) => {
       const baseItem = {
         id: `event_${ev.id}`,
         title: ev.title,
-        stageTag: `m${ev.unlockMission || 0} · ${ev.tag}`,
+        stageTag: getEventStageTag(ev),
         kind: 'event',
         eventId: ev.id,
       };
-      const group = getChainGroup(ev.id);
+      if (ev.scripted || ev.eventType === 'scripted') {
+        scripted.push(baseItem);
+        return;
+      }
+      const group = getChainGroup(ev);
       if (group) {
         if (!chainGroups[group]) chainGroups[group] = [];
         chainGroups[group].push(baseItem);
@@ -253,9 +275,10 @@
         single.push(baseItem);
       }
     });
-    Object.values(chainGroups).forEach(arr => arr.sort(sortByMission));
-    single.sort(sortByMission);
-    return { chainGroups, single };
+    Object.values(chainGroups).forEach(arr => arr.sort(sortBySchedule));
+    single.sort(sortBySchedule);
+    scripted.sort(sortBySchedule);
+    return { chainGroups, single, scripted };
   }
 
   function buildInvestorSidebarItem() {
@@ -267,14 +290,10 @@
     };
   }
 
-  const INVESTOR_REVIEW_STAGE_ORDER = ['q1', 'h1', 'q3_pass', 'q3_warn', 'q3_fired', 'y1'];
+  const INVESTOR_REVIEW_STAGE_ORDER = ['early_warning', 'early_final'];
   const INVESTOR_REVIEW_STAGE_LABELS = {
-    q1: 'Day 90',
-    h1: 'Day 180',
-    q3_pass: 'Day 270 达标',
-    q3_warn: 'Day 270 警告',
-    q3_fired: 'Day 270 撤资',
-    y1: 'Day 360',
+    early_warning: 'Day 30+',
+    early_final: 'Day 60+',
   };
 
   function buildInvestorReviewSidebarItems() {
@@ -299,6 +318,14 @@
     todayEarned: 144,
     day: 60,
     hour: 14,
+  };
+  const SNOW_RESCUE_MOCK_STATE = {
+    ...MOCK_STATE,
+    funds: -10000,
+    day: 11,
+    hour: 0,
+    negFundsDays: Math.max(1, (D.GAME?.DEATH_FUNDS_DAYS || 5) - 1),
+    investorPressureFired: true,
   };
   // 投资人事件需要资金负 + 可裁的司机/可卖的车
   const INVESTOR_MOCK_STATE = {
@@ -354,7 +381,7 @@
       previews = [
         { label: '立即罚款', value: `-¥${Math.round(r0 * params.B_FINE_PCT).toLocaleString()}`, tone: 'negative' },
         { label: '60 天禁运 · 订单量', value: `降至 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}%(60 天)`, tone: 'negative' },
-        { label: '强制启动月合规成本', value: `每月按流水扣:首月 ${firstPct}% → 稳定后 ${floorPct}%`, tone: 'negative' },
+        { label: '强制启动月合规成本', value: `按每月净流水滚动扣:首月 ${firstPct}% → 稳定后 ${floorPct}%`, tone: 'negative' },
       ];
       footerNote = '整改期间运营成本需照常承担。如需止损,可在车队管理界面卖车或裁员。';
     } else if (stageKey === 'resume') {
@@ -395,21 +422,16 @@
     const review = D.INVESTOR_REVIEW;
     const stageData = review?.stages?.[stageKey];
     if (!stageData) return null;
+    const punishment = review?.punishment?.[stageKey] || {};
     const ctx = {
-      fee: stageKey === 'h1' ? 25000 : stageKey === 'q3_warn' ? 35000 : stageKey === 'q3_fired' ? 177000 : 0,
-      remaining: 59000,
-      startFundsK: Math.round((D.GAME.STARTING_FUNDS || 0) / 1000),
-      currentFundsK: Math.round((INVESTOR_REVIEW_MOCK_STATE.funds || 0) / 1000),
-      startCrews: 2,
+      fee: punishment.fee || 0,
+      targetCrews: review?.targetCrews || review?.kpi?.targetCrews || 3,
       currentCrews: INVESTOR_REVIEW_MOCK_STATE.drivers.filter((driver) => driver.vehicleId).length,
     };
     let desc = stageData.desc || '';
     desc = desc
       .replace(/\{N\}/g, ctx.fee.toLocaleString())
-      .replace(/\{remaining\}/g, ctx.remaining.toLocaleString())
-      .replace(/\{startFundsK\}/g, ctx.startFundsK)
-      .replace(/\{currentFundsK\}/g, ctx.currentFundsK)
-      .replace(/\{startCrews\}/g, ctx.startCrews)
+      .replace(/\{targetCrews\}/g, ctx.targetCrews)
       .replace(/\{currentCrews\}/g, ctx.currentCrews);
     const options = stageData.options
       ? stageData.options.map((opt) => ({ label: opt.label, detail: opt.detail, apply: () => ({}) }))
@@ -424,7 +446,7 @@
         isInvestorReview: true,
         investorReviewStage: stageKey,
         investorReviewFee: ctx.fee,
-        investorReviewFeeLabel: stageKey === 'h1' ? '中型公司的咨询费' : stageKey === 'q3_warn' ? '考核罚金(中车队)' : '',
+        investorReviewFeeLabel: punishment.label || '',
         skipScale: true,
         options,
       },
@@ -432,11 +454,11 @@
   }
 
   function StorybookApp() {
-    const [r0, setR0] = useState(87684);
+    const [r0, setR0] = useState(10000);
     const [activeId, setActiveId] = useState(() => window.location.hash.replace(/^#/, '') || 'policy_gov_ban_decision');
 
     const policyItems = useMemo(buildPolicySidebarItems, []);
-    const { chainGroups, single: singleItems } = useMemo(buildRandomEventSidebarItems, []);
+    const { chainGroups, single: singleItems, scripted: scriptedItems } = useMemo(buildRandomEventSidebarItems, []);
     const investorItem = useMemo(buildInvestorSidebarItem, []);
     const investorReviewItems = useMemo(buildInvestorReviewSidebarItems, []);
 
@@ -444,6 +466,7 @@
     const chainItemsFlat = Object.values(chainGroups).flat();
     const allItems = [
       ...policyItems,
+      ...scriptedItems,
       ...chainItemsFlat,
       ...singleItems,
       ...investorReviewItems,
@@ -491,7 +514,7 @@
             <div className="sub">实时读取 wycwy-data.js · {allItems.length} 项</div>
           </div>
           <div className="sb-controls">
-            R₀ 基准月营收(¥)
+            R₀ 锁定基准(罚款/贷款)
             <input
               type="number"
               value={r0}
@@ -499,11 +522,13 @@
             />
           </div>
           {renderSidebarGroup('政策事件 (V15)', policyItems)}
-          {chainGroups.borrow && renderSidebarGroup('链式 · borrow 老张借钱', chainGroups.borrow)}
-          {chainGroups.platform && renderSidebarGroup('链式 · platform 平台抽成', chainGroups.platform)}
-          {chainGroups.rival && renderSidebarGroup('链式 · rival 竞品挖人(钥匙司机)', chainGroups.rival)}
-          {chainGroups.accident && renderSidebarGroup('链式 · accident 司机事故', chainGroups.accident)}
-          {renderSidebarGroup('随机事件 - 单段', singleItems)}
+          {scriptedItems.length > 0 && renderSidebarGroup('脚本事件', scriptedItems)}
+          {CHAIN_GROUP_ORDER.map((group) => (
+            chainGroups[group]
+              ? <React.Fragment key={group}>{renderSidebarGroup(CHAIN_GROUP_LABELS[group] || `链式 · ${group}`, chainGroups[group])}</React.Fragment>
+              : null
+          ))}
+          {renderSidebarGroup('随机事件 - 阶段池', singleItems)}
           {renderSidebarGroup('投资人 review', investorReviewItems)}
           {renderSidebarGroup('投资人危机', [investorItem])}
         </div>
@@ -515,7 +540,16 @@
             return (
               <div className="sb-meta-banner">
                 <span><b>id</b><code>{ev.id}</code></span>
-                <span><b>unlockMission</b><code>{ev.unlockMission || 0}</code></span>
+                <span><b>type</b><code>{ev.eventType || 'random'}</code></span>
+                {ev.phase && <span><b>阶段池</b><code>{PHASE_LABELS[ev.phase] || ev.phase}</code></span>}
+                {ev.minDay !== undefined && <span><b>最早触发</b><code>D{ev.minDay}</code></span>}
+                {ev.minCrews !== undefined && <span><b>最少车组</b><code>{ev.minCrews}</code></span>}
+                {ev.minOrders !== undefined && <span><b>最少订单</b><code>{ev.minOrders}</code></span>}
+                {ev.weight !== undefined && <span><b>抽签权重</b><code>{ev.weight}</code></span>}
+                {ev.chainId && <span><b>chainId</b><code>{ev.chainId}</code></span>}
+                {ev.stage && <span><b>链段</b><code>S{ev.stage}</code></span>}
+                {ev.delayAfter && <span><b>前段后</b><code>{ev.delayAfter}天</code></span>}
+                <span><b>旧任务参考</b><code>M{ev.unlockMission || 0}</code></span>
                 {ev.chain && <span><b>chain</b><code>{ev.chain}</code></span>}
                 {ev.requireChainChoice && (
                   <span><b>requireChainChoice</b><code>{JSON.stringify(ev.requireChainChoice)}</code></span>
@@ -556,7 +590,7 @@
             <EventModal
               key={`ev_${activeId}`}
               event={built.event}
-              state={MOCK_STATE}
+              state={built.event.id === 'snow_night_breakthrough' ? SNOW_RESCUE_MOCK_STATE : MOCK_STATE}
               onResolve={(idx) => console.log('选项', idx)}
               onResolveInvestor={() => {}}
             />

@@ -127,11 +127,18 @@
   .inspector-section:first-child {
     margin-top: 0;
   }
-  /* V15.17:司机详情卡 — hero 之外独立 section,整合背景/月薪/接单率 */
-  .driver-detail-card {
+  /* V15.23:右侧车组详情内的卡片统一成同一套硬边框组件语言 */
+  .crew-inspector .driver-detail-card,
+  .crew-inspector .driver-attr-row,
+  .crew-inspector .vehicle-manage-card,
+  .crew-inspector .crew-vehicle-card {
     background: var(--sub);
-    border: 1px solid var(--border-soft);
-    border-radius: 3px;
+    border: 2px solid var(--line-ui);
+    border-radius: 2px;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12);
+  }
+  /* V15.17:司机详情卡 — hero 之外独立 section,整合背景/月薪/接单诊断 */
+  .driver-detail-card {
     padding: 10px 12px;
     display: grid;
     gap: 6px;
@@ -155,6 +162,67 @@
     margin-top: 4px;
     padding-top: 8px;
     border-top: 1px dashed var(--border-soft);
+  }
+  .driver-diagnosis-card {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-soft);
+    display: grid;
+    gap: 6px;
+  }
+  .diagnosis-row {
+    display: grid;
+    grid-template-columns: 68px 46px minmax(0, 1fr);
+    gap: 7px;
+    align-items: center;
+    min-width: 0;
+  }
+  .diagnosis-label {
+    color: var(--ink-3);
+    font-weight: 800;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .diagnosis-state {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
+    padding: 2px 5px;
+    border: 1px solid var(--border-soft);
+    border-radius: 2px;
+    background: var(--card);
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .diagnosis-state.strong {
+    background: var(--green-soft);
+    color: var(--green);
+    border-color: color-mix(in srgb, var(--green) 34%, transparent);
+  }
+  .diagnosis-state.normal {
+    background: var(--blue-soft);
+    color: #2C5A8E;
+    border-color: rgba(44,90,142,0.25);
+  }
+  .diagnosis-state.warn {
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .diagnosis-state.danger {
+    background: var(--warn-soft);
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 36%, transparent);
+  }
+  .diagnosis-hint {
+    min-width: 0;
+    color: var(--ink-2);
+    font-size: 12px;
+    line-height: 1.35;
   }
   .tryrate-final-inline strong {
     font-size: 18px;
@@ -217,45 +285,41 @@
     color: var(--ink-3);
     line-height: 1.4;
   }
-  /* V14: 解雇 / 卖车 危险操作区 */
-  /* V14.92: 改用 details/summary 折叠,默认收起 */
-  details.inspector-danger-actions {
+  /* V15.22: 底部其他操作区。换车保持常规动作样式,解雇/卖车保留红色按钮。 */
+  details.inspector-other-actions {
     padding-top: 0;
     border-top: 1px dashed var(--ink-1);
   }
-  details.inspector-danger-actions[open] {
+  details.inspector-other-actions[open] {
     padding-top: 12px;
   }
-  details.inspector-danger-actions summary {
+  details.inspector-other-actions summary {
     cursor: pointer;
     list-style: none;
-    padding: 10px 0 8px;
+    padding: 8px 0 6px;
     user-select: none;
   }
-  details.inspector-danger-actions summary::-webkit-details-marker {
+  details.inspector-other-actions summary::-webkit-details-marker {
     display: none;
   }
-  details.inspector-danger-actions summary::after {
+  details.inspector-other-actions summary::after {
     content: '▾';
     margin-left: 8px;
     font-size: 11px;
-    color: var(--warn);
+    color: var(--ink-3);
     display: inline-block;
     transition: transform 0.15s ease;
   }
-  details.inspector-danger-actions[open] summary::after {
+  details.inspector-other-actions[open] summary::after {
     transform: rotate(180deg);
   }
-  .inspector-danger-actions .inspector-section-title {
-    color: var(--warn);
-  }
-  .inspector-danger-action-list {
+  .inspector-other-action-list {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     width: min(100%, 430px);
   }
-  .inspector-danger-action-list .btn {
+  .inspector-other-action-list > .btn {
     width: 100%;
     justify-content: flex-start;
     text-align: left;
@@ -329,9 +393,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    background: color-mix(in srgb, var(--gold) 18%, var(--sub) 82%);
-    border: 2px solid var(--line-ui);
-    box-shadow: 2px 2px 0 rgba(42,35,32,0.16);
+    background: color-mix(in srgb, var(--gold) 14%, var(--sub) 86%);
   }
   .vehicle-manage-title {
     color: var(--ink);
@@ -346,9 +408,6 @@
     font-weight: 700;
     line-height: 1.25;
   }
-  .crew-inspector .inspector-primary-actions {
-    margin-top: 10px;
-  }
   .crew-inspector .inspector-section-title {
     justify-content: flex-start;
     color: var(--ink-2);
@@ -362,11 +421,8 @@
     box-shadow: 1px 1px 0 rgba(42,35,32,0.16);
     flex-shrink: 0;
   }
-  .crew-inspector .inspector-danger-actions .inspector-section-title::before {
-    background: var(--warn);
-  }
-  .crew-inspector .inspector-danger-actions .inspector-section-title {
-    color: var(--warn);
+  .crew-inspector .inspector-other-actions .inspector-section-title::before {
+    background: var(--ink-3);
   }
   .vehicle-swap-modal-grid {
     display: grid;
@@ -609,7 +665,7 @@
     background: var(--warn);
   }  .driver-attr-list {
     display: grid;
-    gap: 6px;
+    gap: 8px;
   }
   .driver-attr-row {
     --attr-color: var(--accent);
@@ -622,10 +678,8 @@
     align-items: center;
     column-gap: 7px;
     row-gap: 5px;
-    min-height: 72px;
-    padding: 7px 8px;
-    background: color-mix(in srgb, var(--sub) 72%, #FFF8E7 28%);
-    border: 1px solid var(--border-soft);
+    min-height: 76px;
+    padding: 9px 10px;
   }
   .driver-attr-label {
     grid-area: label;
@@ -727,8 +781,7 @@
     font-size: 14px;
     font-weight: 700;
     line-height: 1.32;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
   .crew-vehicle-card {
     display: grid;

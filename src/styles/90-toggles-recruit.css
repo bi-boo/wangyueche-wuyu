@@ -98,14 +98,7 @@
   .ticket-card.headhunter { border: 2px solid var(--accent); background: var(--card); }
   .ticket-top-copy {
     display: grid;
-    gap: 4px;
     min-width: 0;
-  }
-  .ticket-stage {
-    color: var(--ink-2);
-    font-size: 14px;
-    font-weight: 800;
-    line-height: 1;
   }
   .ticket-name { font-weight: 900; font-size: 18px; line-height: 1.15; }
   .ticket-cost { font-weight: 700; color: var(--accent-deep); font-size: 18px; }
@@ -133,19 +126,46 @@
   }
   .ticket-prob-chip {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 58px minmax(0, 1fr) 42px;
     align-items: center;
     gap: 8px;
     min-height: 28px;
-    padding: 4px 8px;
-    border-left: 4px solid var(--prob-color, var(--accent));
-    background: rgba(255,248,231,0.62);
+    padding: 4px 6px;
+    border: 1px solid var(--hairline);
+    background: rgba(255,248,231,0.56);
     font-size: 14px;
     font-weight: 800;
+  }
+  .ticket-prob-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .ticket-prob-name i {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border: 1px solid var(--ink);
+    background: var(--prob-color, var(--accent));
+  }
+  .ticket-prob-meter {
+    height: 8px;
+    border: 1px solid var(--border-soft);
+    background: rgba(42,35,32,0.08);
+    overflow: hidden;
+  }
+  .ticket-prob-meter span {
+    display: block;
+    width: var(--prob-width, 0%);
+    height: 100%;
+    background: var(--prob-color, var(--accent));
   }
   .ticket-prob-chip strong {
     color: var(--accent-deep);
     font-size: 14px;
+    text-align: right;
   }
   .ticket-card .btn-block { margin-top: 0; align-self: end; }
   .gacha-grid {
@@ -281,7 +301,13 @@
   @keyframes slideUp {
     from { transform: translate(-50%, 100%); opacity: 0; }
     to { transform: translate(-50%, 0); opacity: 1; }
-  }  @media (max-width: 760px) {
+  }
+  @media (max-width: 860px) {
+    .ticket-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
     .ticket-list {
       grid-template-columns: 1fr;
       overflow-x: visible;

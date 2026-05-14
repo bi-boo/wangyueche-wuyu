@@ -118,7 +118,7 @@ function LogInspector({ state }) {
         {logs.length === 0 ? (
           <div className="inspector-card log-empty-card">
             <div className="inspector-section-title">暂无记录</div>
-            <div className="inspector-sub">开始运营后,接单、完单、事件和系统提示会显示在这里。</div>
+            <div className="inspector-sub">开始运营后,接单、完单、事件和运营提示会显示在这里。</div>
           </div>
         ) : (
           <div className="log-drawer-list inspector-log-list">
@@ -196,17 +196,120 @@ function getStatOrderLinks(stat, currentValue, vehicleData) {
 
 function getStatTrainHint(stat, currentValue, vehicleData, goodRate) {
   if (stat === 'service') {
-    return '服务越高,好评率和口碑涨得越快';
+    return `当前好评率约 ${goodRate}%,好评会涨城市口碑,口碑高才有更多好单`;
   }
-  // V14.67: 改为从 ORDERS.req 动态推导,避免数值后台改门槛后提示撒谎。
-  const reqHints = ORDERS
+  // V14.67: 从 ORDERS.req 动态推导门槛,避免数值后台改门槛后提示撒谎。
+  const thresholds = ORDERS
     .filter((o) => o.req && typeof o.req[stat] === 'number')
-    .map((o) => `${o.name}需${stat === 'driving' ? '车技' : '服务'}${o.req[stat]}`);
+    .sort((a, b) => a.req[stat] - b.req[stat]);
+  if (stat === 'driving') {
+    const airport = thresholds.find((o) => o.id === 'airport') || thresholds[0];
+    const luxury = thresholds.find((o) => o.id === 'luxury') || thresholds[thresholds.length - 1];
+    if (airport && currentValue < airport.req[stat]) {
+      return `车技到 ${airport.req[stat]} 可接专车订单,到 ${luxury.req[stat]} 可接豪华车订单`;
+    }
+    if (luxury && currentValue < luxury.req[stat]) {
+      return `专车订单已能接,车技到 ${luxury.req[stat]} 可接豪华车订单`;
+    }
+    return '高价订单门槛已达,继续练能提高专车和豪华车收入';
+  }
+  const reqHints = thresholds.map((o) => `${o.name}需${getDriverStatLabel(stat)}${o.req[stat]}`);
   return reqHints.length > 0 ? reqHints.join(',') : '提升此属性可解锁更高级订单';
 }
 
 function getTrainingCost(training, currentValue) {
   return E.getTrainingCost ? E.getTrainingCost(training, currentValue) : training.cost;
+}
+
+function getOrderMissingText(order, driver) {
+  const missing = Object.entries(order.req || {})
+    .map(([key, value]) => {
+      const current = driver.stats?.[key] || 0;
+      const gap = Math.max(0, value - current);
+      if (gap <= 0) return null;
+      return `${key === 'driving' ? '车技' : '服务'}${gap}`;
+    })
+    .filter(Boolean);
+  return missing.join('、');
+}
+
+function getOrderOpportunityDiagnosis(reputation) {
+  if (reputation >= 520) {
+    return { key: 'opportunity', label: '客源', state: '很旺', tone: 'strong', hint: '高价片区热起来了,好单更多' };
+  }
+  if (reputation >= 180) {
+    return { key: 'opportunity', label: '客源', state: '稳定', tone: 'normal', hint: '客流够用,稳住好评就行' };
+  }
+  if (reputation >= 90) {
+    return { key: 'opportunity', label: '客源', state: '稳定', tone: 'normal', hint: '基础片区够跑,继续攒口碑开新区' };
+  }
+  return { key: 'opportunity', label: '客源', state: '偏冷', tone: 'warn', hint: '街坊还不熟,先攒好评再扩片区' };
+}
+
+function getDriverWillingnessDiagnosis(driver) {
+  const loyalty = driver.loyalty ?? 50;
+  const bonus = driver.orderRateBonus || 1;
+  const bonusText = bonus > 1 ? `,自带人气能多带点单` : '';
+  if (loyalty >= 80) {
+    return { key: 'willingness', label: '干劲', state: '很足', tone: 'strong', hint: `心气足,愿意多跑几单${bonusText}` };
+  }
+  if (loyalty >= 50) {
+    return { key: 'willingness', label: '干劲', state: '稳定', tone: 'normal', hint: `状态稳,不用急着调薪${bonusText}` };
+  }
+  if (loyalty >= 30) {
+    return { key: 'willingness', label: '干劲', state: '偏低', tone: 'warn', hint: `心气有点散,加薪或好事能拉回来${bonusText}` };
+  }
+  return { key: 'willingness', label: '干劲', state: '危险', tone: 'danger', hint: '快留不住了,接单会少' };
+}
+
+function getOrderAbilityDiagnosis(driver, vehicleData) {
+  if (!vehicleData) {
+    return { key: 'ability', label: '单型', state: '断档', tone: 'danger', hint: '还没配车,先找辆车上路' };
+  }
+  const vehicleOrders = ORDERS.filter((order) => vehicleData.eligible.includes(order.id));
+  const readyOrders = vehicleOrders.filter((order) =>
+    Object.entries(order.req || {}).every(([key, value]) => (driver.stats?.[key] || 0) >= value)
+  );
+  const lockedByStats = vehicleOrders.filter((order) => !readyOrders.includes(order));
+  const bestReady = readyOrders.slice().sort((a, b) => b.fare - a.fare)[0];
+  const nextLocked = lockedByStats.slice().sort((a, b) => a.fare - b.fare)[0];
+  if (!bestReady) {
+    const next = lockedByStats[0];
+    return {
+      key: 'ability',
+      label: '单型',
+      state: '受限',
+      tone: 'warn',
+      hint: next ? `${next.name}还差${getOrderMissingText(next, driver)}` : '这辆车暂时没合适的单',
+    };
+  }
+  if (bestReady.id === 'luxury') {
+    return { key: 'ability', label: '单型', state: '全开', tone: 'strong', hint: '豪华车订单也能接' };
+  }
+  if (bestReady.id === 'airport') {
+    return {
+      key: 'ability',
+      label: '单型',
+      state: '可跑',
+      tone: 'normal',
+      hint: nextLocked ? `专车能跑,${nextLocked.name}还差${getOrderMissingText(nextLocked, driver)}` : '专车订单能跑',
+    };
+  }
+  return {
+    key: 'ability',
+    label: '单型',
+    state: '可跑',
+    tone: 'normal',
+    hint: nextLocked ? `${bestReady.name}能跑,${nextLocked.name}还差${getOrderMissingText(nextLocked, driver)}` : `${bestReady.name}能跑`,
+  };
+}
+
+function getDriverOrderDiagnosis(driver, vehicleData, reputation) {
+  return [
+    getOrderOpportunityDiagnosis(reputation),
+    getDriverWillingnessDiagnosis(driver),
+    getOrderAbilityDiagnosis(driver, vehicleData),
+  ];
 }
 
 // V15.17:canTrain 和 canRaiseSalary 控制车技/服务训练 + 按钮 / 忠诚行调薪 + 按钮的可见性
@@ -340,7 +443,7 @@ function VehicleSwapModal({ driver, vehicles, drivers, dispatch, onClose }) {
 }
 
 function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, dispatch, funds, reputation, state, requestConfirm, onSelectVehicle, onSelectDriver, onRequestSalaryRaise }) {
-  // V15.17:渐进解锁判定 — 训练/调薪/接单率拆解按 gate 控制
+  // V15.17:渐进解锁判定 — 训练/调薪/接单诊断按 gate 控制
   const canTrain = E.isUIGateUnlocked(state, 'training_actions');
   const canRaiseSalary = E.isUIGateUnlocked(state, 'salary_raise');
   const showTryRateCard = E.isUIGateUnlocked(state, 'tryrate_card');
@@ -365,11 +468,11 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
     <div className="panel panel-tight inspector-panel driver-inspector crew-inspector">
       <div className="panel-header">
         <span className="panel-title">车组详情</span>
-        <span className="panel-sub">{driver ? '车组概览 / 常用操作 / 能力训练' : '分配司机 / 车辆订单'}</span>
+        <span className="panel-sub">{driver ? '概览 / 档案 / 训练' : '分配司机 / 车辆订单'}</span>
       </div>
       <div className="inspector-scroll driver-inspector-grid">
         {/* V15.17:hero 跟左侧车队卡完全一致 — 头像 + 名字+车型 meta + 忠诚 chip
-            背景/月薪/接单率移到下方独立「司机详情」卡 */}
+            身份/月薪/接单诊断移到下方独立「司机档案」卡 */}
         <div className="inspector-hero crew-hero">
           <div className="crew-overview-row crew-card-row">
             {driver ? (
@@ -428,13 +531,13 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
           </div>
         </div>
 
-        {/* V15.17:司机详情卡 — 整合背景 + 月薪 + 接单率拆解(原 tryrate-card 合并进来) */}
+        {/* V15.17:司机档案卡 — 整合身份 + 月薪 + 接单诊断(原 tryrate-card 合并进来) */}
         {driver && (
           <div className="inspector-section">
-            <div className="inspector-section-title">司机详情</div>
+            <div className="inspector-section-title">司机档案</div>
             <div className="driver-detail-card">
               <div className="driver-detail-row">
-                <span className="driver-detail-label">背景</span>
+                <span className="driver-detail-label">身份</span>
                 <span className="driver-detail-value">{getDriverMetaLine(driver)}</span>
               </div>
               <div className="driver-detail-row">
@@ -442,31 +545,19 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                 <span className="driver-detail-value">¥{driver.salary.toLocaleString()}</span>
               </div>
               {showTryRateCard && (() => {
-                const breakdown = E.getDriverTryRateBreakdown(driver, reputation);
-                const fmt = (v) => v.toFixed(2);
+                const diagnosis = getDriverOrderDiagnosis(driver, vd, reputation);
                 return (
                   <>
-                    <div className="driver-detail-row driver-detail-tryrate">
-                      <span className="driver-detail-label">今日接单率</span>
-                      <span className="driver-detail-value tryrate-final-inline">
-                        <strong>{Math.round(breakdown.final * 100)}%</strong>
-                        {breakdown.capped && <span className="tryrate-cap-badge">封顶 99%</span>}
-                      </span>
+                    <div className="driver-diagnosis-card">
+                      {diagnosis.map((item) => (
+                        <div className="diagnosis-row" key={item.key}>
+                          <span className="diagnosis-label">{item.label}</span>
+                          <span className={`diagnosis-state ${item.tone}`}>{item.state}</span>
+                          <span className="diagnosis-hint">{item.hint}</span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="tryrate-formula tryrate-formula-inline">
-                      基础 {Math.round(breakdown.base * 100)}%
-                      <span className="tryrate-mul"> × </span>
-                      口碑 {fmt(breakdown.repMul)}
-                      <span className="tryrate-mul"> × </span>
-                      忠诚 {fmt(breakdown.loyaltyMul)}
-                      {breakdown.bonus !== 1.0 && (
-                        <>
-                          <span className="tryrate-mul"> × </span>
-                          <span className="tryrate-bonus">加成 {fmt(breakdown.bonus)}</span>
-                        </>
-                      )}
-                    </div>
-                    <div className="tryrate-hint">单数少时看这里:口碑/忠诚哪个低就是当前瓶颈</div>
+                    <div className="tryrate-hint">单子少时,先看客源、干劲和单型。</div>
                   </>
                 );
               })()}
@@ -475,7 +566,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
         )}
 
         {/* V14.2: 选中空车(无司机) → 顶部显示分配司机列表;
-            选中司机 → 先给常用操作,再进入能力训练,降低寻找按钮的成本。 */}
+            选中司机 → 优先看状态和训练,低频管理动作收在底部。 */}
         {!driver && vehicle && (
           <div className="inspector-section">
             <div className="inspector-section-title">分配司机</div>
@@ -503,21 +594,6 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                   </div>
                 );
               })}
-            </div>
-          </div>
-        )}
-
-        {driver && (
-          <div className="inspector-section inspector-primary-actions">
-            <div className="inspector-section-title">常用操作</div>
-            <div className="vehicle-manage-card">
-              <div>
-                <div className="vehicle-manage-title">{vd ? `车辆: ${vd.name}` : '车辆: 未分配'}</div>
-                <div className="vehicle-manage-sub">{vd ? getInspectorVehicleOrderSummary(vd) : '分配车辆后才能接单'}</div>
-              </div>
-              <button className="btn btn-primary btn-xs" onClick={() => setShowVehicleSwap(true)}>
-                {vd ? '换车' : '分配'}
-              </button>
             </div>
           </div>
         )}
@@ -569,18 +645,27 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
           </div>
         )}
 
-        {/* V14.92: 风险操作折叠 — 默认收起,避免新手误以为"解雇是日常操作"
-            V15.17:day 60 后才解锁(避免开局玩家误解雇唯一司机) */}
-        {(canFireDriver || canSellVehicle) && E.isUIGateUnlocked(state, 'risk_actions') && (
-          <details className="inspector-section inspector-danger-actions">
-            <summary className="inspector-section-title">风险操作</summary>
-            <div className="inspector-danger-action-list">
-              {canFireDriver && (
+        {/* V15.22: 换车/分配、解雇、卖车统一收到底部,避免训练区被低频操作打断。
+            解雇和卖车仍受 day 60 UI 解锁限制,并保留二次确认。 */}
+        {driver && (
+          <details className="inspector-section inspector-other-actions" open>
+            <summary className="inspector-section-title">其他操作</summary>
+            <div className="inspector-other-action-list">
+              <div className="vehicle-manage-card">
+                <div>
+                  <div className="vehicle-manage-title">{vd ? `车辆: ${vd.name}` : '车辆: 未分配'}</div>
+                  <div className="vehicle-manage-sub">{vd ? getInspectorVehicleOrderSummary(vd) : '分配车辆后才能接单'}</div>
+                </div>
+                <button className="btn btn-primary btn-xs" onClick={() => setShowVehicleSwap(true)}>
+                  {vd ? '换车' : '分配'}
+                </button>
+              </div>
+              {E.isUIGateUnlocked(state, 'risk_actions') && canFireDriver && (
                 <button className="btn btn-ghost btn-danger"
                   onClick={() => {
                     const severance = driver.salary * 2;
                     requestConfirm({
-                      tag: '风险操作',
+                      tag: '其他操作',
                       title: `确认解雇 ${driver.name}？`,
                       message: `需支付 2 个月补偿 ¥${severance.toLocaleString()}。${driverBusy ? '\n注意：当前正在跑单，订单会中断。' : ''}`,
                       confirmLabel: '解雇',
@@ -591,13 +676,13 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                   解雇 {driver.name}(补偿 ¥{(driver.salary * 2).toLocaleString()})
                 </button>
               )}
-              {canSellVehicle && (() => {
+              {E.isUIGateUnlocked(state, 'risk_actions') && canSellVehicle && (() => {
                 const refund = Math.round(vd.price * 0.6);
                 return (
                   <button className="btn btn-ghost btn-danger"
                     onClick={() => {
                       requestConfirm({
-                        tag: '风险操作',
+                        tag: '其他操作',
                         title: `卖出 ${vd.name}？`,
                         message: `回收 ¥${refund.toLocaleString()}（60% 残值）。${vehicleBusy ? '\n注意：当前正在跑单，订单会中断。' : ''}`,
                         confirmLabel: '卖车',

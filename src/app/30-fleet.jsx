@@ -173,7 +173,7 @@ function getZoneOrderWeight(zone, orderId) {
 
 function getZoneOrderRows(zone) {
   const total = ORDERS.reduce((sum, order) => sum + getZoneOrderWeight(zone, order.id), 0) || 1;
-  // 固定为 ORDERS 的业务顺序:特惠 → 快车 → 专车 → 豪华车,方便横向比较片区。
+  // 固定为 ORDERS 的业务顺序:出租车 → 快车 → 专车 → 豪华车,方便横向比较片区。
   return ORDERS
     .map((order) => {
       const weight = getZoneOrderWeight(zone, order.id);
@@ -185,4 +185,3 @@ function getZoneOrderRows(zone) {
     })
     .filter((row) => row.weight > 0);
 }
-

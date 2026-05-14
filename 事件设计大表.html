@@ -42,7 +42,7 @@
       repeating-linear-gradient(0deg, transparent 0, transparent 16px, rgba(42,35,32,0.025) 16px, rgba(42,35,32,0.025) 17px),
       repeating-linear-gradient(90deg, transparent 0, transparent 16px, rgba(42,35,32,0.025) 16px, rgba(42,35,32,0.025) 17px);
   }
-  .container { max-width: 1480px; margin: 0 auto; }
+  .container { max-width: 1600px; margin: 0 auto; }
   .top {
     position: sticky;
     top: 0;
@@ -53,12 +53,12 @@
     border-bottom: 2px solid var(--border-soft);
     backdrop-filter: blur(8px);
   }
-  .top-inner { max-width: 1480px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; }
+  .top-inner { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; }
   h1 { margin: 0 0 4px; font-size: 26px; line-height: 1.2; }
   .subtitle { color: var(--ink-2); font-size: 13px; }
   .actions { display: flex; gap: 8px; align-items: center; }
   .search {
-    width: 260px;
+    width: 300px;
     padding: 8px 10px;
     border: 2px solid var(--border);
     border-radius: var(--ui-radius);
@@ -114,6 +114,14 @@
     overflow: hidden;
     margin-bottom: 20px;
   }
+  .event-table { table-layout: fixed; }
+  .event-table .col-index { width: 44px; }
+  .event-table .col-title { width: 30%; }
+  .event-table .col-tag { width: 72px; }
+  .event-table .col-progress { width: 88px; }
+  .event-table .col-chain { width: 110px; }
+  .event-table .col-trigger { width: 178px; }
+  .event-table .col-options { width: 34%; }
   thead { background: var(--ink); color: var(--card); }
   th {
     padding: 10px 9px;
@@ -137,7 +145,6 @@
     padding: 1px 4px;
     border-radius: var(--ui-radius);
   }
-  .id { white-space: nowrap; }
   .muted { color: var(--ink-3); }
   .tag {
     display: inline-block;
@@ -159,7 +166,7 @@
     border-left: 3px solid var(--accent);
     background: rgba(255,255,255,0.48);
   }
-  .option b { color: var(--ink); }
+  .option b { display: block; color: var(--ink); line-height: 1.45; }
   .small { font-size: 12px; color: var(--ink-2); }
   .empty {
     padding: 30px;
@@ -187,10 +194,10 @@
   <div class="top-inner">
     <div>
       <h1>事件设计大表 · 实时版</h1>
-      <div class="subtitle">直接读取当前 <code>wycwy-data.js</code>。游戏事件数据改了,刷新本页就是最新表。</div>
+      <div class="subtitle">直接读取当前游戏数据。事件数据改了,刷新本页就是最新表。</div>
     </div>
     <div class="actions">
-      <input id="search" class="search" placeholder="搜索 id / 标题 / tag / 文案" />
+      <input id="search" class="search" placeholder="搜索标题 / 标签 / 文案 / 选项" />
       <button id="reloadBtn" type="button">刷新数据</button>
     </div>
   </div>
@@ -216,6 +223,24 @@
     rival: '竞品挖人',
     accident: '司机事故',
   };
+  const POLICY_TYPE_NAMES = {
+    notice: '提前预告',
+    decision: '玩家决策',
+    verdict: '检查结果',
+    resume: '恢复运营',
+  };
+  const REVIEW_TYPE_NAMES = {
+    warning: '提醒',
+    punish: '扣款施压',
+    branch: '达标分支',
+    vision: '年终收尾',
+  };
+  const REVIEW_STAGE_NAMES = {
+    q1: '第 90 天提醒',
+    h1: '半年复盘',
+    q3: '三季度检查',
+    y1: '年终复盘',
+  };
 
   function esc(value) {
     return String(value ?? '')
@@ -230,11 +255,6 @@
     return '¥' + Math.round(num).toLocaleString();
   }
 
-  function code(value) {
-    if (value === undefined || value === null || value === '') return '<span class="muted">-</span>';
-    return '<code>' + esc(value) + '</code>';
-  }
-
   function getChainFamily(event) {
     const id = event.id || '';
     for (const family of TRUE_CHAINS) {
@@ -245,32 +265,62 @@
     return '';
   }
 
+  function sameChoiceValue(a, b) {
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+
+  function findChoiceEvent(chainKey) {
+    return (D.EVENTS || []).find((event) => event.chain === chainKey || event.id === chainKey);
+  }
+
+  function choiceLabel(chainKey, expected) {
+    const source = findChoiceEvent(chainKey);
+    const values = Array.isArray(expected) ? expected : [expected];
+    const labels = values.map((value) => {
+      const option = (source?.options || []).find((opt) => sameChoiceValue(opt.choiceKey, value));
+      return '「' + (option?.label || value) + '」';
+    });
+    const sourceTitle = source?.title ? '「' + source.title + '」' : '前面事件';
+    return '前面在' + sourceTitle + '选择了' + labels.join('或');
+  }
+
   function formatRequire(value) {
     if (!value) return '';
-    return Object.entries(value).map(([key, val]) => {
-      const shown = Array.isArray(val) ? '[' + val.join(', ') + ']' : val;
-      return key + ' = ' + shown;
-    }).join('; ');
+    return Object.entries(value).map(([key, val]) => choiceLabel(key, val)).join('; ');
+  }
+
+  function cooldownText(days) {
+    const num = Number(days || 0);
+    if (!num) return '没有特殊冷却';
+    if (num >= 365) return '基本只会出现一次';
+    return '触发后 ' + num + ' 天内不会再出现';
+  }
+
+  function missionGateText(value) {
+    const num = Number(value || 0);
+    return num > 0 ? '第 ' + num + ' 个任务后' : '开局';
   }
 
   function triggerText(event) {
-    const parts = ['完成任务数 ≥ ' + (event.unlockMission || 0)];
+    const mission = Number(event.unlockMission || 0);
+    const parts = [mission > 0 ? '完成第 ' + mission + ' 个主线任务后才可能出现' : '开局后就可能出现'];
     const req = formatRequire(event.requireChainChoice);
-    if (req) parts.push('前置选择: ' + req);
-    if (event.requireKeyDriverAlive === true) parts.push('钥匙司机在编');
-    if (event.requireKeyDriverAlive === false) parts.push('钥匙司机已离队');
-    if (event.requireFunds) parts.push('资金 ≥ ' + money(event.requireFunds));
-    if (event.blindOptions) parts.push('盲选:选前隐藏后果');
-    if (event.skipScale) parts.push('不按规模缩放');
-    return parts.join('<br>');
+    if (req) parts.push('只有当' + req);
+    if (event.requireKeyDriverAlive === true) parts.push('关键司机还在车队');
+    if (event.requireKeyDriverAlive === false) parts.push('关键司机已经离队');
+    if (event.requireFunds) parts.push('当前资金不少于 ' + money(event.requireFunds));
+    if (event.blindOptions) parts.push('玩家选择前看不到具体后果');
+    if (event.skipScale) parts.push('结果不随车队规模放大');
+    parts.push(cooldownText(event.cooldown));
+    return parts.map(esc).join('<br>');
   }
 
   function optionText(options) {
     if (!Array.isArray(options) || options.length === 0) return '<span class="muted">无选项</span>';
     return '<div class="options">' + options.map((opt, idx) => {
-      const choice = opt.choiceKey !== undefined ? ' <span class="small">choiceKey=' + esc(JSON.stringify(opt.choiceKey)) + '</span>' : '';
+      const extraToggle = opt.extraToggle ? '<div class="small">可附加选择: ' + esc(opt.extraToggle.label || '') + '</div>' : '';
       const detail = opt.detail ? '<div class="small">' + esc(opt.detail) + '</div>' : '';
-      return '<div class="option"><b>' + (idx + 1) + '. ' + esc(opt.label || '选项') + '</b>' + choice + detail + '</div>';
+      return '<div class="option"><b>' + (idx + 1) + '. ' + esc(opt.label || '选项') + '</b>' + detail + extraToggle + '</div>';
     }).join('') + '</div>';
   }
 
@@ -286,12 +336,11 @@
     const family = getChainFamily(event);
     return '<tr data-search="' + esc(searchTextEvent(event)) + '">' +
       '<td class="muted">' + (idx + 1) + '</td>' +
-      '<td class="id">' + code(event.id) + '</td>' +
       '<td><b>' + esc(event.title) + '</b><div class="small">' + esc(event.desc || '') + '</div></td>' +
       '<td><span class="tag">' + esc(event.tag || '-') + '</span></td>' +
-      '<td>' + (event.unlockMission || 0) + '</td>' +
-      '<td>' + (family ? '<span class="tag good">' + esc(CHAIN_NAMES[family] || family) + '</span><br>' : '') + code(event.chain) + '</td>' +
-      '<td>' + triggerText(event) + '<div class="small">冷却 ' + (event.cooldown || '-') + ' 天</div></td>' +
+      '<td>' + missionGateText(event.unlockMission) + '</td>' +
+      '<td>' + (family ? '<span class="tag good">' + esc(CHAIN_NAMES[family] || family) + '</span>' : '<span class="muted">单段</span>') + '</td>' +
+      '<td>' + triggerText(event) + '</td>' +
       '<td>' + optionText(event.options) + '</td>' +
     '</tr>';
   }
@@ -304,33 +353,34 @@
       .join('');
     return '<h2>' + esc(title) + '</h2>' +
       (note ? '<div class="note">' + note + '</div>' : '') +
-      '<table><thead><tr>' +
-      '<th>#</th><th style="width:180px">事件 ID</th><th>标题与描述</th><th>标签</th><th>任务</th><th>链路</th><th>触发逻辑</th><th>选项与效果</th>' +
+      '<table class="event-table"><colgroup><col class="col-index"><col class="col-title"><col class="col-tag"><col class="col-progress"><col class="col-chain"><col class="col-trigger"><col class="col-options"></colgroup><thead><tr>' +
+      '<th>#</th><th>标题与描述</th><th>标签</th><th>进度</th><th>剧情线</th><th>出现条件</th><th>选项与效果</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function renderPolicyTable() {
     const rows = (D.POLICY_EVENTS || []).flatMap((eventDef) => {
       return (eventDef.schedule || []).map((item) => {
-        const stage = item.type === 'verdict' ? 'verdict_pass / verdict_fine / verdict_ban' : item.stage;
         const stageData = eventDef.stages?.[item.stage] || {};
+        const isVerdict = item.type === 'verdict';
+        const title = isVerdict ? '检查结果' : (stageData.title || eventDef.title);
+        const desc = isVerdict ? '系统会根据前面是否投入合规建设,展示“通过、罚款、整改”中的一种结果。' : (stageData.desc || '');
+        const options = isVerdict ? [{ label: '按检查结果确认', detail: '通过、罚款或整改会分别展示对应按钮' }] : (stageData.options || [{ label: stageData.buttonLabel || '知道了', detail: '' }]);
         return '<tr data-search="' + esc([eventDef.id, eventDef.title, item.stage, item.type, stageData.title, stageData.tag].join(' ').toLowerCase()) + '">' +
-          '<td>' + item.atDay + '</td>' +
-          '<td>' + code(eventDef.id) + '</td>' +
-          '<td>' + code(stage) + '</td>' +
-          '<td><span class="tag warn">' + esc(item.type) + '</span></td>' +
-          '<td><b>' + esc(stageData.title || eventDef.title) + '</b><div class="small">' + esc(stageData.desc || '') + '</div></td>' +
-          '<td>' + optionText(stageData.options || [{ label: stageData.buttonLabel || '知道了', detail: '' }]) + '</td>' +
+          '<td>第 ' + item.atDay + ' 天</td>' +
+          '<td><span class="tag warn">' + esc(POLICY_TYPE_NAMES[item.type] || item.type) + '</span></td>' +
+          '<td><b>' + esc(title) + '</b><div class="small">' + esc(desc) + '</div></td>' +
+          '<td>' + optionText(options) + '</td>' +
         '</tr>';
       });
     }).join('');
     return '<h2>政策事件时间线</h2>' +
-      '<div class="note">这部分来自 <code>POLICY_EVENTS</code>,按游戏绝对天数触发,独立于随机事件抽签。</div>' +
-      '<table><thead><tr><th>Day</th><th>事件</th><th>阶段</th><th>类型</th><th>弹窗内容</th><th>选项</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      '<div class="note">政策事件按游戏里的日期触发,不会参与普通随机事件抽签。</div>' +
+      '<table><thead><tr><th>游戏时间</th><th>节点类型</th><th>弹窗内容</th><th>选项</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function kpiText(kpi) {
-    if (!kpi) return '<span class="muted">无硬 KPI</span>';
+    if (!kpi) return '<span class="muted">无硬性目标</span>';
     const parts = [
       '资金 ≥ ' + money(kpi.funds),
       '口碑 ≥ ' + kpi.reputation,
@@ -342,53 +392,74 @@
     return parts.join('<br>');
   }
 
+  function missionTitle(missionId) {
+    const mission = (D.MISSIONS || []).find((item) => item.id === missionId);
+    return mission?.title || missionId || '';
+  }
+
+  function gateTriggerText(trigger) {
+    if (!trigger) return '默认开放';
+    if (trigger.type === 'mission') return '完成「' + missionTitle(trigger.value) + '」后';
+    if (trigger.type === 'day') return '运营到第 ' + trigger.value + ' 天后';
+    return '达到指定进度后';
+  }
+
+  function gateSplashText(gate) {
+    if (gate.splash === false) {
+      return '<span class="tag neutral">不弹窗</span><div class="small">随相关阶段静默开放,不打断运营。</div>';
+    }
+    const kicker = gate.kicker || '新入口开放';
+    const confirmLabel = gate.confirmLabel || '继续运营';
+    return '<b>' + esc(kicker) + ' · ' + esc(gate.title || '') + '</b>' +
+      '<div class="small">' + esc(gate.desc || '') + '</div>' +
+      '<div><span class="tag">新增入口</span> ' + esc(gate.hint || '') + '</div>' +
+      '<div class="small">按钮: ' + esc(confirmLabel) + '</div>';
+  }
+
   function renderInvestorReviewTable() {
     const review = D.INVESTOR_REVIEW || {};
     const stageRows = Object.entries(review.stages || {}).map(([stageKey, stage]) => {
       return '<tr data-search="' + esc(['investor_review', stageKey, stage.title, stage.tag, stage.desc].join(' ').toLowerCase()) + '">' +
-        '<td>' + code(stageKey) + '</td>' +
-        '<td><span class="tag">' + esc(stage.tag || '-') + '</span></td>' +
-        '<td><b>' + esc(stage.title || '') + '</b><div class="small">' + esc(stage.desc || '') + '</div></td>' +
+        '<td><b>' + esc(stage.title || REVIEW_STAGE_NAMES[stageKey] || '') + '</b><div><span class="tag">' + esc(stage.tag || '-') + '</span></div></td>' +
+        '<td><div class="small">' + esc(stage.desc || '') + '</div></td>' +
         '<td>' + optionText(stage.options || [{ label: stage.buttonLabel || '知道了', detail: '' }]) + '</td>' +
       '</tr>';
     }).join('');
     const scheduleRows = (review.schedule || []).map((item) => {
       return '<tr data-search="' + esc(['investor_review', item.stage, item.type].join(' ').toLowerCase()) + '">' +
-        '<td>' + item.atDay + '</td>' +
-        '<td>' + code(item.stage) + '</td>' +
-        '<td><span class="tag warn">' + esc(item.type) + '</span></td>' +
+        '<td>第 ' + item.atDay + ' 天</td>' +
+        '<td>' + esc(REVIEW_STAGE_NAMES[item.stage] || item.stage) + '</td>' +
+        '<td><span class="tag warn">' + esc(REVIEW_TYPE_NAMES[item.type] || item.type) + '</span></td>' +
         '<td>' + kpiText(review.kpi?.[item.stage]) + '</td>' +
       '</tr>';
     }).join('');
-    return '<h2>投资人 Review</h2>' +
-      '<div class="note">这部分来自 <code>INVESTOR_REVIEW</code>,按 Day 90 / 180 / 270 / 360 检查经营结果。弹窗预览页会把每个分支单独列出来。</div>' +
-      '<table><thead><tr><th>Day</th><th>检查点</th><th>类型</th><th>KPI 逻辑</th></tr></thead><tbody>' + scheduleRows + '</tbody></table>' +
-      '<table><thead><tr><th>Stage</th><th>Tag</th><th>弹窗文案</th><th>选项</th></tr></thead><tbody>' + stageRows + '</tbody></table>';
+    return '<h2>投资人复盘</h2>' +
+      '<div class="note">投资人会在第 90、180、270、360 天复盘经营结果。达标和不达标会走不同弹窗分支。</div>' +
+      '<table><thead><tr><th>游戏时间</th><th>复盘节点</th><th>处理方式</th><th>达标要求</th></tr></thead><tbody>' + scheduleRows + '</tbody></table>' +
+      '<table><thead><tr><th>结果弹窗</th><th>弹窗文案</th><th>选项</th></tr></thead><tbody>' + stageRows + '</tbody></table>';
   }
 
   function renderMissionGateTable() {
     const missionRows = (D.MISSIONS || []).map((mission, idx) => {
       return '<tr data-search="' + esc([mission.id, mission.title, mission.desc, mission.hint].join(' ').toLowerCase()) + '">' +
         '<td>' + (idx + 1) + '</td>' +
-        '<td>' + code(mission.id) + '</td>' +
         '<td><b>' + esc(mission.title) + '</b><div class="small">' + esc(mission.desc || '') + '</div></td>' +
         '<td>' + (mission.hidden ? '<span class="tag neutral">静默</span>' : '<span class="tag good">主线可见</span>') + '</td>' +
         '<td>' + money(mission.reward?.funds) + '<div class="small">' + esc(mission.reward?.message || '') + '</div></td>' +
       '</tr>';
     }).join('');
     const gateRows = (D.UI_GATES || []).map((gate) => {
-      const trigger = gate.trigger ? gate.trigger.type + ' = ' + gate.trigger.value : '-';
-      return '<tr data-search="' + esc([gate.id, gate.title, gate.desc, gate.hint, trigger].join(' ').toLowerCase()) + '">' +
-        '<td>' + code(gate.id) + '</td>' +
-        '<td><b>' + esc(gate.title) + '</b><div class="small">' + esc(gate.desc || '') + '</div></td>' +
-        '<td>' + code(trigger) + '</td>' +
-        '<td>' + esc(gate.hint || '') + '</td>' +
+      const trigger = gateTriggerText(gate.trigger);
+      return '<tr data-search="' + esc([gate.id, gate.title, gate.desc, gate.hint, trigger, gate.kicker, gate.confirmLabel].join(' ').toLowerCase()) + '">' +
+        '<td>' + gateSplashText(gate) + '</td>' +
+        '<td>' + esc(trigger) + '</td>' +
+        '<td><b>' + esc(gate.title || '') + '</b><div class="small">' + esc(gate.hint || '') + '</div></td>' +
       '</tr>';
     }).join('');
     return '<h2>任务与渐进解锁</h2>' +
-      '<div class="note">这张表用于看“什么时候会开放什么 UI”。主线任务来自 <code>MISSIONS</code>,入口解锁来自 <code>UI_GATES</code>。</div>' +
-      '<table><thead><tr><th>#</th><th>任务 ID</th><th>任务</th><th>展示</th><th>奖励</th></tr></thead><tbody>' + missionRows + '</tbody></table>' +
-      '<table><thead><tr><th>Gate ID</th><th>解锁内容</th><th>触发</th><th>位置</th></tr></thead><tbody>' + gateRows + '</tbody></table>';
+      '<div class="note">这张表用于看“玩家推进到哪一步时,会开放哪些任务、界面入口和解锁弹窗”。标记为“不弹窗”的入口会静默开放,不打断运营。</div>' +
+      '<table><thead><tr><th>#</th><th>任务</th><th>展示方式</th><th>奖励</th></tr></thead><tbody>' + missionRows + '</tbody></table>' +
+      '<table><thead><tr><th>解锁弹窗</th><th>触发时机</th><th>开放入口</th></tr></thead><tbody>' + gateRows + '</tbody></table>';
   }
 
   function renderSummary() {
@@ -398,11 +469,11 @@
     const hiddenMissions = (D.MISSIONS || []).filter((mission) => mission.hidden).length;
     const metrics = [
       ['随机事件', events.length],
-      ['链式事件段', chainEvents],
+      ['连续剧情段', chainEvents],
       ['政策事件', (D.POLICY_EVENTS || []).length],
-      ['投资人阶段', Object.keys(D.INVESTOR_REVIEW?.stages || {}).length],
+      ['投资人弹窗', Object.keys(D.INVESTOR_REVIEW?.stages || {}).length],
       ['主线任务', visibleMissions + ' + ' + hiddenMissions + ' 静默'],
-      ['UI 解锁', (D.UI_GATES || []).length],
+      ['界面解锁', (D.UI_GATES || []).length],
     ];
     summary.innerHTML = metrics.map(([label, value]) => '<div class="metric"><span>' + esc(label) + '</span><strong>' + esc(value) + '</strong></div>').join('');
   }
@@ -423,9 +494,9 @@
 
     renderSummary();
     let html = '';
-    html += renderEventTable('随机事件 · 单段', '来自 <code>EVENTS</code> 中未归入四条真分支链式的事件。触发仍走每 7 天抽签、unlockMission 和冷却过滤。', singleEvents);
+    html += renderEventTable('随机事件 · 单段', '这里是普通随机事件。游戏每 7 天会从“已开放、未冷却”的事件里抽一个,不属于连续剧情线。', singleEvents);
     TRUE_CHAINS.forEach((family) => {
-      html += renderEventTable('链式事件 · ' + (CHAIN_NAMES[family] || family), '同一链路下的后续段靠 <code>chainChoices</code>、钥匙司机状态等条件过滤,不是旧版 chainStages 顺序推进。', chainBuckets[family] || []);
+      html += renderEventTable('连续剧情 · ' + (CHAIN_NAMES[family] || family), '这里是连续剧情。前面选过什么、关键司机是否还在,会决定后续事件会不会出现,不是固定按第 1、2、3 段机械播放。', chainBuckets[family] || []);
     });
     html += renderPolicyTable();
     html += renderInvestorReviewTable();

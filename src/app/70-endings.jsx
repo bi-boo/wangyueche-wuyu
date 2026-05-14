@@ -96,13 +96,13 @@ function MissionToast({ mission, onClose }) {
 
 /* ============== ConfirmModal:替代 native confirm(),保持开罗工坊视觉一致 ============== */
 
-// V15.17:渐进解锁 — 新功能解锁半屏弹窗
+// V15.17:渐进解锁 — 新入口开放半屏弹窗
 function UnlockSplashModal({ gate, onClose }) {
   if (!gate) return null;
   return (
     <div className="modal-overlay unlock-splash-overlay" onClick={onClose}>
       <div className="modal unlock-splash-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="unlock-splash-tag">新功能解锁</div>
+        <div className="unlock-splash-tag">{gate.kicker || '新入口开放'}</div>
         <div className="unlock-splash-icon" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36"
                fill="none" stroke="currentColor" strokeWidth="2"
@@ -113,11 +113,11 @@ function UnlockSplashModal({ gate, onClose }) {
         <h2 className="unlock-splash-title">{gate.title}</h2>
         <p className="unlock-splash-desc">{gate.desc}</p>
         <div className="unlock-splash-hint">
-          <span className="unlock-splash-hint-label">位置</span>
+          <span className="unlock-splash-hint-label">新增入口</span>
           <span className="unlock-splash-hint-value">{gate.hint}</span>
         </div>
         <button className="btn btn-primary unlock-splash-confirm" onClick={onClose}>
-          知道了
+          {gate.confirmLabel || '继续运营'}
         </button>
       </div>
     </div>
@@ -153,4 +153,3 @@ function ConfirmModal({ title, message, confirmLabel = '确定', cancelLabel = '
 }
 
 /* ============== App 主组件 ============== */
-

@@ -22,13 +22,12 @@ function MissionRouteRow({ row, expanded, onOpenShop }) {
           <strong>{mission.title}</strong>
           <span className="mission-route-state">{stateLabel}</span>
         </div>
-        <div className="mission-route-desc">{mission.desc}</div>
         {orderStatus && (
           <div className="mission-order-link">
             <OrderIcon orderId={orderStatus.order.id} color="currentColor" size={14} />
-            <span>牵引订单:{orderStatus.order.name}</span>
+            <span>{orderStatus.order.name}</span>
             <strong>¥{orderStatus.order.fare}/单</strong>
-            <em>{orderStatus.unlocked ? '已满足' : '待解锁'}</em>
+            <em>{orderStatus.unlocked ? '可接' : '未开放'}</em>
           </div>
         )}
         {expanded && orderStatus && (
@@ -43,30 +42,41 @@ function MissionRouteRow({ row, expanded, onOpenShop }) {
   );
 }
 
+function getMissionActionText(mission) {
+  if (!mission) return '可以继续运营,也可以在游戏目标里选择结束本局。';
+  return mission.hint || mission.desc;
+}
+
 function MissionRoutePanel({ state, orderStatusById, onOpenShop }) {
   // V15.16:乱序完成 — 找第一个未完成且非 hidden 的任务作为"当前任务"
   const completedSet = new Set(state.completedMissionIds || []);
   const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && !m.hidden);
-  const currentIdx = currentMission ? MISSIONS.indexOf(currentMission) : MISSIONS.length;
+  const visibleMissions = MISSIONS.filter((m) => !m.hidden);
+  const visibleDoneCount = visibleMissions.filter((m) => completedSet.has(m.id)).length;
   const rows = getMissionRouteRows(state, orderStatusById);
   const currentOrderId = currentMission ? MISSION_ORDER_TARGETS[currentMission.id] : null;
   const currentOrderStatus = currentOrderId ? orderStatusById[currentOrderId] : null;
   return (
     <>
       <div className="mission-route-focus">
-        <div className="roadmap-focus-tag">{currentMission ? '当前任务' : '主线完成'}</div>
-        <div className="roadmap-focus-title">{currentMission ? currentMission.title : '主线任务已完成'}</div>
-        <div className="mission-route-focus-desc">
-          {currentMission ? currentMission.desc : '可以继续运营,也可以在游戏目标里选择结束本局。'}
+        <div className="mission-route-focus-top">
+          <div>
+            <div className="roadmap-focus-tag">{currentMission ? '当前任务' : '主线完成'}</div>
+            <div className="roadmap-focus-title">{currentMission ? currentMission.title : '主线任务已完成'}</div>
+          </div>
+          <span className="mission-route-progress">{visibleDoneCount} / {visibleMissions.length}</span>
         </div>
-        {currentMission?.hint && <div className="mission-route-hint">{currentMission.hint}</div>}
+        <div className="mission-route-next">
+          <span>下一步</span>
+          <strong>{getMissionActionText(currentMission)}</strong>
+        </div>
         {currentOrderStatus && (
           <div className="mission-route-order-focus">
             <div className="mission-order-link strong">
               <OrderIcon orderId={currentOrderStatus.order.id} color="currentColor" size={14} />
-              <span>本任务需要:{currentOrderStatus.order.name}</span>
+              <span>目标订单:{currentOrderStatus.order.name}</span>
               <strong>¥{currentOrderStatus.order.fare}/单</strong>
-              <em>{currentOrderStatus.unlocked ? '已满足' : '待解锁'}</em>
+              <em>{currentOrderStatus.unlocked ? '可接' : '未开放'}</em>
             </div>
             <ConditionRow status={currentOrderStatus.zone} />
             <ConditionRow status={currentOrderStatus.stat} />
@@ -81,7 +91,7 @@ function MissionRoutePanel({ state, orderStatusById, onOpenShop }) {
           <MissionRouteRow
             key={row.mission.id}
             row={row}
-            expanded={row.idx === currentIdx && !!row.orderStatus}
+            expanded={currentMission?.id === row.mission.id && !!row.orderStatus}
             onOpenShop={onOpenShop}
           />
         ))}
@@ -150,6 +160,36 @@ function EndingAchievementWall({ achievements }) {
       </div>
     </div>
   );
+}
+
+function EndingGoalSummary({ achievements }) {
+  const total = achievements.length;
+  const conquered = achievements.filter((a) => a.badge.cls === 'conquered').length;
+  return (
+    <div className="ending-goal-summary">
+      <span>通关进度</span>
+      <strong>{conquered} / {total}</strong>
+    </div>
+  );
+}
+
+function getEndingGoalRows(state) {
+  const targetRows = getTargetEndingRows(state);
+  const achievements = getEndingAchievements(state);
+  return targetRows.map((row, idx) => {
+    const achievement = achievements[idx];
+    const revealed = achievement?.revealed || !row.hidden;
+    const hidden = !revealed;
+    let status = row.status;
+    if (achievement?.badge?.cls === 'conquered') {
+      status = { cls: 'done', label: '已征服' };
+    } else if (achievement?.badge?.cls === 'reachable') {
+      status = { cls: 'next', label: '可冲击' };
+    } else if (row.status.cls === 'next') {
+      status = { ...row.status, label: '下一目标' };
+    }
+    return { ending: row.ending, hidden, status };
+  });
 }
 
 // V14.90: 运营记录列表 + 详情查看
@@ -267,8 +307,8 @@ function UnlockRoadmapModal({ state, onClose, onOpenShop, initialTab = 'missions
   const [historyDetail, setHistoryDetail] = useState(null);
   const allStatus = ORDERS.map((o) => computeOrderUnlockStatus(o, state));
   const orderStatusById = Object.fromEntries(allStatus.map((s) => [s.order.id, s]));
-  const endingRows = getTargetEndingRows(state);
   const achievements = getEndingAchievements(state);
+  const endingRows = getEndingGoalRows(state);
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: 640}}>
@@ -312,8 +352,8 @@ function UnlockRoadmapModal({ state, onClose, onOpenShop, initialTab = 'missions
           )}
           {activeTab === 'endings' && (
             <>
-              <EndingAchievementWall achievements={achievements} />
-              <div className="roadmap-section-title">主线结局</div>
+              <EndingGoalSummary achievements={achievements} />
+              <div className="roadmap-section-title">结局路线</div>
               <div className="ending-roadmap-list">
                 {endingRows.map(({ ending, hidden, status }) => (
                   <div key={ending.id} className={`ending-roadmap-item ${status.cls}`}>

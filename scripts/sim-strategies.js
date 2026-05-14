@@ -29,13 +29,14 @@ const STRATEGIES = {
     onDay: (day) => (day >= 1 && day <= 5) ? [{ type: 'trainAllToTarget', stat: 'service', target: 30 }] : null,
   },
   '平衡推进': {
-    desc: 'D1 训练服务 / D2 招人 / D3 训练服务 / D4 买凯美瑞 / D5 招人',
+    desc: '第 1 天训练服务 / 第 2 天招人 / 第 3 天训练服务 / 第 4 天买 DD D1 / 第 5 天招人 / 第 8 天资金够再买凯美瑞',
     onDay: (day) => {
       if (day === 1) return [{ type: 'trainAllToTarget', stat: 'service', target: 30 }];
       if (day === 2) return [{ type: 'recruit' }, { type: 'autoAssign' }];
       if (day === 3) return [{ type: 'trainAllToTarget', stat: 'service', target: 30 }];
-      if (day === 4) return [{ type: 'buy', templateId: 'camry' }, { type: 'autoAssign' }];
+      if (day === 4) return [{ type: 'buy', templateId: 'didi_d1' }, { type: 'autoAssign' }];
       if (day === 5) return [{ type: 'recruit' }, { type: 'autoAssign' }];
+      if (day === 8) return [{ type: 'buy', templateId: 'camry' }, { type: 'autoAssign' }];
       return null;
     },
   },
@@ -78,8 +79,8 @@ async function actAutoAssign(page) {
   const empty = s.vehicles.find((v) => !s.drivers.some((d) => d.vehicleId === v.id));
   if (empty) {
     await dispatchOnce(page, { type: 'ASSIGN_VEHICLE', driverId: unassigned.id, vehicleId: empty.id });
-  } else if (s.funds >= 5000) {
-    await dispatchOnce(page, { type: 'BUY_VEHICLE', templateId: 'santana' });
+  } else if (s.funds >= 6000) {
+    await dispatchOnce(page, { type: 'BUY_VEHICLE', templateId: 'taxi' });
     const s2 = await getState(page);
     const newV = s2.vehicles[s2.vehicles.length - 1];
     await dispatchOnce(page, { type: 'ASSIGN_VEHICLE', driverId: unassigned.id, vehicleId: newV.id });

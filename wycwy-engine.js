@@ -28,6 +28,7 @@
   const DEBT_RESTRUCTURE_FEE_RATE = 0.05;
   const DEBT_RESTRUCTURE_MIN_DAYS = 14;
   const DEBT_RESTRUCTURE_MAX_DAYS = 60;
+  const SNOW_RESCUE_EVENT_ID = 'snow_night_breakthrough';
 
   function isRealTimeRunning(state) {
     return !!state.hasStarted
@@ -707,6 +708,10 @@
       // V15.16 cleanup:eventChainCount 字段彻底删除(V7 遗留,V15.x 改用 chainChoices)
       // V15.x: 真分支链式
       chainChoices: {},     // { [chain]: choiceKey } — 玩家在 chain 事件里选了什么,后续段据此过滤
+      chainProgress: {},     // { [chainId]: { stage, lastDay, lastEventId, completedEventIds } } — 链式剧情节奏
+      lastChainEventDay: 0,
+      lastRandomEventDay: 0,
+      eventTagLastDays: {},  // { [tag]: day } — 随机事件同类降权
       keyDriverIds: [],     // 钥匙司机 ID 列表(rival_pricing +¥3k/+¥4k 标记)
       platformChoseSelfop: false,  // 是否已选自营(platform_pressure 永久完结标记)
       floatGains: [],
@@ -719,20 +724,24 @@
       newMissionComplete: null,
       // V15.17:渐进解锁 — UI gate 状态(已解锁的入口 id 数组,持久化)
       unlockedUIGates: [],
-      // 当前正在展示的解锁 splash 卡片队列(玩家点「知道了」后弹下一个)
+      // 当前正在展示的解锁 splash 卡片队列(玩家点「继续运营」后弹下一个)
       activeUnlockSplash: null,
       // V15.17:刚解锁后的 spotlight — gateId + untilHour 自动过期 / 玩家点击 ack
       spotlight: null,
       // V14.10: 死亡条件计数器(连续天数)— 只剩资金破产
       negFundsDays: 0,
+      // V15.23:第一次普通破产倒计时剩 1 天时触发“雪夜爆单”救场,一局只触发一次
+      snowRescueFired: false,
       // V5: 投资人压力事件队列
       investorPressureFired: false,
-      // V15.16: 投资人定期 review 机制 — 按绝对时间触发(day 90/180/270/360)
-      reviewCounter: 0,           // 已触发评估次数(0-4),仅用于调试 / 月报回顾
-      investorMissCount: 0,       // 累计未达标次数,Q3 撤资判定使用(>= 2 触发撤资)
+      // V15.29: 投资人 early review 机制 — 早期防挂机,达到 3 车组后退出
+      reviewCounter: 0,           // 已处理的 early review 次数,仅用于调试 / 月报回顾
+      investorReviewStages: {},   // { [stage]: true } — early_warning / early_final 是否已处理
+      investorReviewDone: false,  // 达到 3 车组或二次提醒处理后退出 review 体系
+      investorMissCount: 0,       // 兼容旧 UI/存档,新逻辑只作为提醒等级计数
       lastReviewDay: 0,           // 最近一次评估的 day,防止重复触发
-      investorBoosted: false,     // Q3 是否触发过(达标接受/达标稳着/撤资任一选项后置 true)
-      investorPath: null,         // 'ipo' | 'settle' | 'fired' | null,Q3 玩家选择的路径(用于顶栏 KPI 渲染区分)
+      investorBoosted: false,     // 兼容旧存档字段,新逻辑不再使用 Q3 加注路径
+      investorPath: null,         // 兼容旧存档字段
       gameOverPending: null,      // 'kicked_out' | null,撤资事件触发后标记,死亡时归因使用
       // V5: 已解锁的最高结局 tier(从 0 开始,达成才更新)
       unlockedEndingTier: 0,
@@ -907,22 +916,23 @@
       // V15.17:老存档加载时把已该解锁的 gate 静默标为已解锁,避免连环弹 splash
       activeUnlockSplash: null,
     };
-    if (UI_GATES && UI_GATES.length > 0) {
-      const alreadyUnlocked = new Set(hydrated.unlockedUIGates || []);
-      for (const gate of UI_GATES) {
-        if (alreadyUnlocked.has(gate.id)) continue;
-        if (isUIGateTriggered(hydrated, gate)) alreadyUnlocked.add(gate.id);
-      }
-      hydrated.unlockedUIGates = [...alreadyUnlocked];
-    }
-    hydrated = syncDebtLegacyFields(hydrated);
-    // V15.16 fix:V15.16 之前的老存档没有 investorBoosted/investorPath 字段
-    // 若加载时玩家已 day > 270,说明 Q3 评估理论上已"无感通过",标记为 settle 防止再次触发
-    // V15.16 audit fix:加 !investorPath 检查,避免覆盖脏存档里已存的 'ipo' 路径
-    if (hydrated.day > 270 && !hydrated.investorBoosted && !hydrated.investorPath) {
-      hydrated.investorBoosted = true;
-      hydrated.investorPath = 'settle';
-      hydrated.reviewCounter = Math.max(hydrated.reviewCounter || 0, 3);
+	    if (UI_GATES && UI_GATES.length > 0) {
+	      const alreadyUnlocked = new Set(hydrated.unlockedUIGates || []);
+	      for (const gate of UI_GATES) {
+	        if (alreadyUnlocked.has(gate.id)) continue;
+	        if (isUIGateTriggered(hydrated, gate)) alreadyUnlocked.add(gate.id);
+	      }
+	      hydrated.unlockedUIGates = [...alreadyUnlocked];
+	    }
+	    // V15.25:桑塔纳被出租车替换,老自动存档里的 templateId 需要平滑迁移。
+	    hydrated.vehicles = (hydrated.vehicles || []).map((v) =>
+	      v?.templateId === 'santana' ? { ...v, templateId: 'taxi', name: '出租车' } : v
+	    );
+	    hydrated = syncDebtLegacyFields(hydrated);
+    // V15.26:老存档若已过早期 review 窗口,不再补弹旧版 Q3/年终 review。
+    if (hydrated.day > 90 && !hydrated.investorReviewDone) {
+      hydrated.investorReviewDone = true;
+      hydrated.reviewCounter = Math.max(hydrated.reviewCounter || 0, 2);
     }
     advanceRuntimeCounters(hydrated);
     return pushActionHistory(hydrated, {
@@ -1020,16 +1030,16 @@
 
   function unlockUIGate(state, gate) {
     if (!gate || isUIGateUnlocked(state, gate.id)) return state;
-    // V15.17:解锁时强制暂停 + 设 spotlight 让玩家关闭 splash 后能看到位置
-    // spotlight 12 游戏小时后自动过期,或玩家点击对应入口立刻 ack 清空
+    // V15.17:解锁时强制暂停 + 设 spotlight 让玩家关闭 splash 后能找到入口。
+    // V15.22:splash=false 的辅助信息静默开放,避免同一阶段连续弹窗。
     const untilHour = (state.day || 1) * 24 + (state.hour || 6) + 12;
     let s = {
       ...state,
-      paused: true,
       unlockedUIGates: [...(state.unlockedUIGates || []), gate.id],
-      spotlight: { gateId: gate.id, untilHour },
     };
-    if (!s.activeUnlockSplash) {
+    if (gate.splash !== false && !s.activeUnlockSplash) {
+      s.paused = true;
+      s.spotlight = { gateId: gate.id, untilHour };
       s.activeUnlockSplash = gate;
     }
     s = pushLog(s, `🔓 解锁:${gate.title} — ${gate.hint}`, 'event');
@@ -1142,6 +1152,34 @@
       label: text,
       level,
     });
+  }
+
+  function shouldTriggerSnowRescueEvent(state) {
+    if (!state || state.snowRescueFired || state.activeEvent || state.gameOver) return false;
+    if (state.gameOverPending === 'kicked_out') return false;
+    if ((state.funds || 0) >= GAME.DEATH_FUNDS_THRESHOLD) return false;
+    const deathThreshold = GAME.DEATH_FUNDS_DAYS + (state.bankruptcyGraceBonus || 0);
+    const lastChanceDay = Math.max(1, deathThreshold - 1);
+    return (state.negFundsDays || 0) >= lastChanceDay;
+  }
+
+  function triggerSnowRescueEvent(state) {
+    if (!shouldTriggerSnowRescueEvent(state)) return state;
+    const ev = EVENTS.find((event) => event.id === SNOW_RESCUE_EVENT_ID);
+    if (!ev) return state;
+    let s = {
+      ...state,
+      activeEvent: ev,
+      paused: true,
+      snowRescueFired: true,
+      eventCooldowns: {
+        ...(state.eventCooldowns || {}),
+        [ev.id]: (state.day || 1) + (ev.cooldown || 999),
+      },
+    };
+    s = pushLog(s, `特殊事件出现: ${ev.title} — 破产倒计时最后一天`, 'event');
+    s = pushNotif(s, '雪夜爆单 · 这是最后一次翻盘机会', 'warn');
+    return s;
   }
 
   // V6: 抽卡 actions
@@ -1608,6 +1646,181 @@
     return s;
   }
 
+  function getOperatingCrewCount(state) {
+    const vehicleIds = new Set((state?.vehicles || []).map((v) => v.id));
+    return (state?.drivers || []).filter((d) => d.vehicleId && vehicleIds.has(d.vehicleId)).length;
+  }
+
+  function getCurrentEventPhase(state) {
+    const day = state?.day || 1;
+    const crews = getOperatingCrewCount(state);
+    if (day >= 120 || crews >= 8) return 'late';
+    if (day >= 31 || crews >= 4) return 'mid';
+    return 'early';
+  }
+
+  function getEventPhaseRank(phase) {
+    if (phase === 'late') return 3;
+    if (phase === 'mid') return 2;
+    return 1;
+  }
+
+  function isEventPhaseUnlocked(event, state) {
+    return getEventPhaseRank(event.phase || 'early') <= getEventPhaseRank(getCurrentEventPhase(state));
+  }
+
+  function getEventChainId(event) {
+    if (!event) return '';
+    if (event.chainId) return event.chainId;
+    if (event.eventType === 'chain' && event.chain) return event.chain.replace(/_(close|distance|intimate|trust|breach|loyalty|pricing).*$/, '');
+    return '';
+  }
+
+  function isChainEvent(event) {
+    return event?.eventType === 'chain' || !!event?.chainId;
+  }
+
+  function isRandomEvent(event) {
+    if (!event || event.scripted || event.eventType === 'scripted') return false;
+    if (isChainEvent(event)) return false;
+    return event.eventType === 'random' || !event.eventType;
+  }
+
+  function isKeyDriverAlive(state) {
+    return (state?.keyDriverIds || []).length > 0
+      && (state.keyDriverIds || []).some((id) => (state.drivers || []).some((d) => d.id === id));
+  }
+
+  function satisfyChainChoice(requireChainChoice, chainChoices) {
+    if (!requireChainChoice) return true;
+    for (const key of Object.keys(requireChainChoice)) {
+      const expected = requireChainChoice[key];
+      const actual = (chainChoices || {})[key];
+      if (Array.isArray(expected)) {
+        if (!expected.includes(actual)) return false;
+      } else if (actual !== expected) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function satisfyEventBaseConditions(event, state) {
+    if (!event || event.scripted || event.eventType === 'scripted') return false;
+    const cooldowns = state.eventCooldowns || {};
+    const unlockDay = cooldowns[event.id];
+    if (unlockDay !== undefined && state.day < unlockDay) return false;
+    if ((event.minDay || 0) > state.day) return false;
+    if ((event.minCrews || 0) > getOperatingCrewCount(state)) return false;
+    if ((event.minOrders || 0) > (state.totalCompleted || 0)) return false;
+    if (!satisfyChainChoice(event.requireChainChoice, state.chainChoices || {})) return false;
+    const keyAlive = isKeyDriverAlive(state);
+    if (event.requireKeyDriverAlive === true && !keyAlive) return false;
+    if (event.requireKeyDriverAlive === false && keyAlive) return false;
+    if (event.id === 'platform_pressure' && state.platformChoseSelfop) return false;
+    return true;
+  }
+
+  function isChainEventDue(event, state) {
+    if (!isChainEvent(event)) return false;
+    if (!satisfyEventBaseConditions(event, state)) return false;
+    const chainId = getEventChainId(event);
+    if (!chainId) return false;
+    const progress = (state.chainProgress || {})[chainId] || {};
+    const stage = event.stage || 1;
+    if ((progress.stage || 0) >= stage) return false;
+    const completedIds = new Set(progress.completedEventIds || []);
+    if (completedIds.has(event.id)) return false;
+    if (stage > 1 && !progress.lastDay) return false;
+    if (event.delayAfter && progress.lastDay && state.day - progress.lastDay < event.delayAfter) return false;
+    const minGap = GAME.CHAIN_EVENT_MIN_GAP_DAYS || 0;
+    const lastAnyEventDay = Math.max(state.lastChainEventDay || 0, state.lastRandomEventDay || 0);
+    if (minGap > 0 && lastAnyEventDay && state.day - lastAnyEventDay < minGap) return false;
+    return true;
+  }
+
+  function selectDueChainEvent(state) {
+    const available = (EVENTS || [])
+      .filter((event) => isChainEventDue(event, state))
+      .sort((a, b) =>
+        (a.stage || 1) - (b.stage || 1)
+        || (a.minDay || 0) - (b.minDay || 0)
+        || String(a.id).localeCompare(String(b.id))
+      );
+    return available[0] || null;
+  }
+
+  function getRandomEventWeight(event, state) {
+    const baseWeight = Math.max(0, Number(event.weight ?? 1));
+    if (baseWeight <= 0) return 0;
+    const tag = event.tag || '';
+    const lastTagDay = tag ? (state.eventTagLastDays || {})[tag] : 0;
+    const tagCooldown = GAME.RANDOM_EVENT_TAG_COOLDOWN_DAYS || 0;
+    const tagPenalty = tag && lastTagDay && state.day - lastTagDay < tagCooldown ? 0.35 : 1;
+    return baseWeight * tagPenalty;
+  }
+
+  function weightedPickEvent(events, state) {
+    const weighted = (events || [])
+      .map((event) => ({ event, weight: getRandomEventWeight(event, state) }))
+      .filter((item) => item.weight > 0);
+    const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+    if (total <= 0) return null;
+    let roll = Math.random() * total;
+    for (const item of weighted) {
+      roll -= item.weight;
+      if (roll <= 0) return item.event;
+    }
+    return weighted[weighted.length - 1]?.event || null;
+  }
+
+  function isRandomEventEligible(event, state) {
+    if (!isRandomEvent(event)) return false;
+    if (!satisfyEventBaseConditions(event, state)) return false;
+    if (!isEventPhaseUnlocked(event, state)) return false;
+    if (state.day <= (GAME.EARLY_EVENT_UNTIL_DAY || 0)) {
+      const earlyIds = GAME.EARLY_EVENT_IDS || [];
+      if (earlyIds.length > 0 && !earlyIds.includes(event.id)) return false;
+    }
+    return true;
+  }
+
+  function selectRandomEvent(state) {
+    const interval = GAME.RANDOM_EVENT_INTERVAL_DAYS || GAME.EVENT_INTERVAL_DAYS || 7;
+    const pity = GAME.RANDOM_EVENT_PITY_DAYS || interval * 2;
+    const lastDay = Math.max(state.lastRandomEventDay || 0, state.lastChainEventDay || 0);
+    const daysSince = lastDay ? state.day - lastDay : state.day;
+    if (daysSince < interval) return null;
+    const available = (EVENTS || []).filter((event) => isRandomEventEligible(event, state));
+    if (available.length === 0) return null;
+    if (daysSince >= pity) return weightedPickEvent(available, state);
+    return weightedPickEvent(available, state);
+  }
+
+  function openScheduledEvent(state, event, source) {
+    const cooldownDays = event.cooldown || randInt(25, 35);
+    let s = {
+      ...state,
+      eventCooldowns: {
+        ...(state.eventCooldowns || {}),
+        [event.id]: (state.day || 1) + cooldownDays,
+      },
+      activeEvent: event,
+      paused: true,
+    };
+    if (source === 'chain') {
+      s.lastChainEventDay = state.day;
+      s = pushLog(s, `剧情事件出现: ${event.title}`, 'event');
+    } else {
+      s.lastRandomEventDay = state.day;
+      if (event.tag) {
+        s.eventTagLastDays = { ...(state.eventTagLastDays || {}), [event.tag]: state.day };
+      }
+      s = pushLog(s, `随机事件出现: ${event.title}`, 'event');
+    }
+    return s;
+  }
+
   function endOfDay(state) {
     let s = { ...state, hour: 0, day: state.day + 1 };
     let dailyCost = 0;
@@ -1682,7 +1895,7 @@
 
     // V10.10: 只维护资金失败计数,减少玩家需要盯住的隐藏失败条件。
     s.negFundsDays = s.funds < GAME.DEATH_FUNDS_THRESHOLD ? (s.negFundsDays || 0) + 1 : 0;
-    // V15.16 fix:资金回正时清 gameOverPending 标记,避免下次再死时仍归因 kicked_out
+    // 旧存档兼容:资金回正时清 gameOverPending 标记,避免下次再死时仍归因 kicked_out
     if (s.funds >= 0 && s.gameOverPending === 'kicked_out') {
       s.gameOverPending = null;
     }
@@ -1698,11 +1911,14 @@
     }
     if (s.funds >= 0) s.investorPressureFired = false;
 
+    s = triggerSnowRescueEvent(s);
+    if (s.activeEvent) return s;
+
     // V15: 政策事件按游戏绝对时间触发,优先于随机事件。
     // 触发后会 set s.activeEvent = activePolicyEvent,后续随机事件分支自动跳过。
     s = policyEventTick(s);
 
-    // V15.16: 投资人定期 review(day 90/180/270/360),与政策事件互斥(都设 activeEvent)。
+    // V15.26: 投资人 early review 使用最早触发窗口,与政策事件互斥。
     // policyEventTick 已经判定了 s.activeEvent,所以两者不会同日双弹。
     s = investorReviewTick(s);
     if (s.activeEvent) return s;
@@ -1711,57 +1927,12 @@
       return s;
     }
 
-    // V15.x: 事件触发过滤 — unlockMission 阶段化 + chainChoices 真分支 + keyDriver 状态
-    // 替代原 V10.10 chainStages 顺序触发逻辑
-    const eventInterval = GAME.EVENT_INTERVAL_DAYS || 7;
-    if (s.day > 1 && s.day % eventInterval === 0 && !s.activeEvent) {
-      const cooldowns = s.eventCooldowns || {};
-      const completed = (s.completedMissionIds || []).length;
-      const chainChoices = s.chainChoices || {};
-      const keyDriverAlive = (s.keyDriverIds || []).length > 0
-        && (s.keyDriverIds || []).some((id) => (s.drivers || []).some((d) => d.id === id));
+    // V15.24:事件调度拆分。链式剧情看 chainProgress + delayAfter,随机事件看经营阶段池。
+    const chainEvent = selectDueChainEvent(s);
+    if (chainEvent) return openScheduledEvent(s, chainEvent, 'chain');
 
-      let available = EVENTS.filter((e) => {
-        // 1. cooldown 检查
-        const unlockDay = cooldowns[e.id];
-        if (unlockDay !== undefined && s.day < unlockDay) return false;
-        // 2. unlockMission 阶段化(完成第 N 个任务后才解锁)
-        if ((e.unlockMission || 0) > completed) return false;
-        // 3. requireChainChoice — 链式后续段必须满足 chainChoices 前置条件
-        if (e.requireChainChoice) {
-          for (const key of Object.keys(e.requireChainChoice)) {
-            const expected = e.requireChainChoice[key];
-            const actual = chainChoices[key];
-            if (Array.isArray(expected)) {
-              if (!expected.includes(actual)) return false;
-            } else if (actual !== expected) return false;
-          }
-        }
-        // 4. requireKeyDriverAlive — 钥匙司机在编/离队的二选一前置
-        if (e.requireKeyDriverAlive === true && !keyDriverAlive) return false;
-        if (e.requireKeyDriverAlive === false && keyDriverAlive) return false;
-        // 5. platform_pressure 已选自营则永久不再触发
-        if (e.id === 'platform_pressure' && s.platformChoseSelfop) return false;
-        return true;
-      });
-
-      // 早期事件优先(开局前 10 天只抽 EARLY_EVENT_IDS 列表内的轻事件)
-      if (s.day <= (GAME.EARLY_EVENT_UNTIL_DAY || 10)) {
-        const earlyIds = GAME.EARLY_EVENT_IDS || [];
-        const early = available.filter((e) => earlyIds.includes(e.id));
-        if (early.length > 0) available = early;
-      }
-
-      if (available.length > 0) {
-        const ev = pick(available);
-        const cooldownDays = ev.cooldown || randInt(25, 35);
-        s.eventCooldowns = { ...cooldowns, [ev.id]: s.day + cooldownDays };
-        s.activeEvent = ev;
-        s.paused = true;
-        s = pushLog(s, `事件出现: ${ev.title}`, 'event');
-        return s;
-      }
-    }
+    const randomEvent = selectRandomEvent(s);
+    if (randomEvent) return openScheduledEvent(s, randomEvent, 'random');
 
     s = openDueMonthlyReport(s);
 
@@ -1824,8 +1995,8 @@
   }
 
   // ============================================================
-  // V15.16: 投资人定期 review — 按绝对时间触发,惩罚 + 目标驱动双轨
-  // 详见 GAME_DESIGN.md 第七章「投资人定期 review」
+  // V15.29: 投资人 early review — 早期防挂机,通过 3 车组后退出
+  // 详见 GAME_DESIGN.md 第七章「投资人 early review」
   // ============================================================
 
   // 计算可运营车组数 = min(已配车司机数, 拥有的车辆数中已被司机绑定的)
@@ -1833,163 +2004,68 @@
     return (s.drivers || []).filter((d) => d.vehicleId).length;
   }
 
-  // 检查是否拥有指定订单类型的车组(airport=专车=凯美瑞,luxury=豪华=奔驰 E)
-  // V15.16 fix:vehicle 对象只有 templateId 字段(genVehicle line 478),没有 type 字段
-  function hasOrderTypeCrew(s, orderType) {
-    const requiredVehicleId = orderType === 'airport' ? 'camry' : (orderType === 'luxury' ? 'benz_e' : null);
-    if (!requiredVehicleId) return true;
-    const vehMap = {};
-    (s.vehicles || []).forEach((v) => { vehMap[v.id] = v; });
-    return (s.drivers || []).some((d) => {
-      if (!d.vehicleId) return false;
-      const veh = vehMap[d.vehicleId];
-      return veh && veh.templateId === requiredVehicleId;
-    });
+  function getInvestorReviewTargetCrews() {
+    return INVESTOR_REVIEW?.targetCrews || INVESTOR_REVIEW?.kpi?.targetCrews || 3;
   }
 
-  // 判断 KPI 是否达标。stage = 'q1' | 'h1' | 'q3'(y1 仪式感事件,无 KPI)
-  // V15.16 audit fix:
-  // - threshold 'two_of_three':车组必须达标 + 资金/口碑至少 1 项达标(避免"永远不抓口碑"退化策略)
-  // - 0 司机 0 车直接 fail(避免"无车队也算合格"漏洞)
-  // - platformChoseSelfop 玩家 funds 阈值提高 25%(自营无抽成,收入提升 25% 应对应抬高门槛)
-  function evaluateInvestorKPI(s, stage) {
-    const kpi = INVESTOR_REVIEW.kpi[stage];
-    if (!kpi) return true;
-    const crews = countOperatingCrews(s);
-    // 0 车队直接 fail — 经营游戏核心是车队,无车队不算合格
-    if (crews === 0) return false;
-    // 自营玩家无抽成,收入 +25%,KPI funds 阈值同步抬高(避免门槛实质降档)
-    const fundsThreshold = s.platformChoseSelfop ? Math.round(kpi.funds * 1.25) : kpi.funds;
-    const fundsPass = (s.funds || 0) >= fundsThreshold;
-    const repPass = (s.reputation || 0) >= kpi.reputation;
-    const crewsPass = crews >= kpi.crews;
-    const airportPass = !kpi.requireAirport || hasOrderTypeCrew(s, 'airport');
-    const luxuryPass = !kpi.requireLuxury || hasOrderTypeCrew(s, 'luxury');
-    if (kpi.threshold === 'two_of_three') {
-      // 车组必须达标(扩张是经营游戏 Pillar)+ 资金/口碑至少 1 项达标
-      return crewsPass && (fundsPass || repPass) && airportPass && luxuryPass;
-    }
-    return fundsPass && repPass && crewsPass && airportPass && luxuryPass;
+  function hasPassedInvestorReview(s) {
+    return countOperatingCrews(s) >= getInvestorReviewTargetCrews();
   }
 
-  // 算半年 / Q3 警告的扣款金额(按车组规模分档)
-  function getInvestorReviewFee(s, stage) {
-    const tiers = INVESTOR_REVIEW.punishment[stage]?.tiers;
-    if (!tiers) return { fee: 0, label: '' };
-    const crews = countOperatingCrews(s);
-    for (const tier of tiers) {
-      if (crews <= tier.maxCrews) return { fee: tier.fee, label: tier.label };
-    }
-    return { fee: tiers[tiers.length - 1].fee, label: tiers[tiers.length - 1].label };
-  }
-
-  // 算 Q3 撤资扣款 = max(funds * 1.5, 100000)
-  function getInvestorFiredAmount(s) {
-    const conf = INVESTOR_REVIEW.punishment.q3_fired;
-    return Math.max(Math.floor((s.funds || 0) * conf.multiplier), conf.minAmount);
-  }
-
-  // 投资人 review 主 tick — 在 endOfDay 末尾调用,检查 day 是否到达评估点
-  function investorReviewTick(state) {
-    let s = state;
-    if (s.activeEvent || s.activePolicyDecision || s.gameOver) return s;
-    if (s.lastReviewDay === s.day) return s;  // 防同日重复触发
-    if (s.investorBoosted) {
-      // V15.16 fix:只有「接受挑战」(IPO 路径)的玩家才会触发年终 review
-      // 「稳着先」(settle) 和「撤资」(fired) 走完即退出 review 体系
-      if (s.day === 360 && s.investorPath === 'ipo' && s.reviewCounter < 4) {
-        return triggerInvestorReview(s, 'y1');
-      }
-      return s;
-    }
-    const item = INVESTOR_REVIEW.schedule.find((x) => x.atDay === s.day);
-    if (!item) return s;
-    return triggerInvestorReview(s, item.stage);
-  }
-
-  // 触发投资人 review 事件 — 根据 KPI 检查结果决定走哪个分支
-  function triggerInvestorReview(state, stage) {
-    let s = state;
-    if (stage === 'q1') {
-      if (evaluateInvestorKPI(s, 'q1')) {
-        // 达标:无感推进,只更新 lastReviewDay
-        s = { ...s, lastReviewDay: s.day, reviewCounter: (s.reviewCounter || 0) + 1 };
-        s = pushLog(s, `【Q1 review】KPI 达标,投资人未追问`, 'event');
-        return s;
-      }
-      // 不达标:弹警告事件
-      return openInvestorReviewEvent(s, 'q1', { fee: 0 });
-    }
-    if (stage === 'h1') {
-      if (evaluateInvestorKPI(s, 'h1')) {
-        s = { ...s, lastReviewDay: s.day, reviewCounter: (s.reviewCounter || 0) + 1 };
-        s = pushLog(s, `【半年 review】KPI 达标,投资人未追问`, 'event');
-        return s;
-      }
-      const { fee, label } = getInvestorReviewFee(s, 'h1');
-      return openInvestorReviewEvent(s, 'h1', { fee, feeLabel: label });
-    }
-    if (stage === 'q3') {
-      if (evaluateInvestorKPI(s, 'q3')) {
-        // 达标:走愿景分支
-        return openInvestorReviewEvent(s, 'q3_pass', { fee: 0 });
-      }
-      // 不达标:看 missCount
-      if ((s.investorMissCount || 0) >= 2) {
-        // 累计 ≥ 2 次未达标 → 撤资
-        const fee = getInvestorFiredAmount(s);
-        return openInvestorReviewEvent(s, 'q3_fired', { fee });
-      }
-      // 中途追上的玩家(missCount < 2):弹考核罚金
-      const { fee, label } = getInvestorReviewFee(s, 'q3_warn');
-      return openInvestorReviewEvent(s, 'q3_warn', { fee, feeLabel: label });
-    }
-    if (stage === 'y1') {
-      return openInvestorReviewEvent(s, 'y1', { fee: 0 });
+  function markInvestorReviewDone(state, reason) {
+    let s = { ...state, investorReviewDone: true, lastReviewDay: state.day };
+    if (reason === 'expanded') {
+      s = pushLog(s, `【投资人 review】车队运力补起来了,投资人暂时放下这件事`, 'success');
     }
     return s;
   }
 
-  // 装载 activeEvent — 按 stage 取对应文案 + 选项
+  function hasInvestorReviewStageFired(s, stage) {
+    return !!((s.investorReviewStages || {})[stage]);
+  }
+
+  function getNextInvestorReviewItem(s) {
+    return (INVESTOR_REVIEW.schedule || []).find((item) =>
+      item.atDay <= s.day && !hasInvestorReviewStageFired(s, item.stage)
+    );
+  }
+
+  function getInvestorReviewFee(s, stage) {
+    const conf = INVESTOR_REVIEW.punishment?.[stage] || {};
+    const rawFee = conf.fee || 0;
+    const minRemaining = conf.minRemainingFunds || 0;
+    const safeFee = Math.min(rawFee, Math.max(0, (s.funds || 0) - minRemaining));
+    return { fee: safeFee, rawFee, label: conf.label || '' };
+  }
+
+  // 投资人 review 主 tick — atDay 是最早窗口,当前有弹窗/月报时顺延。
+  function investorReviewTick(state) {
+    let s = state;
+    if (s.activeEvent || s.activePolicyDecision || s.gameOver) return s;
+    if (s.showMonthlyReport || isMonthlyReportDue(s)) return s;
+    if (s.lastReviewDay === s.day) return s;  // 防同日重复触发
+    if (s.investorReviewDone) return s;
+    if (hasPassedInvestorReview(s)) return markInvestorReviewDone(s, 'expanded');
+    const item = getNextInvestorReviewItem(s);
+    if (!item) return s;
+    return openInvestorReviewEvent(s, item.stage, getInvestorReviewFee(s, item.stage));
+  }
+
+  // 装载 activeEvent — 按 stage 取对应文案 + 选项。
   function openInvestorReviewEvent(state, stage, ctx) {
     const stageData = INVESTOR_REVIEW.stages[stage];
     if (!stageData) return state;
     let s = { ...state };
     let desc = stageData.desc;
-    // 占位符替换
-    if (ctx.fee !== undefined && ctx.fee > 0) {
-      desc = desc.replace(/\{N\}/g, ctx.fee.toLocaleString());
-    }
-    if (stage === 'q3_fired') {
-      const remaining = Math.max(0, ctx.fee - (s.funds || 0));
-      desc = desc.replace(/\{remaining\}/g, remaining.toLocaleString());
-    }
-    if (stage === 'y1') {
-      const startFundsK = Math.round(GAME.STARTING_FUNDS / 1000);
-      const currentFundsK = Math.max(0, Math.round((s.funds || 0) / 1000));
-      const startCrews = 2;  // 开局 2 司机 2 车
-      const currentCrews = countOperatingCrews(s);
-      desc = desc
-        .replace(/\{startFundsK\}/g, startFundsK)
-        .replace(/\{currentFundsK\}/g, currentFundsK)
-        .replace(/\{startCrews\}/g, startCrews)
-        .replace(/\{currentCrews\}/g, currentCrews);
-    }
-    // 构造选项(单选 / 多选)
-    let options;
-    if (stageData.options) {
-      // 多选项(q3_pass / y1):每个选项有 id / label / detail
-      options = stageData.options.map((o) => ({
-        label: o.label,
-        detail: o.detail,
-        apply: () => ({}),  // 实际副作用在 resolveInvestorReviewEvent 处理
-      }));
-    } else {
-      // 单选项(q1 / h1 / q3_warn / q3_fired):buttonLabel
-      options = [
-        { label: stageData.buttonLabel || '知道了', detail: '', apply: () => ({}) },
-      ];
-    }
+    const targetCrews = getInvestorReviewTargetCrews();
+    const currentCrews = countOperatingCrews(s);
+    desc = desc
+      .replace(/\{targetCrews\}/g, targetCrews)
+      .replace(/\{currentCrews\}/g, currentCrews)
+      .replace(/\{N\}/g, (ctx.rawFee || ctx.fee || 0).toLocaleString());
+    const options = [
+      { label: stageData.buttonLabel || '知道了', detail: '', apply: () => ({}) },
+    ];
     s.activeEvent = {
       id: `investor_review_${stage}`,
       title: stageData.title,
@@ -1998,12 +2074,11 @@
       isInvestorReview: true,
       investorReviewStage: stage,
       investorReviewFee: ctx.fee || 0,
-      investorReviewFeeLabel: ctx.feeLabel || '',
+      investorReviewFeeLabel: ctx.label || '',
       skipScale: true,  // 不走 scaleEventEffect 缩放
       options,
     };
     s.paused = true;  // V15.17:investor review 弹出强制暂停
-    s.paused = true;
     s = pushLog(s, `【投资人 review】${stageData.title}`, 'event');
     return s;
   }
@@ -2016,88 +2091,27 @@
     const fee = ev.investorReviewFee || 0;
     const feeLabel = ev.investorReviewFeeLabel || '';
     let s = { ...state, activeEvent: null, paused: false };
-    const fundsBefore = s.funds;
+    s.investorReviewStages = { ...(s.investorReviewStages || {}), [stage]: true };
+    s.lastReviewDay = s.day;
+    s.reviewCounter = (s.reviewCounter || 0) + 1;
 
-    if (stage === 'q1') {
-      s.investorMissCount = (s.investorMissCount || 0) + 1;
-      s.lastReviewDay = s.day;
-      s.reviewCounter = (s.reviewCounter || 0) + 1;
-      s = pushLog(s, '【Q1 review】未达标,警告 1', 'warn');
-    } else if (stage === 'h1') {
+    if (stage === 'early_warning') {
+      s.investorMissCount = Math.max(s.investorMissCount || 0, 1);
+      s = pushLog(s, `【投资人 review】首次提醒:请尽快补齐第三个可运营车组`, 'warn');
+    } else if (stage === 'early_final') {
       s.funds -= fee;
-      s.investorMissCount = (s.investorMissCount || 0) + 1;
-      s.lastReviewDay = s.day;
-      s.reviewCounter = (s.reviewCounter || 0) + 1;
-      s = recordMonthlyEventImpact(s, -fee, { title: '投资人半年 review', label: feeLabel || '咨询费', detail: '半年 review 未达标' });
-      s = pushLog(s, `【半年 review】扣款 ¥${fee.toLocaleString()}(${feeLabel})`, 'warn');
-    } else if (stage === 'q3_pass') {
-      s.lastReviewDay = s.day;
-      s.reviewCounter = (s.reviewCounter || 0) + 1;
-      s.investorBoosted = true;
-      if (optionIdx === 0) {
-        const bonus = INVESTOR_REVIEW.punishment.q3_boost.bonus;
-        s.funds += bonus;
-        s.investorPath = 'ipo';
-        s = recordMonthlyEventImpact(s, bonus, { title: '投资人 Q3 review', label: '投后加注', detail: '接受 IPO 挑战' });
-        s = pushLog(s, `【Q3 review】+¥${bonus.toLocaleString()} 投后加注,激活 IPO 路径`, 'success');
-      } else {
-        s.investorPath = 'settle';
-        s = pushLog(s, '【Q3 review】选择稳着先,不再触发评估', 'event');
+      s.investorMissCount = Math.max(s.investorMissCount || 0, 2);
+      s.investorReviewDone = true;
+      if (fee > 0) {
+        s = recordMonthlyEventImpact(s, -fee, { title: '投资人 early review', label: feeLabel || '早期资源占用费', detail: '第二个月复盘后扣回资源占用费' });
       }
-    } else if (stage === 'q3_warn') {
-      s.funds -= fee;
-      s.investorMissCount = (s.investorMissCount || 0) + 1;
-      s.lastReviewDay = s.day;
-      s.reviewCounter = (s.reviewCounter || 0) + 1;
-      s = recordMonthlyEventImpact(s, -fee, { title: '投资人 Q3 review', label: feeLabel || '考核罚金', detail: 'Q3 review 未达标' });
-      s = pushLog(s, `【Q3 review】考核罚金 ¥${fee.toLocaleString()}(${feeLabel})`, 'warn');
-    } else if (stage === 'q3_fired') {
-      s.funds -= fee;
-      s.gameOverPending = 'kicked_out';
-      s.investorBoosted = true;
-      s.investorPath = 'fired';
-      s.lastReviewDay = s.day;
-      s.reviewCounter = (s.reviewCounter || 0) + 1;
-      s = recordMonthlyEventImpact(s, -fee, { title: '投资人撤资', label: '撤回投资款', detail: '终止合作,清算倒计时 5 天' });
-      s = pushLog(s, `【投资人撤资】扣款 ¥${fee.toLocaleString()},清算倒计时 5 天`, 'warn');
-    } else if (stage === 'y1') {
-      s.lastReviewDay = s.day;
-      s.reviewCounter = (s.reviewCounter || 0) + 1;
-      if (optionIdx === 1) {
-        // 接受当前结局收尾
-        const tier = s.unlockedEndingTier || 0;
-        const ending = (typeof ENDINGS !== 'undefined') ? ENDINGS.find((e) => e.tier === tier) : null;
-        if (ending) {
-          s.gameOver = {
-            type: 'win',
-            endingId: ending.id,
-            endingName: ending.name,
-            endingDesc: ending.desc,
-            stats: snapshotStats(s),
-            forced: false,
-          };
-          s = pushLog(s, `【年终 review】接受当前结局:${ending.name}`, 'success');
-        } else {
-          s = pushLog(s, '【年终 review】当前未解锁任何结局,继续运营', 'event');
-        }
-      } else {
-        s = pushLog(s, '【年终 review】继续运营冲 IPO', 'event');
-      }
-    }
-
-    // 检查破产倒计时(扣款若导致 funds < 0)
-    if (s.funds < GAME.DEATH_FUNDS_THRESHOLD) {
-      s.negFundsDays = Math.max(1, s.negFundsDays || 0);
-      // V15.16 audit fix:review 扣款致 funds 转负时,标记 INVESTOR_PRESSURE 已"消耗"
-      // 避免下次 endOfDay 同时触发 review + V14 投资人压力弹窗(系统打架)
-      // review 已经接管了"投资人施压"叙事,V14 弹窗在此场景冗余
-      s.investorPressureFired = true;
+      s = pushLog(s, `【投资人 review】二次提醒:扣款 ¥${fee.toLocaleString()}(${feeLabel || '早期资源占用费'}),早期评估结束`, 'warn');
     }
     return openDueMonthlyReport(s);
   }
 
   // ============================================================
-  // V15.16 投资人 review 结束
+  // V15.26 投资人 early review 结束
   // ============================================================
 
   function triggerPolicyNotice(state, eventDef, stage) {
@@ -2186,7 +2200,7 @@
       policyEffectPreview = [
         { label: '立即罚款', value: `-¥${Math.round(r0 * params.B_FINE_PCT).toLocaleString()}`, tone: 'negative' },
         { label: '60 天禁运 · 订单量', value: `降至 ${Math.round(params.B_BAN_ORDER_BOOST * 100)}%(60 天)`, tone: 'negative' },
-        { label: '强制启动月合规成本', value: `每月按流水扣:首月 ${complianceFirstPct}% → 稳定后 ${complianceFloorPct}%`, tone: 'negative' },
+        { label: '强制启动月合规成本', value: `按每月净流水滚动扣:首月 ${complianceFirstPct}% → 稳定后 ${complianceFloorPct}%`, tone: 'negative' },
       ];
     }
     // verdict_pass / notice / resume 默认空数组(无副作用)
@@ -2405,8 +2419,8 @@
     const monthsSinceStart = Math.floor((s.day - ps.complianceStartDay) / 30) + 1;
     const idx = Math.min(monthsSinceStart - 1, schedule.length - 1);
     const pct = schedule[idx];
-    const r0 = ps.refMonthlyRevenue || 1;
-    const cost = Math.round(r0 * pct);
+    const rollingBase = Math.max(0, (s.monthlyEarnedGross || 0) - (s.monthlyCommission || 0));
+    const cost = Math.round(rollingBase * pct);
     if (cost <= 0) return s;
     s = { ...s, funds: s.funds - cost };
     s = {
@@ -2422,9 +2436,9 @@
     s = recordMonthlyEventImpact(s, -cost, {
       title: '监管整改',
       label: `合规月支出(第 ${monthsSinceStart} 个月,${Math.round(pct * 100)}%)`,
-      detail: `按衰减曲线扣款 ¥${cost.toLocaleString()}`,
+      detail: `按本月净流水 ¥${rollingBase.toLocaleString()} 扣款 ¥${cost.toLocaleString()}`,
     });
-    s = pushLog(s, `合规月支出 ¥${cost.toLocaleString()}(第 ${monthsSinceStart} 月,${Math.round(pct * 100)}%)`, 'event');
+    s = pushLog(s, `合规月支出 ¥${cost.toLocaleString()}(本月净流水 ¥${rollingBase.toLocaleString()} × ${Math.round(pct * 100)}%)`, 'event');
     return s;
   }
 
@@ -2800,6 +2814,13 @@
       s.boostUntilDay = s.day + 1;
       s.boostMul = eff.orderBoost;
     }
+    if (eff.clearBankruptcyCountdown) {
+      s.negFundsDays = 0;
+      s.investorPressureFired = false;
+      if (s.gameOverPending !== 'kicked_out') s.gameOverPending = null;
+      eventDetail = '现金流回正';
+      s = pushLog(s, '现金流回正: 公司暂时回到安全区', 'success');
+    }
     if (eff.certifyFleet) {
       s.vehicles = s.vehicles.map((v) => ({ ...v, policyCertified: true }));
       s = pushLog(s, `合规更新: ${s.vehicles.length} 辆车完成新政备案`, 'success');
@@ -2905,12 +2926,35 @@
     if (ev.chain && opt.choiceKey !== undefined) {
       s.chainChoices = { ...(s.chainChoices || {}), [ev.chain]: opt.choiceKey };
     }
+    if (isChainEvent(ev)) {
+      const chainId = getEventChainId(ev);
+      if (chainId) {
+        const prev = (s.chainProgress || {})[chainId] || {};
+        const completedIds = new Set(prev.completedEventIds || []);
+        completedIds.add(ev.id);
+        s.chainProgress = {
+          ...(s.chainProgress || {}),
+          [chainId]: {
+            ...prev,
+            stage: Math.max(prev.stage || 0, ev.stage || 1),
+            lastDay: s.day,
+            lastEventId: ev.id,
+            completedEventIds: [...completedIds],
+          },
+        };
+      }
+    }
     // V14.75: 累加事件资金影响并记录来源,月报展示可追溯明细。
     s = recordMonthlyEventImpact(s, s.funds - fundsBefore, {
       title: ev.title,
       label: opt.label,
       detail: eventDetail || `事件已弹出并处理: ${opt.label}`,
     });
+    if (ev.id === SNOW_RESCUE_EVENT_ID) {
+      s = policyEventTick(s);
+      if (!s.activeEvent && !s.activePolicyDecision) s = investorReviewTick(s);
+      if (s.activeEvent || s.activePolicyDecision) return s;
+    }
     return openDueMonthlyReport(s);
   }
 
@@ -3346,6 +3390,7 @@
     getRarityLoyaltyRule, getDriverLoyaltyCap, getDriverQuitLine, getSalaryRaiseLoyaltyEffect,
     getInvestorPressurePlan, getDebtSummary,
     getEventBusinessScale, scaleEventEffect,
+    getOperatingCrewCount, getCurrentEventPhase, selectDueChainEvent, selectRandomEvent,
     computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,
     getDriverTryRateBreakdown,
     isUIGateUnlocked, UI_GATES,

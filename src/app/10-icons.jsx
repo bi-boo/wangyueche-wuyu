@@ -1,3 +1,5 @@
+const VEHICLE_ASSET_VERSION = 'vehicle-art-20260512-2';
+
 function DriverAvatar({ avatar, size = 36, name = '?' }) {
   const bg = avatar?.hatColor || '#FF6B35';
   const hat = avatar?.hat || 'default';
@@ -21,7 +23,7 @@ function DriverAvatar({ avatar, size = 36, name = '?' }) {
 
 function VehicleIcon({ template, size = 60 }) {
   if (!template) return null;
-  const src = `assets/pixel/vehicles/${template.id}.png`;
+  const src = `assets/pixel/vehicles/${template.id}.png?v=${VEHICLE_ASSET_VERSION}`;
   return (
     <div className={`ph-vehicle asset-vehicle vehicle-${template.id}`} data-asset={`vehicle-${template.id}`}
       style={{ width: size * 2.15, height: size * 0.86, background: template.color, color: '#FFF8E7',
@@ -32,7 +34,7 @@ function VehicleIcon({ template, size = 60 }) {
 }
 
 const ORDER_ICON_META = {
-  short: { label: '惠', cls: 'short' },
+  short: { label: '租', cls: 'short' },
   business: { label: '快', cls: 'business' },
   airport: { label: '专', cls: 'airport' },
   luxury: { label: '豪', cls: 'luxury' },
@@ -161,7 +163,7 @@ function CityMap({ zones, drivers, state, selectedZoneId, onSelectZone }) {
         if (!zone) return null;
         const vehicle = state?.vehicles?.find((v) => v.id === d.vehicleId);
         const template = vehicle ? E.getVehicleData(vehicle) : null;
-        const vehicleSrc = template ? `assets/pixel/vehicles/${template.id}.png` : null;
+        const vehicleSrc = template ? `assets/pixel/vehicles/${template.id}.png?v=${VEHICLE_ASSET_VERSION}` : null;
         // V14.67: lane / animationDelay 只依赖 d.id(稳定),避免数组 index 因其他司机完单/解雇导致位置跳跃。
         const lane = ((d.id * 3) % 8) / 8;
         const angle = lane * Math.PI * 2;

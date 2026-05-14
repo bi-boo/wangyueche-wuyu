@@ -4,8 +4,8 @@ function Tutorial({ onClose }) {
   const STEPS = [
     {
       tag: '开局',
-      title: '把两辆桑塔纳先跑起来',
-      text: <>你现在有 <strong>¥10,000</strong>、<strong>2 名司机</strong> 和 <strong>2 辆桑塔纳</strong>。第一局先别想复杂经营,目标就是让车队开始接单、赚钱、涨口碑。</>,
+      title: '把两辆出租车先跑起来',
+      text: <>你现在有 <strong>¥10,000</strong>、<strong>2 名司机</strong> 和 <strong>2 辆出租车</strong>。第一局先别想复杂经营,目标就是让车队开始接单、赚钱、涨口碑。</>,
       bubble: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
     },
     {
@@ -126,9 +126,9 @@ function formatLoseBestPreview(effect, bestDriver) {
   return `失去最强司机${bestDriver ? ` ${bestDriver.name}` : ''}`;
 }
 
-function getEventOptionDetail(option, effect) {
+function getEventOptionDetail(option, hasVisibleEffectPreview = false) {
   if (!option || !option.detail) return '';
-  if (effect.eventScale || effect.orderBoost) return '';
+  if (hasVisibleEffectPreview) return '';
   return option.detail;
 }
 
@@ -411,10 +411,11 @@ function InvestorPressureModal({ event, state, onResolve }) {
 }
 
 function getChainEventFamily(event) {
+  if (event?.eventType !== 'chain' && !event?.chainId) return null;
   const id = event?.id || '';
   const chain = event?.chain || '';
+  if (event?.chainId) return event.chainId;
   if (id.startsWith('borrow_') || chain.startsWith('borrow')) return 'borrow';
-  if (id === 'platform_pressure' || chain === 'platform') return 'platform';
   if (id.startsWith('rival_') || chain.startsWith('rival')) return 'rival';
   if (id.startsWith('accident_') || chain.startsWith('accident')) return 'accident';
   return null;
@@ -468,7 +469,6 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
             const bestDriver = getBestDriverForEvent(state);
             const salaryAfter = bestDriver && eff.salaryRaise ? bestDriver.salary + eff.salaryRaise : null;
             const salaryDaily = eff.salaryRaise ? Math.round(eff.salaryRaise / 30) : 0;
-            const optionDetail = event.blindOptions ? (o.detail || '') : getEventOptionDetail(o, eff);
             const orderBoostText = formatOrderBoostText(eff);
             const disabledReason = getEventOptionDisabledReason(o, state);
             const effectPreviewItems = [];
@@ -495,6 +495,7 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
             }
             if (orderBoostText) addPreview(orderBoostText, eff.orderBoost < 1 ? 'negative' : 'positive');
             if (eff.commissionRate !== undefined) addPreview(`平台抽成调整为 ${Math.round(eff.commissionRate * 100)}%`);
+            if (eff.platformDone) addPreview('后续不再涨抽成', 'positive');
             if (eff.certifyFleet) addPreview('当前车辆合规升级', 'positive');
             if (eff.addDrivers) addPreview(`新增司机 +${eff.addDrivers}`, 'positive');
             if (eff.addVehicles) addPreview(`${getEffectVehicleName(eff)} +${eff.addVehicles}`, 'positive');
@@ -510,6 +511,9 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
             }
             if (eff.loseBest) addPreview(formatLoseBestPreview(eff, bestDriver), 'negative');
             if (eff.previewError) addPreview('事件预览异常,请选择其他方案', 'negative');
+            const optionDetail = event.isInvestorReview
+              ? ''
+              : (event.blindOptions ? (o.detail || '') : getEventOptionDetail(o, effectPreviewItems.length > 0));
             // V15.x: blindOptions 事件(如 rival_pricing 4 选项盲选)隐藏 effect chips,选完才揭晓
             if (event.blindOptions) {
               return (
@@ -608,7 +612,7 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
       return (
         <div className="event-effect-preview">
           <span className="negative">立即扣 ¥{startupFee.toLocaleString()}</span>
-          <span className="negative">合规成本按月流水扣:首月 {complianceFirstPct}% → 稳定后 {complianceFloorPct}%</span>
+          <span className="negative">合规成本按每月净流水滚动扣:首月 {complianceFirstPct}% → 稳定后 {complianceFloorPct}%</span>
           <span className="negative">30 天内招募/购车 5 天冷却</span>
         </div>
       );
@@ -914,12 +918,7 @@ function StoryModal({ story, drivers, onClose }) {
   );
 }
 
-// V6: 抽卡式招募 — 选券 → 抽 3 张 → 挑 1 张
-const TICKET_STAGE_TEXT = {
-  normal: '起步补人',
-  vip: '中期主力',
-  headhunter: '后期挖人',
-};
+// V6: 抽卡式招募 — 付一次券钱 → 看 3 名候选 → 挑 1 名入队
 const RARITY_ORDER = ['N', 'R', 'SR', 'SSR'];
 
 function formatTicketRate(prob) {
@@ -944,7 +943,7 @@ function RecruitModal({ state, dispatch, onClose }) {
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal recruit-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: 980}}>
           <div className="modal-title">招募新司机</div>
-          <div className="modal-desc">选一张招募券 — 每次出 3 名候选,挑 1 名加入车队。概率按每名候选单独计算。</div>
+          <div className="modal-desc">付一次券钱,先看 3 名候选,再挑 1 名加入车队。</div>
           <div className="ticket-list">
             {RECRUIT_TICKETS.map((t) => {
               const enough = funds >= t.cost;
@@ -954,18 +953,28 @@ function RecruitModal({ state, dispatch, onClose }) {
                   <div className="ticket-top">
                     <img className="ticket-icon" src={`assets/pixel/icons/ticket-${t.id}.png`} alt="" draggable="false" />
                     <div className="ticket-top-copy">
-                      <span className="ticket-stage">{TICKET_STAGE_TEXT[t.id]}</span>
                       <span className="ticket-name">{t.name}</span>
                     </div>
                     <span className="ticket-cost">¥{t.cost.toLocaleString()}</span>
                   </div>
                   <div className="ticket-desc">{t.desc}</div>
                   <div className="ticket-prob-card">
-                    <div className="ticket-prob-title">单名候选概率</div>
+                    <div className="ticket-prob-title">候选水平</div>
                     <div className="ticket-prob-list">
                       {probRows.map((row) => (
-                        <span key={row.rarity} className="ticket-prob-chip" style={{ '--prob-color': row.meta.color }}>
-                          <span>{row.meta.name}</span>
+                        <span
+                          key={row.rarity}
+                          className="ticket-prob-chip"
+                          style={{
+                            '--prob-color': row.meta.color,
+                            '--prob-width': `${Math.round((row.prob || 0) * 100)}%`,
+                          }}
+                        >
+                          <span className="ticket-prob-name">
+                            <i aria-hidden="true" />
+                            {row.meta.name}
+                          </span>
+                          <span className="ticket-prob-meter" aria-hidden="true"><span /></span>
                           <strong>{formatTicketRate(row.prob)}</strong>
                         </span>
                       ))}
@@ -976,7 +985,7 @@ function RecruitModal({ state, dispatch, onClose }) {
                     disabled={!enough}
                     onClick={() => dispatch({type: 'GACHA_START', ticketId: t.id})}
                   >
-                    {enough ? '抽卡 3 张' : '资金不足'}
+                    {enough ? `花 ¥${t.cost.toLocaleString()} 看 3 人` : '资金不足'}
                   </button>
                 </div>
               );
@@ -1061,14 +1070,13 @@ function ShopModal({ onClose, onBuyVehicle, state }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal shop-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-title">4S 店:买新车</div>
-        <div className="modal-desc">快车由片区解锁,桑塔纳也能跑。凯美瑞起能跑专车订单,奔驰 E 能跑豪华车订单。</div>
         <div className="shop-grid">
           {VEHICLES.map((v) => {
             // V12: 车型只用钱解锁,口碑门槛已删除
             const cantAfford = state.funds < v.price;
             return (
               <div key={v.id} className="shop-item">
-                <div className="shop-image"><VehicleIcon template={v} size={84} /></div>
+                <div className="shop-image"><VehicleIcon template={v} size={72} /></div>
                 <div className="shop-info">
                   <div className="shop-name-row">
                     <span className="shop-name">{v.name}</span>
@@ -1199,10 +1207,12 @@ const MISSION_ORDER_TARGETS = {
 };
 
 function getMissionRouteRows(state, orderStatusById) {
-  // V15.16:乱序完成 — 状态用 completedMissionIds 判断,hidden 任务标"自动达成"
+  // V15.16:路线只展示玩家需要主动推进的任务;hidden 里程碑在后台静默完成。
   const completedSet = new Set(state.completedMissionIds || []);
   const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && !m.hidden);
-  return MISSIONS.map((mission, idx) => {
+  return MISSIONS
+    .filter((mission) => !mission.hidden)
+    .map((mission, idx) => {
     const orderId = MISSION_ORDER_TARGETS[mission.id];
     const orderStatus = orderId ? orderStatusById[orderId] : null;
     const isDone = completedSet.has(mission.id);
@@ -1212,9 +1222,7 @@ function getMissionRouteRows(state, orderStatusById) {
       ? '已完成'
       : isCurrent
         ? '当前任务'
-        : mission.hidden
-          ? '自动达成'
-          : '后续任务';
+        : '未开始';
     return { mission, idx, orderStatus, stateClass, stateLabel };
   });
 }

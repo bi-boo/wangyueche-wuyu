@@ -41,7 +41,7 @@ function MissionBar({ state, onOpenRoadmap }) {
 
 /* ============== V3: 顶栏 ============== */
 
-const APP_VERSION = 'V15.15';
+const APP_VERSION = 'V15.29';
 const RUN_HISTORY_KEY = 'wycwy-run-history-v1';
 const CURRENT_RUN_KEY = 'wycwy-current-run-v1';
 const AUTOSAVE_KEY = 'wycwy-autosave-v1';
@@ -328,66 +328,41 @@ function HelpRow({ label, children }) {
   );
 }
 
-// V15.16: 投资人 review KPI 单元
-// 6 种状态:默认 / Q1 警告 / 半年警告 / IPO 模式 / 等年终(boosted) / 撤资或稳着先(返回 null)
-// 详见 GAME_DESIGN.md 第七章「投资人定期 review」+ tmp/投资人KPI视觉对比-V1.html
+// V15.29: 投资人 early review 单元
+// 只负责早期防挂机:30/60 天窗口检查是否补到 3 个可运营车组,通过后结束。
 function InvestorReviewStat({ state }) {
-  const { day, gameOverPending, investorPath, investorMissCount, funds } = state;
-  // 状态 5:撤资 / 选稳着先 → 不显示(由父组件根据 investorReviewVisible 不渲染)
-  if (gameOverPending === 'kicked_out' || investorPath === 'fired' || investorPath === 'settle') {
+  const { day, investorMissCount } = state;
+  const review = D.INVESTOR_REVIEW || {};
+  const targetCrews = review.targetCrews || review.kpi?.targetCrews || 3;
+  const currentCrews = (state.drivers || []).filter((driver) => driver.vehicleId).length;
+  if (state.investorReviewDone || currentCrews >= targetCrews) {
     return null;
   }
-  // 共用 popover:所有状态都用同一份评估规则说明
-  const helpPopover = (
-    <TopbarHelp id="investor-help-popover" title="投资人评估规则">
-      <HelpRow label="怎么算">投资人按第 90 / 180 / 270 / 360 天(Q1/半年/Q3/年终)评估你的经营 KPI(资金、口碑、可运营车组)。</HelpRow>
-      <HelpRow label="不达标">Q1 警告 → 半年扣咨询费 ¥15-40k → 累计 2 次未达标 → Q3 撤资(扣 funds×1.5 或 ¥100k 兜底,直接触发 5 天破产倒计时)。</HelpRow>
-      <HelpRow label="达标">Q3 KPI 全部达标可选「接受挑战」+¥30k 加注冲 IPO,或「稳着先」以当前最高结局收尾,之后不再触发评估。</HelpRow>
-    </TopbarHelp>
-  );
-
-  // 状态 4 / 状态 6:IPO 路径(接受挑战后)
-  if (investorPath === 'ipo') {
-    if (day >= 355) {
-      // 状态 6:Q3 后未撤资,等年终 review(最后 5 天)
-      const daysToY1 = Math.max(0, 360 - day);
-      return (
-        <div className="ts-stat topbar-stat ir-stat ir-stat--boosted has-help" tabIndex="0" aria-describedby="investor-help-popover" title="投资人评估规则">
-          <span className="ts-label">距年终 review</span>
-          <strong className="ts-value">{daysToY1} 天</strong>
-          {helpPopover}
-        </div>
-      );
-    }
-    // 状态 4:IPO 模式 — 距 Tier 5(¥1,000,000)还差多少万
-    const tier5 = 1000000;
-    const remaining = Math.max(0, tier5 - (funds || 0));
-    const remainingW = (remaining / 10000).toFixed(0);
-    return (
-      <div className="ts-stat topbar-stat ir-stat ir-stat--ipo has-help" tabIndex="0" aria-describedby="investor-help-popover" title="投资人评估规则">
-        <span className="ts-label">距 IPO</span>
-        <strong className="ts-value">¥{remainingW} 万</strong>
-        {helpPopover}
-      </div>
-    );
-  }
-  // 状态 1 / 2 / 3:还没触发 Q3,根据 missCount 决定警告级别
-  const schedule = [
-    { atDay: 90,  name: 'Q1 review' },
-    { atDay: 180, name: '半年 review' },
-    { atDay: 270, name: 'Q3 review' },
-    { atDay: 360, name: '年终 review' },
+  const stages = state.investorReviewStages || {};
+  const schedule = review.schedule || [
+    { atDay: 30, stage: 'early_warning', name: '扩张提醒' },
+    { atDay: 60, stage: 'early_final', name: '最后提醒' },
   ];
-  const next = schedule.find((r) => r.atDay > day) || schedule[schedule.length - 1];
+  const next = schedule.find((item) => !stages[item.stage]) || null;
+  if (!next) return null;
   const daysLeft = Math.max(0, next.atDay - day);
+  const nextName = next.stage === 'early_final' ? '最后提醒' : '扩张提醒';
   const missCount = investorMissCount || 0;
   let cls = 'ir-stat--default';
-  if (missCount >= 2) cls = 'ir-stat--warn2';
-  else if (missCount >= 1) cls = 'ir-stat--warn1';
+  if (missCount >= 1 || next.stage === 'early_final') cls = 'ir-stat--warn1';
+  if (day >= next.atDay) cls = 'ir-stat--warn2';
+  const helpPopover = (
+    <TopbarHelp id="investor-help-popover" title="投资人评估规则">
+      <HelpRow label="怎么看">投资人只在早期盯一眼车队运力,补到 {targetCrews} 个可运营车组就算节奏正常。</HelpRow>
+      <HelpRow label="节奏">第 30 天左右首次提醒,第 60 天左右二次提醒。若当天有月报或其他弹窗,会顺延到下一个空闲日。</HelpRow>
+      <HelpRow label="当前">当前 {currentCrews}/{targetCrews} 组。补齐后,投资人就先不盯这件事。</HelpRow>
+    </TopbarHelp>
+  );
   return (
     <div className={`ts-stat topbar-stat ir-stat ${cls} has-help`} tabIndex="0" aria-describedby="investor-help-popover" title="投资人评估规则">
-      <span className="ts-label">距{next.name}</span>
-      <strong className="ts-value">{daysLeft} 天</strong>
+      <span className="ts-label">距{nextName}</span>
+      <strong className="ts-value">{daysLeft > 0 ? `${daysLeft} 天` : '待处理'}</strong>
+      <span className="ts-sub">{currentCrews}/{targetCrews} 车组</span>
       {helpPopover}
     </div>
   );
@@ -480,12 +455,10 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
   };
   const nextDebt = debtSummary.nextDebt;
   const debtUrgent = nextDebt && debtSummary.nextDaysLeft <= 7;
-  // V15.16: 投资人 review 单元是否显示。撤资 / 选稳着先后从顶栏移除,KPI 区从 5 列回到 4 列。
-  const investorReviewVisible = !(
-    state.gameOverPending === 'kicked_out' ||
-    state.investorPath === 'fired' ||
-    state.investorPath === 'settle'
-  );
+  // V15.29: 投资人 review 只在早期未达 3 车组时显示。
+  const investorReviewTargetCrews = D.INVESTOR_REVIEW?.targetCrews || D.INVESTOR_REVIEW?.kpi?.targetCrews || 3;
+  const investorReviewVisible = !state.investorReviewDone
+    && (state.drivers || []).filter((driver) => driver.vehicleId).length < investorReviewTargetCrews;
   return (
     <div className="topbar">
       <div className="topbar-left">
@@ -602,7 +575,7 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
             </TopbarHelp>
           </div>
           )}
-          {/* V15.17:投资人 chip 同时受 gate 解锁(day 80)和 investorReviewVisible(撤资/收尾后隐藏)双重控制 */}
+          {/* V15.29:投资人 chip 同时受 gate 解锁(day 20)和 investorReviewVisible(达标后隐藏)双重控制 */}
           {investorReviewVisible && E.isUIGateUnlocked(state, 'investor_chip') && <InvestorReviewStat state={state} />}
         </div>
         );
@@ -754,8 +727,8 @@ function getLoyaltyMeta(driver) {
   const quitLine = E.getDriverQuitLine ? E.getDriverQuitLine(driver) : 30;
   const normalCap = E.getDriverLoyaltyCap ? E.getDriverLoyaltyCap(driver) : 100;
   const effect = loyalty > normalCap
-    ? '信任已突破职业上限,仍需保持公平对待'
-    : `普通上限 ${normalCap},低于 ${quitLine} 可能离职`;
+    ? '信任已经超过普通上限,别让负面事件把关系打回去'
+    : `忠诚影响接单积极性,低于 ${quitLine} 有离队风险`;
   if (loyalty < quitLine) {
     return {
       cls: 'danger',
