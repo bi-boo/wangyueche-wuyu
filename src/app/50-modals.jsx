@@ -121,10 +121,50 @@ function getBestDriverForEvent(state) {
   return [...state.drivers].sort((a, b) => total(b) - total(a))[0];
 }
 
+function normalizeNarrativePunctuation(text) {
+  if (typeof text !== 'string') return text;
+  let quoteOpen = true;
+  return text
+    .replace(/([\u4e00-\u9fff])\s*,\s*/g, '$1，')
+    .replace(/,\s*([\u4e00-\u9fff])/g, '，$1')
+    .replace(/([\u4e00-\u9fff])\s*:\s*/g, '$1：')
+    .replace(/:\s*([\u4e00-\u9fff])/g, '：$1')
+    .replace(/\(/g, '（')
+    .replace(/\)/g, '）')
+    .replace(/\?/g, '？')
+    .replace(/!/g, '！')
+    .replace(/"/g, () => {
+      const mark = quoteOpen ? '“' : '”';
+      quoteOpen = !quoteOpen;
+      return mark;
+    });
+}
+
+function formatNarrativeText(text, maxLineLength = 34) {
+  const normalized = normalizeNarrativePunctuation(text);
+  if (typeof normalized !== 'string' || normalized.includes('\n') || normalized.length <= maxLineLength) {
+    return normalized;
+  }
+  const sentences = normalized.match(/[^。！？]+[。！？]?/g);
+  if (!sentences || sentences.length <= 1) return normalized;
+  const lines = [];
+  let current = '';
+  sentences.forEach((sentence) => {
+    if (current && `${current}${sentence}`.length > maxLineLength) {
+      lines.push(current);
+      current = sentence;
+    } else {
+      current += sentence;
+    }
+  });
+  if (current) lines.push(current);
+  return lines.join('\n');
+}
+
 function getEventOptionDetail(option, hasVisibleEffectPreview = false) {
   if (!option || !option.detail) return '';
   if (hasVisibleEffectPreview) return '';
-  return option.detail;
+  return normalizeNarrativePunctuation(option.detail);
 }
 
 function formatOrderBoostText(effect) {
@@ -341,7 +381,7 @@ function InvestorPressureModal({ event, state, onResolve }) {
         <div className="event-modal-header">
           <div className="modal-tag">{event.tag}事件</div>
           <div className="modal-title">{event.title}</div>
-          <div className="modal-desc">{event.desc}</div>
+          <div className="modal-desc">{formatNarrativeText(event.desc)}</div>
         </div>
         <EventResourceSnapshot state={state} thirdLabel="距破产" thirdValue={`${daysLeft} 天`} thirdTone="danger" />
         <div className="investor-choices">
@@ -446,14 +486,14 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
                   <span className="event-npc-name">{npc.name}</span>
                 </div>
                 <div className="modal-title">{event.title}</div>
-                <div className="modal-desc">{event.desc}</div>
+                <div className="modal-desc">{formatNarrativeText(event.desc)}</div>
               </div>
             </div>
           ) : (
             <>
               <div className="modal-tag">{event.tag}事件</div>
               <div className="modal-title">{event.title}</div>
-              <div className="modal-desc">{event.desc}</div>
+              <div className="modal-desc">{formatNarrativeText(event.desc)}</div>
             </>
           )}
         </div>
@@ -468,7 +508,7 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
             const disabledReason = getEventOptionDisabledReason(o, state);
             const effectPreviewItems = [];
             const addPreview = (content, className = '') => {
-              effectPreviewItems.push(<span key={effectPreviewItems.length} className={className}>{content}</span>);
+              effectPreviewItems.push(<span key={effectPreviewItems.length} className={className}>{normalizeNarrativePunctuation(content)}</span>);
             };
             if (disabledReason) addPreview(disabledReason, 'negative');
             if (eff.funds !== undefined) {
@@ -506,7 +546,7 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
             if (eff.previewError) addPreview('事件预览异常,请选择其他方案', 'negative');
             const optionDetail = event.isInvestorReview
               ? ''
-              : (event.blindOptions ? (o.detail || '') : getEventOptionDetail(o, effectPreviewItems.length > 0));
+              : (event.blindOptions ? normalizeNarrativePunctuation(o.detail || '') : getEventOptionDetail(o, effectPreviewItems.length > 0));
             // V15.x: blindOptions 事件(如 rival_pricing 4 选项盲选)隐藏 effect chips,选完才揭晓
             if (event.blindOptions) {
               return (
@@ -546,7 +586,7 @@ function PolicyNoticeModal({ event, state, onResolve }) {
         <div className="event-modal-header">
           <div className="modal-tag">{event.tag || '政策事件'}</div>
           <div className="modal-title">{event.title}</div>
-          <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{event.desc}</div>
+          <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{formatNarrativeText(event.desc)}</div>
         </div>
         {/* V15.16 audit:政策事件是叙事/信息性事件,不需要展示玩家当前数据(无决策权衡需要参考) */}
         {previews.length > 0 && (
@@ -628,7 +668,7 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
         <div className="event-modal-header">
           <div className="modal-tag">{decision.tag || '政策决策'}</div>
           <div className="modal-title">{decision.title}</div>
-          <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{decision.desc}</div>
+          <div className="modal-desc" style={{whiteSpace: 'pre-line'}}>{formatNarrativeText(decision.desc)}</div>
         </div>
         <EventResourceSnapshot state={state} />
         <div className="modal-options">
@@ -645,7 +685,7 @@ function PolicyDecisionModal({ decision, state, onResolve }) {
                   onClick={() => onResolve(opt.id, toggleVal)}
                 >
                   <div className="modal-option-label">{opt.label}</div>
-                  {opt.detail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{opt.detail}</div>}
+                  {opt.detail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{normalizeNarrativePunctuation(opt.detail)}</div>}
                   {renderEffects(opt.id)}
                 </button>
                 {hasExtra && (
@@ -898,7 +938,7 @@ function StoryModal({ story, drivers, onClose }) {
         modal
         className="story-feedback"
       >
-        <div className="story-text">{story.text}</div>
+        <div className="story-text">{formatNarrativeText(story.text, 42)}</div>
         {rewardLines.length > 0 && (
           <div className="story-rewards">
             {rewardLines.map((line, i) => (
