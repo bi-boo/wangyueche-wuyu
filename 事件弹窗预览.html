@@ -131,6 +131,63 @@
     font-family: "JetBrains Mono", "Menlo", monospace;
     font-size: 11px;
   }
+
+  /* 剧情预览 */
+  .story-preview-modal {
+    width: min(720px, calc(100vw - 80px));
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+  }
+  .story-image-frame {
+    height: clamp(188px, 29vw, 270px);
+    margin: 12px 0 16px;
+    overflow: hidden;
+    border: 4px solid #1d1a18;
+    background: #1d1a18;
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.16);
+  }
+  .story-image-frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+  }
+  .story-dialogue {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 14px;
+    color: #332820;
+    font-size: 14px;
+    line-height: 1.72;
+  }
+  .story-dialogue p {
+    margin: 0;
+  }
+  @media (max-width: 760px) {
+    #root {
+      flex-direction: column;
+    }
+    .sb-sidebar {
+      width: 100%;
+      height: 260px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    }
+    .sb-stage {
+      min-height: 0;
+    }
+    .sb-stage .modal-overlay {
+      padding: 12px !important;
+      align-items: flex-start;
+    }
+    .story-preview-modal {
+      width: min(100%, 560px);
+      max-height: calc(100% - 24px);
+    }
+    .story-image-frame {
+      height: 156px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -281,6 +338,36 @@
         {items.map((item, idx) => (
           <span key={idx} className={item.tone || ''}>{normalizeNarrativePunctuation(item.text)}</span>
         ))}
+      </div>
+    );
+  }
+
+  function StoryPreviewImage({ story }) {
+    return (
+      <div className="story-image-frame">
+        <img src={story.image} alt="" draggable="false" />
+      </div>
+    );
+  }
+
+  function PreviewStoryModal({ story }) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal event-modal story-preview-modal">
+          <div className="modal-tag">{story.tag}</div>
+          <div className="modal-title">{story.title}</div>
+          <StoryPreviewImage story={story} />
+          <div className="story-dialogue">
+            {story.paragraphs.map((line, idx) => <p key={idx}>{formatNarrativeText(line, 42)}</p>)}
+          </div>
+          <div className="modal-options">
+            {story.buttons.map((label) => (
+              <button key={label} className="modal-option" onClick={() => console.log('剧情预览按钮', label)}>
+                <div className="modal-option-label">{label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -493,6 +580,43 @@
   const D = window.WYCWY_DATA;
   const E = window.WYCWY_ENGINE;
 
+  const STORY_PREVIEWS = [
+    {
+      id: 'story_opening_layoff',
+      title: '被裁那天，我买下了第一辆车',
+      tag: '开局剧情',
+      image: 'assets/pixel/story/opening-layoff.png',
+      buttons: ['开始运营'],
+      paragraphs: [
+        '会议室里没有争吵，只有 HR 打印机的声音。',
+        '你抱着纸箱走出写字楼，手机里弹出最后一条工资到账通知。',
+        '回家的网约车上，司机问你：“老板，去哪？”',
+        '你看着窗外堵成红色的三环，突然改口：',
+        '“不回家了。带我去二手车市场。”',
+        '从今天开始，你不再等别人派活。',
+        '你要自己养司机、买车、抢订单，把这座城市一点点跑下来。',
+      ],
+    },
+    {
+      id: 'story_finale_ipo_heir',
+      title: 'IPO 上市 · 真正的接班',
+      tag: '终局剧情',
+      image: 'assets/pixel/story/finale-ipo-heir.png',
+      buttons: ['继承家业', '再开一局'],
+      paragraphs: [
+        '交易所大屏亮起那一刻，你的公司代码跳了出来。',
+        '司机群里刷满红包，投资人终于没再催你做周报。',
+        '就在你准备发表上市感言时，楼顶传来直升机的轰鸣。',
+        '舱门打开，一个真正掌管出行帝国的人走下来。',
+        '他看了看你身后的车队，又看了看屏幕上的市值，笑了一下：',
+        '“玩够了吧？”',
+        '“儿子，该回家了。”',
+        '“家里的公司，也该你继承了。”',
+        '你回头看了一眼城市。那些订单、投诉、夜班、加油票和司机们的笑声，突然都成了真正的资产。',
+      ],
+    },
+  ];
+
   // 政策事件:每个 stage 一个左侧栏项
   function buildPolicySidebarItems() {
     const out = [];
@@ -612,6 +736,16 @@
         kind: 'investorReview',
         investorReviewStage: stageKey,
       }));
+  }
+
+  function buildStoryPreviewSidebarItems() {
+    return STORY_PREVIEWS.map((story) => ({
+      id: story.id,
+      title: story.title,
+      stageTag: story.stageTag,
+      kind: 'storyPreview',
+      storyId: story.id,
+    }));
   }
 
   // -------- mock state --------
@@ -758,18 +892,26 @@
     };
   }
 
+  function buildStoryPreviewModal(storyId) {
+    const story = STORY_PREVIEWS.find((item) => item.id === storyId);
+    if (!story) return null;
+    return { type: 'storyPreview', story };
+  }
+
   function StorybookApp() {
     const [r0, setR0] = useState(10000);
-    const [activeId, setActiveId] = useState(() => window.location.hash.replace(/^#/, '') || 'policy_gov_ban_decision');
+    const [activeId, setActiveId] = useState(() => window.location.hash.replace(/^#/, '') || 'story_opening_layoff');
 
     const policyItems = useMemo(buildPolicySidebarItems, []);
     const { chainGroups, single: singleItems, scripted: scriptedItems } = useMemo(buildRandomEventSidebarItems, []);
     const investorItem = useMemo(buildInvestorSidebarItem, []);
     const investorReviewItems = useMemo(buildInvestorReviewSidebarItems, []);
+    const storyPreviewItems = useMemo(buildStoryPreviewSidebarItems, []);
 
     // 把所有 chainGroups 的事件平铺一份用于查找
     const chainItemsFlat = Object.values(chainGroups).flat();
     const allItems = [
+      ...storyPreviewItems,
       ...policyItems,
       ...scriptedItems,
       ...chainItemsFlat,
@@ -790,7 +932,14 @@
         built = buildInvestorModal();
       } else if (activeItem.kind === 'investorReview') {
         built = buildInvestorReviewModal(activeItem.investorReviewStage);
+      } else if (activeItem.kind === 'storyPreview') {
+        built = buildStoryPreviewModal(activeItem.storyId);
       }
+    }
+
+    function selectItem(id) {
+      setActiveId(id);
+      window.location.hash = id;
     }
 
     function renderSidebarGroup(title, items) {
@@ -801,7 +950,7 @@
             <button
               key={it.id}
               className={`sb-item ${activeId === it.id ? 'active' : ''}`}
-              onClick={() => setActiveId(it.id)}
+              onClick={() => selectItem(it.id)}
             >
               {it.title}
               {it.stageTag && <span className="stage-tag">{it.stageTag}</span>}
@@ -826,6 +975,7 @@
               onChange={(e) => setR0(parseInt(e.target.value, 10) || 0)}
             />
           </div>
+          {renderSidebarGroup('剧情预览', storyPreviewItems)}
           {renderSidebarGroup('政策事件 (V15)', policyItems)}
           {scriptedItems.length > 0 && renderSidebarGroup('脚本事件', scriptedItems)}
           {CHAIN_GROUP_ORDER.map((group) => (
@@ -908,6 +1058,12 @@
               state={INVESTOR_REVIEW_MOCK_STATE}
               onResolve={(idx) => console.log('投资人 review 选项', idx)}
               onResolveInvestor={() => {}}
+            />
+          )}
+          {built && built.type === 'storyPreview' && (
+            <PreviewStoryModal
+              key={`story_${activeId}`}
+              story={built.story}
             />
           )}
         </div>
