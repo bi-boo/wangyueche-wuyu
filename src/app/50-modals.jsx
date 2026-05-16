@@ -12,7 +12,7 @@ function Tutorial({ onClose }) {
       spotSelector: '.topbar-kpis',
       tag: '状态',
       title: '先看钱和口碑',
-      text: <>顶部只需要盯两件事:<strong>资金</strong>别变负,<strong>口碑</strong>越高越容易解锁新片区。时间和供需用来判断车队是不是跑得顺。</>,
+      text: <>开局先看三件事:<strong>时间</strong>决定结算节奏,<strong>资金</strong>不能变负,<strong>口碑</strong>越高越容易解锁新片区。</>,
       bubble: { top: 96, left: '50%', transform: 'translateX(-50%)' },
     },
     {
