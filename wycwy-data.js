@@ -1359,10 +1359,10 @@
     },
     {
       id: 'salary_raise',
-      title: '调薪 — 高级留人手段',
-      desc: '司机忠诚行旁多了「+」按钮,可主动给司机加薪。高幅度调薪可突破忠诚普通上限直达 100。',
+      title: '调薪 — 挽留低忠诚司机',
+      desc: '有司机忠诚跌破离队风险线了。忠诚行旁多了「+」按钮,可主动给司机加薪挽留。',
       hint: '右侧调度台 · 忠诚行',
-      trigger: { type: 'mission', value: 'm6_service_training' },
+      trigger: { type: 'low_loyalty' },
     },
     {
       id: 'risk_actions',

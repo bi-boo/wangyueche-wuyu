@@ -579,6 +579,10 @@
     return Math.min(0.25, (quitLine - loyalty) * 0.01);
   }
 
+  function hasLowLoyaltyDriver(state) {
+    return (state?.drivers || []).some((driver) => (driver.loyalty ?? 50) < getDriverQuitLine(driver));
+  }
+
   // V12: 半订单池 — 每 tick 按片区 density 刷出实物订单名额,司机抢,未抢完即流失。
   // 时段倍率:早高峰(7-9)/晚高峰(17-19) ×1.3,深夜(22-5) ×0.7,其余 ×1.0。
   function buildHourlySupply(state) {
@@ -1025,6 +1029,7 @@
     const { type, value } = gate.trigger;
     if (type === 'mission') return (state.completedMissionIds || []).includes(value);
     if (type === 'day') return (state.day || 0) >= value;
+    if (type === 'low_loyalty') return hasLowLoyaltyDriver(state);
     return false;
   }
 
@@ -3392,7 +3397,7 @@
     getEventBusinessScale, scaleEventEffect,
     getOperatingCrewCount, getCurrentEventPhase, selectDueChainEvent, selectRandomEvent,
     computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,
-    getDriverTryRateBreakdown,
+    getDriverTryRateBreakdown, hasLowLoyaltyDriver,
     isUIGateUnlocked, UI_GATES,
     getTrainingCost,
     buildHourlySupply,
