@@ -738,10 +738,11 @@
       snowRescueFired: false,
       // V5: 投资人压力事件队列
       investorPressureFired: false,
-      // V15.29: 投资人 early review 机制 — 早期防挂机,达到 3 车组后退出
+      // V15.29: 投资人 early review 机制 — 早期防挂机,Day 30 看 3 车组,Day 60 看 5 车组
       reviewCounter: 0,           // 已处理的 early review 次数,仅用于调试 / 月报回顾
       investorReviewStages: {},   // { [stage]: true } — early_warning / early_final 是否已处理
-      investorReviewDone: false,  // 达到 3 车组或二次提醒处理后退出 review 体系
+      investorReviewDone: false,  // 达到 Day 60 最终车组目标后退出 review 体系
+      investorReviewDeadlineDay: null, // Day 60 最后通牒后的撤资截止日
       investorMissCount: 0,       // 兼容旧 UI/存档,新逻辑只作为提醒等级计数
       lastReviewDay: 0,           // 最近一次评估的 day,防止重复触发
       investorBoosted: false,     // 兼容旧存档字段,新逻辑不再使用 Q3 加注路径
@@ -2000,7 +2001,7 @@
   }
 
   // ============================================================
-  // V15.29: 投资人 early review — 早期防挂机,通过 3 车组后退出
+  // V15.29: 投资人 early review — 早期防挂机,Day 30 看 3 车组,Day 60 看 5 车组
   // 详见 GAME_DESIGN.md 第七章「投资人 early review」
   // ============================================================
 
@@ -2013,15 +2014,36 @@
     return INVESTOR_REVIEW?.targetCrews || INVESTOR_REVIEW?.kpi?.targetCrews || 3;
   }
 
+  function getInvestorReviewStageTargetCrews(stage) {
+    const item = (INVESTOR_REVIEW.schedule || []).find((x) => x.stage === stage);
+    return item?.targetCrews || getInvestorReviewTargetCrews();
+  }
+
+  function getInvestorReviewFinalDeadlineDays() {
+    return Math.max(1, INVESTOR_REVIEW?.finalDeadlineDays || 10);
+  }
+
   function hasPassedInvestorReview(s) {
     return countOperatingCrews(s) >= getInvestorReviewTargetCrews();
   }
 
   function markInvestorReviewDone(state, reason) {
-    let s = { ...state, investorReviewDone: true, lastReviewDay: state.day };
+    let s = { ...state, investorReviewDone: true, investorReviewDeadlineDay: null, lastReviewDay: state.day };
     if (reason === 'expanded') {
       s = pushLog(s, `【投资人 review】车队运力补起来了,投资人暂时放下这件事`, 'success');
     }
+    return s;
+  }
+
+  function failInvestorReviewDeadline(state) {
+    let s = { ...state };
+    const targetCrews = getInvestorReviewTargetCrews();
+    const currentCrews = countOperatingCrews(s);
+    const reason = `投资人撤资:最后期限仍只有 ${currentCrews}/${targetCrews} 个可运营车组,公司失去启动资金支持。`;
+    s.gameOver = { type: 'lose', reason, deathCause: 'kicked_out', stats: snapshotStats(s) };
+    s.gameOverPending = 'kicked_out';
+    s.investorReviewDone = true;
+    s = pushLog(s, `【投资人撤资】${reason}`, 'warn');
     return s;
   }
 
@@ -2030,9 +2052,13 @@
   }
 
   function getNextInvestorReviewItem(s) {
-    return (INVESTOR_REVIEW.schedule || []).find((item) =>
-      item.atDay <= s.day && !hasInvestorReviewStageFired(s, item.stage)
-    );
+    const currentCrews = countOperatingCrews(s);
+    return (INVESTOR_REVIEW.schedule || []).find((item) => {
+      const stageTarget = item.targetCrews || getInvestorReviewTargetCrews();
+      return item.atDay <= s.day
+        && !hasInvestorReviewStageFired(s, item.stage)
+        && currentCrews < stageTarget;
+    });
   }
 
   function getInvestorReviewFee(s, stage) {
@@ -2051,6 +2077,9 @@
     if (s.lastReviewDay === s.day) return s;  // 防同日重复触发
     if (s.investorReviewDone) return s;
     if (hasPassedInvestorReview(s)) return markInvestorReviewDone(s, 'expanded');
+    if (s.investorReviewDeadlineDay && s.day >= s.investorReviewDeadlineDay) {
+      return failInvestorReviewDeadline(s);
+    }
     const item = getNextInvestorReviewItem(s);
     if (!item) return s;
     return openInvestorReviewEvent(s, item.stage, getInvestorReviewFee(s, item.stage));
@@ -2062,14 +2091,27 @@
     if (!stageData) return state;
     let s = { ...state };
     let desc = stageData.desc;
-    const targetCrews = getInvestorReviewTargetCrews();
+    const targetCrews = getInvestorReviewStageTargetCrews(stage);
     const currentCrews = countOperatingCrews(s);
+    const deadlineDays = getInvestorReviewFinalDeadlineDays();
+    const deadlineDay = s.day + deadlineDays;
     desc = desc
       .replace(/\{targetCrews\}/g, targetCrews)
       .replace(/\{currentCrews\}/g, currentCrews)
-      .replace(/\{N\}/g, (ctx.rawFee || ctx.fee || 0).toLocaleString());
+      .replace(/\{N\}/g, (ctx.rawFee || ctx.fee || 0).toLocaleString())
+      .replace(/\{D\}/g, deadlineDays)
+      .replace(/\{deadlineDay\}/g, deadlineDay);
+    const optionDetail = (stageData.buttonDetail || '')
+      .replace(/\{targetCrews\}/g, targetCrews)
+      .replace(/\{currentCrews\}/g, currentCrews)
+      .replace(/\{D\}/g, deadlineDays)
+      .replace(/\{deadlineDay\}/g, deadlineDay);
     const options = [
-      { label: stageData.buttonLabel || '知道了', detail: '', apply: () => ({}) },
+      {
+        label: stageData.buttonLabel || '知道了',
+        detail: optionDetail,
+        apply: () => (ctx.fee > 0 ? { funds: -ctx.fee } : {}),
+      },
     ];
     s.activeEvent = {
       id: `investor_review_${stage}`,
@@ -2078,6 +2120,7 @@
       desc,
       isInvestorReview: true,
       investorReviewStage: stage,
+      investorReviewTargetCrews: targetCrews,
       investorReviewFee: ctx.fee || 0,
       investorReviewFeeLabel: ctx.label || '',
       skipScale: true,  // 不走 scaleEventEffect 缩放
@@ -2106,11 +2149,11 @@
     } else if (stage === 'early_final') {
       s.funds -= fee;
       s.investorMissCount = Math.max(s.investorMissCount || 0, 2);
-      s.investorReviewDone = true;
+      s.investorReviewDeadlineDay = s.day + getInvestorReviewFinalDeadlineDays();
       if (fee > 0) {
-        s = recordMonthlyEventImpact(s, -fee, { title: '投资人 early review', label: feeLabel || '早期资源占用费', detail: '第二个月复盘后扣回资源占用费' });
+        s = recordMonthlyEventImpact(s, -fee, { title: '投资人 early review', label: feeLabel || '闲置资源占用费', detail: '第二个月复盘后扣回资源占用费' });
       }
-      s = pushLog(s, `【投资人 review】二次提醒:扣款 ¥${fee.toLocaleString()}(${feeLabel || '早期资源占用费'}),早期评估结束`, 'warn');
+      s = pushLog(s, `【投资人 review】二次提醒:扣款 ¥${fee.toLocaleString()}(${feeLabel || '闲置资源占用费'}),Day ${s.investorReviewDeadlineDay} 前未扩到 ${getInvestorReviewTargetCrews()} 个车组将撤资`, 'warn');
     }
     return openDueMonthlyReport(s);
   }

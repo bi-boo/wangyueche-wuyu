@@ -1225,39 +1225,42 @@
   // V15.29: 投资人 early review — 早期防挂机护栏。
   // 与 INVESTOR_PRESSURE(资金负时触发的失败兜底)互补:
   //   - INVESTOR_PRESSURE:玩家亏损时触发,救场用
-  //   - INVESTOR_REVIEW:玩家早期迟迟不扩到 3 车组时触发,只做提醒和轻惩罚
+  //   - INVESTOR_REVIEW:玩家早期迟迟不扩张时触发,最终可导向撤资失败
   // 详见 GAME_DESIGN.md 第七章「投资人 early review」小节。
   const INVESTOR_REVIEW = {
     id: 'investor_review',
-    targetCrews: 3,
+    targetCrews: 5,
+    finalDeadlineDays: 10,
     // atDay 是最早触发窗口,不是硬日期。若当天有月报/政策/其他弹窗,会顺延到下一个空闲日。
     schedule: [
-      { atDay: 30, stage: 'early_warning', type: 'warning' },
-      { atDay: 60, stage: 'early_final', type: 'punish' },
+      { atDay: 30, stage: 'early_warning', type: 'warning', targetCrews: 3 },
+      { atDay: 60, stage: 'early_final', type: 'punish', targetCrews: 5 },
     ],
     // 保留 object 结构,便于 admin 和旧调参工具读取;真实判断只看可运营车组。
     kpi: {
-      targetCrews: 3,
+      targetCrews: 5,
     },
     punishment: {
       early_final: {
         fee: 10000,
         minRemainingFunds: 1000,
-        label: '早期资源占用费',
+        label: '闲置资源占用费',
       },
     },
     stages: {
       early_warning: {
         title: '投资人来电',
         tag: '投资人',
-        desc: '投资人打来电话。\n\n"这一个月看下来,你现金流还算稳,但车队规模没有打开。"\n\n"别一直守着两辆车慢慢跑。先把第三个车组补起来,后面的目标和机会才接得住。"',
-        buttonLabel: '知道了',
+        desc: '投资人打来电话。\n\n"这一个月看下来,你还停在 {currentCrews}/{targetCrews} 个可运营车组。我们投的不是两辆车的小生意,而是一支能复制扩张的车队。"\n\n"接下来先把第三个车组补起来:买车、招人、把司机分配上车。第二个月复盘看的就不是 3 组了,而是有没有扩到 5 个车组。"',
+        buttonLabel: '知道了,先扩第三个车组',
+        buttonDetail: '目标:买车 + 招司机 + 分配上车,形成 3 个可运营车组',
       },
       early_final: {
-        title: '资源要重新分配',
+        title: '最后一次扩张提醒',
         tag: '投资人',
-        desc: '第二个月复盘会上,投资人把报表推到你面前。\n\n"我们给的是启动资金,不是存款账户。车队扩张还停在早期节奏,资源周转太慢。"\n\n"这次先收回一笔早期资源占用费 ¥{N}。后面先把运力补稳,再谈更高目标。"',
-        buttonLabel: '签字',
+        desc: '第二个月复盘会上,投资人把报表推到你面前。\n\n"现在仍是 {currentCrews}/{targetCrews} 个可运营车组。问题不是现金不够,而是启动资金没被转成运力:没买车、没招人、没形成新车组。"\n\n"这次扣一笔闲置资源占用费 ¥{N},并给你最后 {D} 天。Day {deadlineDay} 前扩到 5 个可运营车组,投资继续；到期还是 {currentCrews}/{targetCrews},我们就撤资清算。"',
+        buttonLabel: '确认扣款,立刻扩张车队',
+        buttonDetail: '最后期限:Day {deadlineDay} 前扩到 5 个可运营车组,否则投资人撤资失败',
       },
     },
   };

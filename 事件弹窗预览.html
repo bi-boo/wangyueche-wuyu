@@ -771,9 +771,9 @@
   };
   const INVESTOR_REVIEW_MOCK_STATE = {
     ...baseInitial,
-    funds: 118000,
-    reputation: 360,
-    day: 270,
+    funds: 42000,
+    reputation: 180,
+    day: 60,
     hour: 9,
     drivers: baseInitial.drivers.map((driver, idx) => ({
       ...driver,
@@ -857,19 +857,29 @@
     const stageData = review?.stages?.[stageKey];
     if (!stageData) return null;
     const punishment = review?.punishment?.[stageKey] || {};
+    const scheduleItem = (review?.schedule || []).find((item) => item.stage === stageKey);
     const ctx = {
       fee: punishment.fee || 0,
-      targetCrews: review?.targetCrews || review?.kpi?.targetCrews || 3,
+      targetCrews: scheduleItem?.targetCrews || review?.targetCrews || review?.kpi?.targetCrews || 3,
       currentCrews: INVESTOR_REVIEW_MOCK_STATE.drivers.filter((driver) => driver.vehicleId).length,
     };
+    ctx.deadlineDays = Math.max(1, review?.finalDeadlineDays || 10);
+    ctx.deadlineDay = INVESTOR_REVIEW_MOCK_STATE.day + ctx.deadlineDays;
     let desc = stageData.desc || '';
     desc = desc
       .replace(/\{N\}/g, ctx.fee.toLocaleString())
       .replace(/\{targetCrews\}/g, ctx.targetCrews)
-      .replace(/\{currentCrews\}/g, ctx.currentCrews);
+      .replace(/\{currentCrews\}/g, ctx.currentCrews)
+      .replace(/\{D\}/g, ctx.deadlineDays)
+      .replace(/\{deadlineDay\}/g, ctx.deadlineDay);
+    const buildDetail = (detail) => (detail || '')
+      .replace(/\{targetCrews\}/g, ctx.targetCrews)
+      .replace(/\{currentCrews\}/g, ctx.currentCrews)
+      .replace(/\{D\}/g, ctx.deadlineDays)
+      .replace(/\{deadlineDay\}/g, ctx.deadlineDay);
     const options = stageData.options
-      ? stageData.options.map((opt) => ({ label: opt.label, detail: opt.detail, apply: () => ({}) }))
-      : [{ label: stageData.buttonLabel || '知道了', detail: '', apply: () => ({}) }];
+      ? stageData.options.map((opt) => ({ label: opt.label, detail: buildDetail(opt.detail), apply: () => (ctx.fee > 0 ? { funds: -ctx.fee } : {}) }))
+      : [{ label: stageData.buttonLabel || '知道了', detail: buildDetail(stageData.buttonDetail), apply: () => (ctx.fee > 0 ? { funds: -ctx.fee } : {}) }];
     return {
       type: 'investorReview',
       event: {
