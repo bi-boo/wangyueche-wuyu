@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>投资人 review KPI 单元 — 6 状态对比 V1</title>
+<style>
+  :root {
+    --bg: #F4E4BC;
+    --bg-deep: #E5D29F;
+    --card: #FFF8E7;
+    --sub: #F0E2BC;
+    --ink: #2A2320;
+    --ink-2: #6D635A;
+    --ink-3: #9A8C7E;
+    --accent: #FF8C42;
+    --accent-deep: #D4621F;
+    --accent-soft: #FFE0B8;
+    --warn: #E84545;
+    --warn-soft: #FFE0E0;
+    --green: #5FAD41;
+    --gold: #FFD93D;
+    --gold-soft: #FFF3B0;
+    --border: #2A2320;
+    --border-soft: rgba(42,35,32,0.18);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 24px 80px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page-title {
+    max-width: 1200px;
+    margin: 0 auto 24px;
+    padding: 18px 22px;
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .page-title h1 {
+    margin: 0 0 6px;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+  .page-title p {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 14px;
+  }
+  .legend {
+    max-width: 1200px;
+    margin: 0 auto 28px;
+    padding: 14px 18px;
+    background: var(--accent-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+    font-size: 14px;
+    color: var(--accent-deep);
+  }
+  .legend strong { color: var(--ink); }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* 每个状态卡片 */
+  .state-card {
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    box-shadow: 3px 3px 0 var(--ink);
+    overflow: hidden;
+  }
+  .state-header {
+    padding: 12px 18px;
+    background: var(--sub);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .state-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--ink);
+    color: var(--card);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+  .state-title {
+    font-size: 18px;
+    font-weight: 700;
+    flex: 1;
+  }
+  .state-when {
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+
+  /* mini topbar */
+  .mini-topbar {
+    height: 70px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) auto minmax(80px, auto);
+    align-items: center;
+    padding: 0 16px;
+    gap: 14px;
+  }
+  .topbar-brand {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .topbar-brand .v {
+    color: var(--ink-3);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .topbar-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .topbar-settings {
+    display: flex;
+    gap: 6px;
+    justify-self: end;
+  }
+  .settings-btn {
+    width: 30px;
+    height: 30px;
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+    border-radius: 3px;
+  }
+
+  /* topbar-stat 单元 — 复刻现有样式 */
+  .topbar-stat {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 8px;
+    row-gap: 2px;
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+    min-height: 44px;
+    padding: 6px 9px;
+    border-radius: 2px;
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.10);
+    transition: all 0.2s;
+  }
+  .ts-label {
+    font-size: 14px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 600;
+  }
+  .ts-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: 0;
+  }
+  .ts-value.accent { color: var(--accent); }
+  .ts-value.warn { color: var(--warn); }
+  .ts-value.green { color: var(--green); }
+
+  /* === 投资人 review KPI 6 种状态 === */
+
+  /* 状态 1: 默认(开局-day 89) — 油墨次棕,无装饰 */
+  .ir-stat--default {
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+  }
+  .ir-stat--default .ts-value { color: var(--ink); }
+
+  /* 状态 2: Q1 警告后(未达标) — 工坊橙边框 + 工坊橙数字 */
+  .ir-stat--warn1 {
+    background: var(--accent-soft);
+    border: 1.5px solid var(--accent);
+  }
+  .ir-stat--warn1 .ts-label { color: var(--accent-deep); }
+  .ir-stat--warn1 .ts-value { color: var(--accent-deep); }
+
+  /* 状态 3: 半年警告后(未达标) — 警告红边框 + 闪烁 */
+  .ir-stat--warn2 {
+    background: var(--warn-soft);
+    border: 1.5px solid var(--warn);
+    animation: pulse-warn 1.6s infinite;
+  }
+  .ir-stat--warn2 .ts-label { color: var(--warn); }
+  .ir-stat--warn2 .ts-value { color: var(--warn); }
+  @keyframes pulse-warn {
+    0%, 100% { box-shadow: 1px 1px 0 rgba(42,35,32,0.10); }
+    50%      { box-shadow: 0 0 0 3px rgba(232,69,69,0.25), 1px 1px 0 rgba(42,35,32,0.10); }
+  }
+
+  /* 状态 4: Q3 达标 + 接受挑战 — 金币金边框 + 油渍橙数字 */
+  .ir-stat--ipo {
+    background: var(--gold-soft);
+    border: 1.5px solid var(--gold);
+    box-shadow: 1px 1px 0 rgba(212,98,31,0.30);
+  }
+  .ir-stat--ipo .ts-label { color: var(--accent-deep); }
+  .ir-stat--ipo .ts-value { color: var(--accent-deep); }
+
+  /* 状态 5: 撤资 / 选稳着先 — 单元消失 */
+  /* (mockup 里整个 ir-stat 容器隐藏,KPI 区只剩 3 列) */
+  .topbar-kpis.no-ir {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+  .ir-stat--gone {
+    visibility: hidden;
+  }
+
+  /* 状态 6: Q3 后未撤资(boosted) — 金币金边框 + 油墨深棕 */
+  .ir-stat--boosted {
+    background: var(--gold-soft);
+    border: 1.5px solid var(--gold);
+  }
+  .ir-stat--boosted .ts-label { color: var(--ink-2); }
+  .ir-stat--boosted .ts-value { color: var(--ink); }
+
+  /* 解释 */
+  .state-note {
+    padding: 12px 18px;
+    background: var(--card);
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .state-note strong { color: var(--ink); }
+  .state-note .stage-info {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: var(--sub);
+    border-radius: 2px;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+  .state-note code {
+    background: var(--sub);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    color: var(--accent-deep);
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>投资人 review KPI 单元 — 6 状态视觉对比</h1>
+  <p>V15.16 顶栏新增「投资人 KPI」单元,根据评估进度切换 6 种状态。配色严格按 DESIGN.md(暖黄底 + 硬阴影 + 工坊橙/警告红/金币金)。</p>
+</div>
+
+<div class="legend">
+  对比 mockup 中的<strong>第 4 个 KPI 单元</strong>("投资人 review")。前 3 个单元(资金/口碑/车队)是现有顶栏样式,作为对照基准。
+</div>
+
+<div class="container">
+
+  <!-- 状态 1: 默认 -->
+  <div class="state-card">
+    <div class="state-header">
+      <span class="state-tag">状态 1</span>
+      <span class="state-title">默认</span>
+      <span class="state-when">开局 → day 89(Q1 评估前)</span>
+    </div>
+    <div class="mini-topbar">
+      <div class="topbar-brand">网约车物语<span class="v">V15.16</span></div>
+      <div class="topbar-kpis">
+        <div class="topbar-stat">
+          <span class="ts-label">资金</span>
+          <span class="ts-value">¥10,000</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">口碑</span>
+          <span class="ts-value">50</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">车队</span>
+          <span class="ts-value">2 组</span>
+        </div>
+        <div class="topbar-stat ir-stat ir-stat--default">
+          <span class="ts-label">距 Q1 review</span>
+          <span class="ts-value">89 天</span>
+        </div>
+      </div>
+      <div class="topbar-settings">
+        <div class="settings-btn"></div>
+        <div class="settings-btn"></div>
+      </div>
+    </div>
+    <div class="state-note">
+      <strong>视觉</strong>:与现有 KPI 单元完全一致(次背景底 + 油墨次棕 label + 油墨深棕数字)。玩家无感知。
+      <div class="stage-info">触发条件:<code>day &lt; 90</code> · 副作用:无 · 玩家心理:正常运营</div>
+    </div>
+  </div>
+
+  <!-- 状态 2: Q1 警告后 -->
+  <div class="state-card">
+    <div class="state-header">
+      <span class="state-tag">状态 2</span>
+      <span class="state-title">Q1 警告后(未达标)</span>
+      <span class="state-when">day 90 → 179 之间</span>
+    </div>
+    <div class="mini-topbar">
+      <div class="topbar-brand">网约车物语<span class="v">V15.16</span></div>
+      <div class="topbar-kpis">
+        <div class="topbar-stat">
+          <span class="ts-label">资金</span>
+          <span class="ts-value">¥30,000</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">口碑</span>
+          <span class="ts-value">80</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">车队</span>
+          <span class="ts-value">2 组</span>
+        </div>
+        <div class="topbar-stat ir-stat ir-stat--warn1">
+          <span class="ts-label">距半年 review</span>
+          <span class="ts-value">87 天</span>
+        </div>
+      </div>
+      <div class="topbar-settings">
+        <div class="settings-btn"></div>
+        <div class="settings-btn"></div>
+      </div>
+    </div>
+    <div class="state-note">
+      <strong>视觉</strong>:工坊橙边框(<code>#FF8C42</code> 1.5px)+ 晨光橙底(<code>#FFE0B8</code>)+ 油渍橙数字(<code>#D4621F</code>)。在顶栏一片暖黄中跳出来。
+      <div class="stage-info">触发条件:<code>investorMissCount &gt;= 1 && day &lt; 180</code> · 副作用:无扣款 · 玩家心理:轻度警觉</div>
+    </div>
+  </div>
+
+  <!-- 状态 3: 半年警告后 -->
+  <div class="state-card">
+    <div class="state-header">
+      <span class="state-tag">状态 3</span>
+      <span class="state-title">半年警告后(未达标)</span>
+      <span class="state-when">day 180 → 269 之间</span>
+    </div>
+    <div class="mini-topbar">
+      <div class="topbar-brand">网约车物语<span class="v">V15.16</span></div>
+      <div class="topbar-kpis">
+        <div class="topbar-stat">
+          <span class="ts-label">资金</span>
+          <span class="ts-value">¥50,000</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">口碑</span>
+          <span class="ts-value">200</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">车队</span>
+          <span class="ts-value">2 组</span>
+        </div>
+        <div class="topbar-stat ir-stat ir-stat--warn2">
+          <span class="ts-label">距 Q3 review</span>
+          <span class="ts-value">90 天</span>
+        </div>
+      </div>
+      <div class="topbar-settings">
+        <div class="settings-btn"></div>
+        <div class="settings-btn"></div>
+      </div>
+    </div>
+    <div class="state-note">
+      <strong>视觉</strong>:警告红边框(<code>#E84545</code> 1.5px)+ 浅红底(<code>#FFE0E0</code>)+ 警告红文字 + <strong>1.6s 周期脉冲外发光</strong>。每次心跳告诉玩家"再不达标就完了"。
+      <div class="stage-info">触发条件:<code>investorMissCount &gt;= 2 && day &lt; 270</code> · 副作用:Q3 来时直接撤资 · 玩家心理:强烈紧迫感</div>
+    </div>
+  </div>
+
+  <!-- 状态 4: Q3 达标 + 接受挑战 -->
+  <div class="state-card">
+    <div class="state-header">
+      <span class="state-tag">状态 4</span>
+      <span class="state-title">Q3 达标 + 接受挑战</span>
+      <span class="state-when">day 270 后(选 IPO 路径)</span>
+    </div>
+    <div class="mini-topbar">
+      <div class="topbar-brand">网约车物语<span class="v">V15.16</span></div>
+      <div class="topbar-kpis">
+        <div class="topbar-stat">
+          <span class="ts-label">资金</span>
+          <span class="ts-value">¥230,000</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">口碑</span>
+          <span class="ts-value">520</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">车队</span>
+          <span class="ts-value">7 组</span>
+        </div>
+        <div class="topbar-stat ir-stat ir-stat--ipo">
+          <span class="ts-label">距 IPO</span>
+          <span class="ts-value">¥77 万</span>
+        </div>
+      </div>
+      <div class="topbar-settings">
+        <div class="settings-btn"></div>
+        <div class="settings-btn"></div>
+      </div>
+    </div>
+    <div class="state-note">
+      <strong>视觉</strong>:金币金边框(<code>#FFD93D</code> 1.5px)+ 浅金底(<code>#FFF3B0</code>)+ 油渍橙数字。从"距 review N 天"切到"距 IPO ¥X 万",叙事从惩罚转为目标驱动。
+      <div class="stage-info">触发条件:<code>investorBoosted === true && unlockedEndingTier &lt; 5</code> · 副作用:+¥30k 加注已发放 · 玩家心理:冲终局</div>
+    </div>
+  </div>
+
+  <!-- 状态 5: 撤资/稳着先 — 单元消失 -->
+  <div class="state-card">
+    <div class="state-header">
+      <span class="state-tag">状态 5</span>
+      <span class="state-title">撤资 / 选稳着先(单元消失)</span>
+      <span class="state-when">Q3 撤资分支 OR 选"稳着先"后</span>
+    </div>
+    <div class="mini-topbar">
+      <div class="topbar-brand">网约车物语<span class="v">V15.16</span></div>
+      <div class="topbar-kpis no-ir">
+        <div class="topbar-stat">
+          <span class="ts-label">资金</span>
+          <span class="ts-value warn">−¥60,000</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">口碑</span>
+          <span class="ts-value">200</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">车队</span>
+          <span class="ts-value">2 组</span>
+        </div>
+      </div>
+      <div class="topbar-settings">
+        <div class="settings-btn"></div>
+        <div class="settings-btn"></div>
+      </div>
+    </div>
+    <div class="state-note">
+      <strong>视觉</strong>:整个投资人 KPI 单元从顶栏移除,KPI 区从 4 列变 3 列。"投资人不会再来 review"。撤资场景下资金红色显示倒计时含义由破产倒计时单独承载(已有"V14 破产 5 天倒计时"逻辑)。
+      <div class="stage-info">触发条件:<code>gameOverPending === 'kicked_out'</code> 或 Q3 选稳着先后 · 副作用:KPI 区收缩 · 玩家心理:已脱离 review 体系</div>
+    </div>
+  </div>
+
+  <!-- 状态 6: Q3 后未撤资 boosted -->
+  <div class="state-card">
+    <div class="state-header">
+      <span class="state-tag">状态 6</span>
+      <span class="state-title">Q3 后未撤资(boosted)</span>
+      <span class="state-when">day 270-359(等年终)</span>
+    </div>
+    <div class="mini-topbar">
+      <div class="topbar-brand">网约车物语<span class="v">V15.16</span></div>
+      <div class="topbar-kpis">
+        <div class="topbar-stat">
+          <span class="ts-label">资金</span>
+          <span class="ts-value">¥230,000</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">口碑</span>
+          <span class="ts-value">520</span>
+        </div>
+        <div class="topbar-stat">
+          <span class="ts-label">车队</span>
+          <span class="ts-value">7 组</span>
+        </div>
+        <div class="topbar-stat ir-stat ir-stat--boosted">
+          <span class="ts-label">距年终 review</span>
+          <span class="ts-value">60 天</span>
+        </div>
+      </div>
+      <div class="topbar-settings">
+        <div class="settings-btn"></div>
+        <div class="settings-btn"></div>
+      </div>
+    </div>
+    <div class="state-note">
+      <strong>视觉</strong>:金币金边框 + 浅金底,<strong>但数字保持油墨深棕</strong>(区别于状态 4 IPO 模式的油渍橙数字)。表示"已经走在好路径上,等年会"。
+      <div class="stage-info">触发条件:<code>investorBoosted === true && day &lt; 360 && unlockedEndingTier &gt;= 4</code> · 副作用:无 · 玩家心理:期待年会</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
