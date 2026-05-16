@@ -214,60 +214,6 @@ function getSavedCurrentRun() {
   }
 }
 
-function buildAutosaveState(state) {
-  return {
-    ...state,
-    paused: true,
-    showTutorial: false,
-    gameOver: null,
-    floatGains: [],
-    newMissionComplete: null,
-    newEndingUnlocked: null,
-  };
-}
-
-function buildAutosaveSummary(state) {
-  return {
-    day: state.day,
-    hour: state.hour,
-    funds: state.funds,
-    reputation: state.reputation,
-    totalCompleted: state.totalCompleted,
-    totalEarned: state.totalEarned,
-    drivers: state.drivers?.length || 0,
-    vehicles: state.vehicles?.length || 0,
-    currentMissionIdx: state.currentMissionIdx || 0,
-  };
-}
-
-function getSavedAutosave() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || 'null');
-    if (!parsed || typeof parsed !== 'object' || !parsed.state) return null;
-    return parsed;
-  } catch (e) {
-    return null;
-  }
-}
-
-function saveAutosave(state) {
-  if (!state || !state.hasStarted || state.gameOver) return null;
-  try {
-    const payload = {
-      version: APP_VERSION,
-      savedAt: new Date().toISOString(),
-      summary: buildAutosaveSummary(state),
-      state: buildAutosaveState(state),
-    };
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
-    window.__WYCWY_AUTOSAVE = payload;
-    return payload;
-  } catch (e) {
-    console.warn('[WYCWY] autosave failed', e);
-    return null;
-  }
-}
-
 function clearAutosave() {
   try {
     localStorage.removeItem(AUTOSAVE_KEY);
@@ -324,46 +270,6 @@ function HelpRow({ label, children }) {
     <div className="rep-help-row">
       <strong>{label}</strong>
       <span>{children}</span>
-    </div>
-  );
-}
-
-// V15.29: 投资人 early review 单元
-// 只负责早期防挂机:30/60 天窗口检查是否补到 3 个可运营车组,通过后结束。
-function InvestorReviewStat({ state }) {
-  const { day, investorMissCount } = state;
-  const review = D.INVESTOR_REVIEW || {};
-  const targetCrews = review.targetCrews || review.kpi?.targetCrews || 3;
-  const currentCrews = (state.drivers || []).filter((driver) => driver.vehicleId).length;
-  if (state.investorReviewDone || currentCrews >= targetCrews) {
-    return null;
-  }
-  const stages = state.investorReviewStages || {};
-  const schedule = review.schedule || [
-    { atDay: 30, stage: 'early_warning', name: '扩张提醒' },
-    { atDay: 60, stage: 'early_final', name: '最后提醒' },
-  ];
-  const next = schedule.find((item) => !stages[item.stage]) || null;
-  if (!next) return null;
-  const daysLeft = Math.max(0, next.atDay - day);
-  const nextName = next.stage === 'early_final' ? '最后提醒' : '扩张提醒';
-  const missCount = investorMissCount || 0;
-  let cls = 'ir-stat--default';
-  if (missCount >= 1 || next.stage === 'early_final') cls = 'ir-stat--warn1';
-  if (day >= next.atDay) cls = 'ir-stat--warn2';
-  const helpPopover = (
-    <TopbarHelp id="investor-help-popover" title="投资人评估规则">
-      <HelpRow label="怎么看">投资人只在早期盯一眼车队运力,补到 {targetCrews} 个可运营车组就算节奏正常。</HelpRow>
-      <HelpRow label="节奏">第 30 天左右首次提醒,第 60 天左右二次提醒。若当天有月报或其他弹窗,会顺延到下一个空闲日。</HelpRow>
-      <HelpRow label="当前">当前 {currentCrews}/{targetCrews} 组。补齐后,投资人就先不盯这件事。</HelpRow>
-    </TopbarHelp>
-  );
-  return (
-    <div className={`ts-stat topbar-stat ir-stat ${cls} has-help`} tabIndex="0" aria-describedby="investor-help-popover" title="投资人评估规则">
-      <span className="ts-label">距{nextName}</span>
-      <strong className="ts-value">{daysLeft > 0 ? `${daysLeft} 天` : '待处理'}</strong>
-      <span className="ts-sub">{currentCrews}/{targetCrews} 车组</span>
-      {helpPopover}
     </div>
   );
 }
@@ -452,10 +358,6 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
   };
   const nextDebt = debtSummary.nextDebt;
   const debtUrgent = nextDebt && debtSummary.nextDaysLeft <= 7;
-  // V15.29: 投资人 review 只在早期未达 3 车组时显示。
-  const investorReviewTargetCrews = D.INVESTOR_REVIEW?.targetCrews || D.INVESTOR_REVIEW?.kpi?.targetCrews || 3;
-  const investorReviewVisible = !state.investorReviewDone
-    && (state.drivers || []).filter((driver) => driver.vehicleId).length < investorReviewTargetCrews;
   return (
     <div className="topbar">
       <div className="topbar-left">
@@ -465,11 +367,9 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
         {(() => {
         // V15.17:KPI 容器宽度按可见 stat 数自适应,避免渐进解锁时露出深色背景
         const supplyVisible = E.isUIGateUnlocked(state, 'supply_chip');
-        const investorChipVisible = investorReviewVisible && E.isUIGateUnlocked(state, 'investor_chip');
-        const statCount = 3 + (supplyVisible ? 1 : 0) + (investorChipVisible ? 1 : 0);
-        // has-investor-review class 仅在 chip 真渲染时加(原条件包括 gate 未解锁的情况,会让 grid 错变 5 列)
+        const statCount = 3 + (supplyVisible ? 1 : 0);
         return (
-        <div className={`topbar-kpis ${investorChipVisible ? 'has-investor-review' : ''}`}
+        <div className="topbar-kpis"
              data-stat-count={statCount}
              aria-label="经营状态">
           <div className="ts-stat topbar-stat time-stat has-help" tabIndex="0" aria-describedby="time-help-popover" title="时间规则">
@@ -572,8 +472,6 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
             </TopbarHelp>
           </div>
           )}
-          {/* V15.29:投资人 chip 同时受 gate 解锁(day 20)和 investorReviewVisible(达标后隐藏)双重控制 */}
-          {investorReviewVisible && E.isUIGateUnlocked(state, 'investor_chip') && <InvestorReviewStat state={state} />}
         </div>
         );
         })()}

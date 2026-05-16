@@ -819,141 +819,6 @@
     });
   }
 
-  function maxNumericId(items, pickId = (item) => item && item.id) {
-    return (items || []).reduce((max, item) => {
-      const id = Number(pickId(item));
-      return Number.isFinite(id) ? Math.max(max, id) : max;
-    }, 0);
-  }
-
-  function rehydrateEventOptions(savedOptions, sourceOptions) {
-    if (!Array.isArray(savedOptions)) return sourceOptions || [];
-    return savedOptions.map((savedOpt, idx) => {
-      const src = (sourceOptions || []).find((opt) => opt.label === savedOpt?.label) || (sourceOptions || [])[idx] || {};
-      return { ...savedOpt, apply: src.apply || (() => ({})) };
-    });
-  }
-
-  function rehydrateActiveEvent(savedEvent) {
-    if (!savedEvent) return null;
-    if (savedEvent.id === 'investor_pressure') {
-      return {
-        ...INVESTOR_PRESSURE,
-        ...savedEvent,
-        options: rehydrateEventOptions(savedEvent.options, INVESTOR_PRESSURE.options),
-      };
-    }
-    if (savedEvent.isPolicyEvent) {
-      return {
-        ...savedEvent,
-        options: rehydrateEventOptions(savedEvent.options, [{ label: savedEvent.options?.[0]?.label || '继续', apply: () => ({}) }]),
-      };
-    }
-    // V15.16: 投资人 review 事件不在 EVENTS 数组里,按 isInvestorReview 标记单独 hydrate
-    if (savedEvent.isInvestorReview) {
-      const fallbackOptions = (savedEvent.options || []).map((o) => ({
-        label: o.label || '确认',
-        detail: o.detail || '',
-        apply: () => ({}),
-      }));
-      return {
-        ...savedEvent,
-        options: rehydrateEventOptions(savedEvent.options, fallbackOptions.length ? fallbackOptions : [{ label: '确认', apply: () => ({}) }]),
-      };
-    }
-    const def = EVENTS.find((event) => event.id === savedEvent.id);
-    if (!def) return null;
-    let sourceOptions = def.options;
-    if (def.chainStages && def.chainStages.length > 0) {
-      const stage = def.chainStages.find((item) =>
-        (item.title && item.title === savedEvent.title) || (item.desc && item.desc === savedEvent.desc)
-      );
-      if (stage?.options) sourceOptions = stage.options;
-    }
-    return {
-      ...def,
-      ...savedEvent,
-      options: rehydrateEventOptions(savedEvent.options, sourceOptions),
-    };
-  }
-
-  function rehydratePolicyDecision(savedDecision) {
-    if (!savedDecision) return null;
-    const eventDef = getPolicyDef(savedDecision.eventId);
-    const stageData = eventDef?.stages?.[savedDecision.stage];
-    return {
-      ...savedDecision,
-      options: savedDecision.options || stageData?.options || [],
-      params: savedDecision.params || eventDef?.params || {},
-    };
-  }
-
-  function advanceRuntimeCounters(state) {
-    driverIdCounter = Math.max(100, maxNumericId(state.drivers), maxNumericId(state.gachaCards));
-    vehicleIdCounter = Math.max(100, maxNumericId(state.vehicles));
-    orderOfferIdCounter = Math.max(0, maxNumericId(state.drivers, (d) => d?.currentOrder?.id), maxNumericId(state.floatGains));
-    logIdCounter = Math.max(0, maxNumericId(state.log), maxNumericId(state.notifications), maxNumericId(state.floatGains));
-    actionHistoryIdCounter = Math.max(0, maxNumericId(state.actionHistory));
-  }
-
-  function hydrateAutosaveState(savedState) {
-    if (!savedState || typeof savedState !== 'object') return null;
-    const base = makeInitialState();
-    const now = Date.now();
-    let hydrated = {
-      ...base,
-      ...savedState,
-      paused: true,
-      showTutorial: false,
-      gameOver: null,
-      activeEvent: rehydrateActiveEvent(savedState.activeEvent),
-      activePolicyDecision: rehydratePolicyDecision(savedState.activePolicyDecision),
-      realTime: {
-        ...(base.realTime || {}),
-        ...(savedState.realTime || {}),
-        lastUpdatedAt: now,
-        updatedBy: 'AUTOSAVE_LOAD',
-      },
-      floatGains: [],
-      notifications: savedState.notifications || [],
-      newMissionComplete: null,
-      newEndingUnlocked: null,
-      // V15.17:老存档加载时把已该解锁的 gate 静默标为已解锁,避免连环弹 splash
-      activeUnlockSplash: null,
-    };
-	    if (UI_GATES && UI_GATES.length > 0) {
-	      const alreadyUnlocked = new Set(hydrated.unlockedUIGates || []);
-	      for (const gate of UI_GATES) {
-	        if (alreadyUnlocked.has(gate.id)) continue;
-	        if (isUIGateTriggered(hydrated, gate)) alreadyUnlocked.add(gate.id);
-	      }
-	      hydrated.unlockedUIGates = [...alreadyUnlocked];
-	    }
-	    // V15.25:桑塔纳被出租车替换,老自动存档里的 templateId 需要平滑迁移。
-	    hydrated.vehicles = (hydrated.vehicles || []).map((v) =>
-	      v?.templateId === 'santana' ? { ...v, templateId: 'taxi', name: '出租车' } : v
-	    );
-	    hydrated = syncDebtLegacyFields(hydrated);
-    // V15.26:老存档若已过早期 review 窗口,不再补弹旧版 Q3/年终 review。
-    if (hydrated.day > 90 && !hydrated.investorReviewDone) {
-      hydrated.investorReviewDone = true;
-      hydrated.reviewCounter = Math.max(hydrated.reviewCounter || 0, 2);
-    }
-    advanceRuntimeCounters(hydrated);
-    return pushActionHistory(hydrated, {
-      category: 'system',
-      type: 'AUTOSAVE_LOAD',
-      label: '已载入本地自动存档',
-      before: base,
-      details: {
-        day: hydrated.day,
-        hour: hydrated.hour,
-        funds: hydrated.funds,
-        reputation: hydrated.reputation,
-      },
-    });
-  }
-
   // V7: 故事弹窗确认 — 发奖励 + 写 seenStories + 清状态
   function applyStoryReward(state, story) {
     let s = { ...state };
@@ -3272,7 +3137,6 @@
       case 'FIRE_DRIVER': return fireDriver(state, action.driverId);
       case 'SELL_VEHICLE': return sellVehicle(state, action.vehicleId);
       case 'RESOLVE_DEBT_CRISIS': return resolveDebtCrisis(state, action.choice);
-      case 'LOAD_AUTOSAVE': return hydrateAutosaveState(action.state) || state;
       case 'RESET': return makeInitialState();
       case 'CLEAR_FLOAT_GAIN': return { ...state, floatGains: state.floatGains.filter((g) => g.id !== action.id) };
       case 'CLEAR_NOTIF': return { ...state, notifications: state.notifications.filter((n) => n.id !== action.id) };
@@ -3444,6 +3308,6 @@
     isUIGateUnlocked, UI_GATES,
     getTrainingCost,
     buildHourlySupply,
-    gameReducer, makeInitialState, hydrateAutosaveState,
+    gameReducer, makeInitialState,
   };
 })();

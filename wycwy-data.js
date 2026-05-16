@@ -1366,13 +1366,6 @@
       hint: '右侧调度台 · 司机档案底部',
       trigger: { type: 'day', value: 60 },
     },
-    {
-      id: 'investor_chip',
-      title: '投资人评估',
-      desc: '顶栏多了「距扩张提醒 N 天」倒计时。投资人会盯一眼早期扩张节奏,别长期只靠两辆车慢慢跑。',
-      hint: '顶栏',
-      trigger: { type: 'day', value: 20 },
-    },
   ];
 
   window.WYCWY_DATA = {

@@ -1,14 +1,7 @@
 function App() {
-  const [state, dispatch] = useReducer(E.gameReducer, null, () => {
-    const autosave = getSavedAutosave();
-    return autosave?.state
-      ? (E.hydrateAutosaveState(autosave.state) || E.makeInitialState())
-      : E.makeInitialState();
-  });
+  const [state, dispatch] = useReducer(E.gameReducer, null, () => E.makeInitialState());
   const savedGameOverKeyRef = useRef(null);
   const lastCurrentRunSaveRef = useRef(0);
-  const lastAutosaveRef = useRef(0);
-  const latestStateRef = useRef(state);
   // V12.2: 暴露给测试脚本(Playwright)用,生产可见但只读取/写入,无 UI 影响
   // V14.89: 加 requestConfirm 暴露,方便 ConfirmModal 视觉验证
   window.__WYCWY_TEST = {
@@ -17,10 +10,8 @@ function App() {
     exportGameDiagnostics,
     getSavedRunHistory,
     getSavedCurrentRun,
-    getSavedAutosave,
     saveRunRecord,
     saveCurrentRunRecord,
-    saveAutosave,
     clearAutosave,
     clearCurrentRunRecord,
     get requestConfirm() { return requestConfirm; },
@@ -95,46 +86,7 @@ function App() {
   }, [state.gameOver, state.day, state.hour, state.funds, state.totalCompleted]);
 
   useEffect(() => {
-    latestStateRef.current = state;
-  }, [state]);
-
-  useEffect(() => {
-    if (!state.hasStarted || state.gameOver) return;
-    const now = Date.now();
-    if (now - lastAutosaveRef.current < 2500) return;
-    lastAutosaveRef.current = now;
-    saveAutosave(state);
-  }, [
-    state.hasStarted,
-    state.gameOver,
-    state.day,
-    state.hour,
-    state.funds,
-    state.reputation,
-    state.totalCompleted,
-    state.totalEarned,
-    state.currentMissionIdx,
-    state.drivers.length,
-    state.vehicles.length,
-    state.debtAmount,
-    state.debtDueDay,
-    state.debtCrisis,
-    state.paused,
-  ]);
-
-  useEffect(() => {
-    const saveLatest = () => saveAutosave(latestStateRef.current);
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') saveLatest();
-    };
-    window.addEventListener('pagehide', saveLatest);
-    window.addEventListener('beforeunload', saveLatest);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      window.removeEventListener('pagehide', saveLatest);
-      window.removeEventListener('beforeunload', saveLatest);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    clearAutosave();
   }, []);
 
   useEffect(() => {
@@ -340,39 +292,14 @@ function App() {
     setShowPauseMenu(true);
   };
 
-  const loadAutosaveFromMenu = () => {
-    const autosave = getSavedAutosave();
-    if (!autosave?.state) return;
-    const loadNow = () => {
-      dispatch({ type: 'LOAD_AUTOSAVE', state: autosave.state });
-      resetUiSelection();
-      setShowPauseMenu(false);
-      setResumeAfterPauseMenu(false);
-    };
-    const progressed = state.hasStarted || state.totalCompleted > 0 || state.totalEarned > 0 || state.day > 1 || state.hour !== 6;
-    if (progressed) {
-      setShowPauseMenu(false);
-      setResumeAfterPauseMenu(false);
-      requestConfirm({
-        tag: '载入存档',
-        title: '载入最近自动存档？',
-        message: '当前画面中的进度会被最近自动存档替换。这个操作不会删除运营记录。',
-        confirmLabel: '载入存档',
-        onConfirm: loadNow,
-      });
-      return;
-    }
-    loadNow();
-  };
-
   const startNewGameFromMenu = () => {
     setShowPauseMenu(false);
     setResumeAfterPauseMenu(false);
     requestConfirm({
-      tag: '开始新游戏',
-      title: '确认开始新游戏？',
-      message: '当前可继续的自动存档会被清空,运营记录会保留。',
-      confirmLabel: '开始新游戏',
+      tag: '开始游戏',
+      title: '确认开始游戏？',
+      message: '当前这一局会重新开始,运营记录会保留。',
+      confirmLabel: '开始游戏',
       danger: true,
       onConfirm: () => {
         clearAutosave();
@@ -593,12 +520,10 @@ function App() {
       {showPauseMenu && !state.gameOver && (
         <PauseMenu
           state={state}
-          autosave={getSavedAutosave()}
           muted={muted}
           crtOn={crtOn}
           skipOnboarding={skipOnboarding}
           onContinue={() => closePauseMenu({ resume: true })}
-          onLoadAutosave={loadAutosaveFromMenu}
           onNewGame={startNewGameFromMenu}
           onToggleMute={toggleMute}
           onToggleCrt={toggleCrt}
