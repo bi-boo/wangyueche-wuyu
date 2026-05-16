@@ -96,7 +96,7 @@ const CITY_MAP_IMAGE = 'assets/maps/city-map-clean-v1.png';
 function CityMap({ zones, drivers, state, selectedZoneId, onSelectZone }) {
   const floatGains = state?.floatGains || [];
   return (
-    <svg viewBox="0 0 100 100" className="city-map-svg" preserveAspectRatio="none">
+    <svg viewBox="0 0 100 100" className="city-map-svg" preserveAspectRatio="xMidYMid meet">
       <defs>
         {/* V14.7.1: 战争迷雾 — 加强模糊半径(0.9 → 1.6)让边缘更柔,
             外溢区域扩大到 ±30% 避免雾被裁切。雾色改用项目主墨色调和暖色底图。 */}
