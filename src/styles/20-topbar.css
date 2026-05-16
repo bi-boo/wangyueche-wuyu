@@ -492,10 +492,13 @@
     border-color: var(--ink) !important;
     box-shadow: 3px 3px 0 var(--accent-deep);
   }  .log-row {
-    display: flex;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: 6px;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.32;
+    align-items: baseline;
+    min-width: 0;
   }
   .log-row.latest {
     background: rgba(255,217,61,0.18);
@@ -505,11 +508,18 @@
   }
   .log-time {
     color: var(--ink-3);
-    flex-shrink: 0;
-    width: 60px;
+    min-width: 0;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
   }
-  .log-text { color: var(--ink-2); }
+  .log-text {
+    min-width: 0;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .log-row.success .log-text { color: var(--green); }
   .log-row.warn .log-text { color: var(--warn); }
   .log-row.event .log-text { color: var(--accent-deep); font-weight: 600; }  /* ========= 通用按钮 ========= */

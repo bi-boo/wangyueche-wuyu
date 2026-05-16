@@ -91,6 +91,34 @@ function LogInspector({ state }) {
   const chronologicalLogs = [...logs].reverse();
   const latestId = logs[0]?.id;
 
+  const compactLogText = (text) => {
+    const orderDone = text.match(/^(.+?) 完成 (?:(.+?) · )?(.+?订单) · 收入 ¥([\d,]+)(?: · (好评|投诉)(?: · 城市口碑 ([+-]\d+))?)?$/);
+    if (orderDone) {
+      const [, driverName, zoneName, orderName, income, review, reputationDelta] = orderDone;
+      return [
+        driverName,
+        zoneName ? zoneName.replace(/区$/, '') : null,
+        orderName.replace(/订单$/, ''),
+        `¥${income}`,
+        review,
+        reputationDelta ? `口碑${reputationDelta}` : null,
+      ].filter(Boolean).join(' ');
+    }
+    const dayClose = text.match(/^第 (\d+) 日结算: 流水 ¥([\d,]+), 应付工资 ¥([\d,]+), 完成 (\d+) 单$/);
+    if (dayClose) {
+      const [, day, revenue, salary, completed] = dayClose;
+      return `D${day} 结算 流水¥${revenue} 工资¥${salary} ${completed}单`;
+    }
+    return text
+      .replace(/城市口碑/g, '口碑')
+      .replace(/出租车订单/g, '出租车')
+      .replace(/快车订单/g, '快车')
+      .replace(/专车订单/g, '专车')
+      .replace(/豪华车订单/g, '豪华')
+      .replace(/收入 ¥/g, '¥')
+      .replace(/\s+/g, ' ');
+  };
+
   const scrollToLatest = () => {
     const el = scrollRef.current;
     if (!el) return;
@@ -123,9 +151,9 @@ function LogInspector({ state }) {
         ) : (
           <div className="log-drawer-list inspector-log-list">
             {chronologicalLogs.map((l) => (
-              <div key={l.id} className={`log-row ${l.level} ${l.id === latestId ? 'latest' : ''}`}>
+              <div key={l.id} className={`log-row ${l.level} ${l.id === latestId ? 'latest' : ''}`} title={`${l.time} ${l.text}`}>
                 <span className="log-time">{l.time}</span>
-                <span className="log-text">{l.text}</span>
+                <span className="log-text">{compactLogText(l.text)}</span>
               </div>
             ))}
             <button className="log-latest-anchor" onClick={scrollToLatest} title="回到最新日志">
