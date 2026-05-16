@@ -374,12 +374,12 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
   const tierName = tierEnding ? tierEnding.name : '初创期';
   const hourText = `${String(state.hour).padStart(2, '0')}:00`;
   // V14.67: 删除 supplyTotal/supplyTaken/supplyLost/activeDrivers/idleDrivers 5 个未使用的局部变量。
-  // V15.16 audit:供需判定从 lossAvg/idleAvg 改为「已解锁区订单密度 vs 实际车组」比例
+  // V15.31:顶栏从“供需匹配”改为供给视角,只回答“司机/车辆供给够不够”。
+  // V15.16 audit:供给判定从 lossAvg/idleAvg 改为「已解锁区订单密度 vs 实际车组」比例
   // 引导玩家「解锁越多区 → 需要越多车」,而不是看实时流失/闲置(玩家不直观)。
-  // 公式:density 之和(高峰 ×1.3) / 车组数 = 供需压力比
+  // 公式:density 之和(高峰 ×1.3) / 车组数 = 供给压力比
   //   > 0.8 → 供给不足(每辆车要服务 >0.8 个区的订单密度,会有流失)
-  //   < 0.4 → 供给充足(车多得有富余)
-  //   其他   → 匹配正常
+  //   其他   → 供给充足(能覆盖当前已解锁片区)
   const supplyHistory = state.supplyHistory || [];
   const histLen = supplyHistory.length;
   const lossSum = supplyHistory.reduce((a, b) => a + (b.lost || 0), 0);
@@ -390,11 +390,12 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
     .reduce((sum, z) => sum + (z.density || 1.0), 0);
   const operatingCrews = (state.drivers || []).filter((d) => d.vehicleId).length;
   const supplyPressure = operatingCrews > 0 ? unlockedDensitySum / operatingCrews : 99;
-  // 风险轴 0-100:基于 supplyPressure 映射(0.4=充足/18%,0.6=正常中位/50%,0.8+=不足/85%+)
+  const unlockedZoneCount = ZONES.filter((z) => E.isZoneUnlocked(state, z)).length;
+  // 风险轴 0-100:基于 supplyPressure 映射(0.4=宽裕/18%,0.6=够用/50%,0.8+=不足/85%+)
   const supplyRisk = Math.max(0, Math.min(100, (supplyPressure - 0.2) / 0.8 * 80 + 10));
   const showAxis = !state.paused;
-  let supplyValue = '匹配正常';
-  let supplySubText = `${ZONES.filter((z) => E.isZoneUnlocked(state, z)).length} 个片区 / ${operatingCrews} 车组`;
+  let supplyValue = '供给充足';
+  let supplySubText = `${operatingCrews} 车组覆盖 ${unlockedZoneCount} 片区`;
   let supplyCls = 'supply-balanced';
   let supplyCardCls = 'balanced';
   if (state.paused) {
@@ -408,15 +409,11 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
     supplyCardCls = 'undersupply';
   } else if (supplyPressure > 0.8) {
     supplyValue = '供给不足';
+    supplySubText = `${operatingCrews} 车组覆盖 ${unlockedZoneCount} 片区偏紧`;
     supplyCls = 'supply-undersupply';
     supplyCardCls = 'undersupply';
-  } else if (supplyPressure < 0.4) {
-    supplyValue = '供给充足';
-    supplyCls = 'supply-oversupply';
-    supplyCardCls = 'oversupply';
   } else {
-    supplyValue = '匹配正常';
-    supplySubText = '司机够接当前订单';
+    supplyValue = '供给充足';
     supplyCls = 'supply-balanced';
     supplyCardCls = 'balanced';
   }
@@ -550,10 +547,10 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
                tabIndex="0"
                aria-describedby="supply-help-popover"
                title={showAxis ? `近 ${histLen}h 平均流失 ${lossAvg.toFixed(1)} 单/h · 闲置 ${idleAvg.toFixed(1)} 司机/h` : ''}>
-            <span className="ts-label">供需</span>
+            <span className="ts-label">供给</span>
             <strong className={`ts-value supply-value ${supplyCls}`}>{supplyValue}</strong>
             {showAxis ? (
-              <div className="ts-supply-axis" aria-label={`供需指针:${supplyValue}`}>
+              <div className="ts-supply-axis" aria-label={`供给压力:${supplyValue}`}>
                 <div className="ts-axis-bar">
                   <span className="ts-axis-zone-left" />
                   <span className="ts-axis-zone-mid" />
@@ -561,17 +558,17 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
                   <div className="ts-axis-pointer" style={{left: `${supplyRisk}%`}} />
                 </div>
                 <div className="ts-axis-labels">
-                  <span>充足</span><span>临界</span><span>不足</span>
+                  <span>宽裕</span><span>够用</span><span>不足</span>
                 </div>
               </div>
             ) : (
               <span className="ts-sub">{supplySubText}</span>
             )}
-            <TopbarHelp id="supply-help-popover" title="供需规则">
-              <HelpRow label="怎么看">供需就是“司机够不够接订单”。绿色靠左表示供给充足,黄色表示接近吃紧,红色靠右表示供给不足。</HelpRow>
+            <TopbarHelp id="supply-help-popover" title="供给规则">
+              <HelpRow label="怎么看">这里看的是车队供给:当前司机和车辆够不够覆盖已解锁片区。绿色表示供给充足,红色表示供给不足。</HelpRow>
               <HelpRow label="不足">司机太少、车不够或车型不对时,订单没人接就会流失;流失订单会让城市口碑下降。</HelpRow>
-              <HelpRow label="充足">司机很多但订单不够时,会有司机闲着不赚钱,显示“供给充足”。</HelpRow>
-              <HelpRow label="建议">不足就招司机、买合适车型或训练司机;充足就优先解锁更高价片区和订单。</HelpRow>
+              <HelpRow label="充足">车组足够覆盖当前片区时,显示“供给充足”。此时可以优先解锁更高价片区和订单。</HelpRow>
+              <HelpRow label="建议">供给不足就招司机、买合适车型或训练司机;供给充足就扩张片区和收入结构。</HelpRow>
             </TopbarHelp>
           </div>
           )}
