@@ -961,31 +961,20 @@
     padding: 4px 8px;
     white-space: nowrap;
   }
-  .fleet-status-line {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 6px;
-    min-width: 0;
-    color: var(--ink-3);
-    font-size: 14px;
-    line-height: 1.35;
-  }
-  .fleet-status-line span {
+  .fleet-title-row {
     display: inline-flex;
     align-items: center;
-    min-height: 20px;
+    gap: 6px;
+    min-width: 0;
+  }
+  .fleet-count-inline {
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
     white-space: nowrap;
   }
-  .fleet-status-line span:first-child {
-    color: var(--ink-2);
-    font-weight: 800;
-  }
-  .fleet-status-line span + span::before {
-    content: "·";
-    margin-right: 6px;
-    color: rgba(42,35,32,0.34);
-  }  /* V14.9: .fleet-tabs 系列已删除 — V14.2 删 crews/pending 两 tab 后无 DOM 命中 */
+  /* V14.9: .fleet-tabs 系列已删除 — V14.2 删 crews/pending 两 tab 后无 DOM 命中 */
   .fleet-list {
     padding-right: 6px;
   }  .fleet-action-row.warn .fleet-action-dot { background: var(--gold); }

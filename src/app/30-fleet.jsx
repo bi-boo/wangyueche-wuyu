@@ -88,7 +88,10 @@ function FleetPanel({
         };
         return (
           <div className="panel-header fleet-panel-header">
-            <span className="panel-title">车队</span>
+            <span className="fleet-title-row">
+              <span className="panel-title">车队</span>
+              <span className="fleet-count-inline">{operatingCrews} 车组</span>
+            </span>
             <div className="fleet-actions">
               {/* V15.17:招募/买车按 gate 解锁,开局藏起,m1/m2 完成后露出 */}
               {E.isUIGateUnlocked(state, 'recruit_btn') && (
@@ -97,9 +100,6 @@ function FleetPanel({
               {E.isUIGateUnlocked(state, 'shop_btn') && (
                 <button className={`btn btn-ghost btn-xs ${shopSpotlight ? 'ui-spotlight' : ''}`} onClick={onShopClick}>+ 买车</button>
               )}
-            </div>
-            <div className="fleet-status-line">
-              <span>{operatingCrews} 车组</span>
             </div>
           </div>
         );
