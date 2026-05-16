@@ -60,6 +60,24 @@
 
 ---
 
+## 线上部署记录
+
+详见 `DEPLOYMENT.md`。当前 canonical 线上地址:
+
+```text
+https://yuanfengai.cn/didichuxing/baozheng/wycwy/
+```
+
+服务器 SSH 别名 `nextype`,nginx 目录:
+
+```text
+/var/www/nextype-website/didichuxing/baozheng/wycwy
+```
+
+换电脑部署前,先按 `DEPLOYMENT.md` 的「避免重复部署」命令在 `yuanfengai.cn` 上搜索 `网约车物语` / `WYCWY_DATA` / `wycwy-data.js` / `wycwy-engine.js`,避免重复占目录。
+
+---
+
 ## 三个核心约定
 
 ### 约定 1:任何 gameplay 改动同步更新 `GAME_DESIGN.md`

@@ -126,6 +126,8 @@ python3 -m http.server 8765
 
 **部署方式**:把整个项目目录(含 src/ wycwy-data.js wycwy-engine.js 字体 assets)上传到 Web server,玩家通过 https://yoursite.com/网约车物语-V3.html 访问。
 
+**当前线上部署记录**:详见 `DEPLOYMENT.md`。当前 canonical 线上地址是 `https://yuanfengai.cn/didichuxing/baozheng/wycwy/`,服务器 SSH 别名 `nextype`,目录 `/var/www/nextype-website/didichuxing/baozheng/wycwy`。部署前先按 `DEPLOYMENT.md` 的「避免重复部署」命令排查旧目录。
+
 **Babel 多 script 作用域 PoC 验证**(V14.93):多个 `<script type="text/babel" src=...>` **共享全局作用域**——`function Foo() {}` 和 `const x = ...` 跨文件可见,**不需要** `Object.assign(window, ...)` 显式导出。所以 src/app/*.jsx 各文件可以直接互相调用对方定义的组件,只需保证文件名 0-9 数字前缀的加载顺序。
 
 ### 陷阱 2:像素字体必须按"原生设计尺寸的整数倍"渲染
