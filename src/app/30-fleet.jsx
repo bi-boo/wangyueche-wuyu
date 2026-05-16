@@ -93,7 +93,7 @@ function FleetPanel({
               <span className="fleet-count-inline">{operatingCrews} 车组</span>
             </span>
             <div className="fleet-actions">
-              {/* V15.17:招募/买车按 gate 解锁,开局藏起,m1/m2 完成后露出 */}
+              {/* V15.17:招募/买车按 gate 解锁,开局藏起,跑完第一日 / 买第三辆车后露出 */}
               {E.isUIGateUnlocked(state, 'recruit_btn') && (
                 <button className={`btn btn-ghost btn-xs ${recruitSpotlight ? 'ui-spotlight' : ''}`} onClick={onRecruitClick}>+ 招募</button>
               )}
