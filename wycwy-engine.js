@@ -838,6 +838,7 @@
       monthlyEarnedGross: 0,        // 乘客支付总额(含抽成)
       monthlyCommission: 0,         // 平台抽成
       monthlySalary: 0,             // 本月累计应付工资(月结时一次性扣款)
+      salaryReserveNoticeFired: false, // V15.40g:第 25 天提醒第 31 天月结发薪
       monthlyDebtPaid: 0,           // 债务扣款
       monthlySeverance: 0,          // 主动解雇补偿
       monthlyEventImpact: 0,        // 事件资金影响合计(signed)
@@ -1934,6 +1935,34 @@
     return s;
   }
 
+  function salaryReserveNoticeTick(state) {
+    if (!state || state.salaryReserveNoticeFired || state.day < 25) return state;
+    if (state.activeEvent || state.activePolicyDecision || state.showMonthlyReport || state.gameOver) return state;
+    const salaryDue = state.monthlySalary || 0;
+    const funds = state.funds || 0;
+    const gap = Math.max(0, salaryDue - funds);
+    const gapText = gap > 0
+      ? `\n\n按现在账面看,还差 ¥${gap.toLocaleString()} 才能覆盖已累计工资。`
+      : '';
+    return {
+      ...state,
+      salaryReserveNoticeFired: true,
+      paused: true,
+      activeEvent: {
+        id: 'salary_reserve_notice_day25',
+        title: '月末发薪提醒',
+        tag: '财务',
+        eventType: 'scripted',
+        scripted: true,
+        skipScale: true,
+        desc: `财务提醒:第 31 天会结算过去 30 天所有员工(司机)的工资。\n\n当前已累计应付工资约 ¥${salaryDue.toLocaleString()},账上现金 ¥${funds.toLocaleString()}。请提前预留好这笔资金,不要在月末前把现金全部拿去买车、招人或培训。${gapText}`,
+        options: [
+          { label: '知道了,预留工资', detail: '第 31 天月报会统一扣除员工工资', apply: () => ({}) },
+        ],
+      },
+    };
+  }
+
   function endOfDay(state) {
     let s = { ...state, hour: 0, day: state.day + 1 };
     let dailyCost = 0;
@@ -2039,6 +2068,9 @@
       s = openDueMonthlyReport(s);
       return s;
     }
+
+    s = salaryReserveNoticeTick(s);
+    if (s.activeEvent) return s;
 
     // V15.24:事件调度拆分。链式剧情看 chainProgress + delayAfter,随机事件看经营阶段池。
     const chainEvent = selectDueChainEvent(s);
