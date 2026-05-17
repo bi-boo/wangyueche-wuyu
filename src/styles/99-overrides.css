@@ -910,6 +910,20 @@
     box-shadow: 3px 3px 0 rgba(42,35,32,0.28) !important;
   }
 
+  /* V15.40c: 开局故事底部是开始游戏主 CTA,不能沿用普通事件选项的弱样式。 */
+  .player-story-opening_layoff .player-story-primary-action {
+    border: 3px solid var(--accent-deep) !important;
+    background: var(--accent) !important;
+    color: #FFF8E7 !important;
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.38) !important;
+  }
+  .player-story-opening_layoff .player-story-primary-action:hover,
+  .player-story-opening_layoff .player-story-primary-action:focus-visible {
+    border-color: var(--ink) !important;
+    background: var(--accent-deep) !important;
+    box-shadow: 5px 5px 0 rgba(42,35,32,0.48) !important;
+  }
+
   .modal-tag,
   .story-tag,
   .game-feedback-tag,

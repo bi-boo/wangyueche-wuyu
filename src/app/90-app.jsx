@@ -8,6 +8,7 @@ function App() {
     dispatch,
     state,
     exportGameDiagnostics,
+    buildRunAnalysisPayload,
     getSavedRunHistory,
     getSavedCurrentRun,
     saveRunRecord,
@@ -115,7 +116,7 @@ function App() {
   // 有事则保持 250ms。其他档位维持固定间隔行为不变。
   const lastTickSnapshotRef = useRef(null);
   useEffect(() => {
-    if (state.paused || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showTutorial || state.debtCrisis || state.gameOver) {
+    if (state.paused || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.activeStory || state.showTutorial || state.debtCrisis || state.gameOver) {
       lastTickSnapshotRef.current = null;
       return;
     }
@@ -124,18 +125,20 @@ function App() {
       || prev.totalCompleted !== state.totalCompleted
       || prev.day !== state.day
       || prev.reputation !== state.reputation
+      || prev.activePlayerStory !== !!state.activePlayerStory
       || prev.activeStory !== !!state.activeStory;
     lastTickSnapshotRef.current = {
       totalCompleted: state.totalCompleted,
       day: state.day,
       reputation: state.reputation,
+      activePlayerStory: !!state.activePlayerStory,
       activeStory: !!state.activeStory,
     };
     const baseInterval = GAME.TICK_MS / state.speed;
     const interval = (state.speed === 8 && !eventful) ? 50 : baseInterval;
     const t = setTimeout(() => dispatch({type: 'TICK'}), interval);
     return () => clearTimeout(t);
-  }, [state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activeStory, state.showTutorial, state.debtCrisis, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
+  }, [state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activePlayerStory, state.activeStory, state.showTutorial, state.debtCrisis, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
 
   useEffect(() => {
     if (!selectedZoneId) return;
@@ -217,8 +220,8 @@ function App() {
     : selectedVehicle;
   const selectedZone = ZONES.find((z) => z.id === selectedZoneId);
   // V14.9: dispatchOffers 已删除,不再 derive selectedZoneOffers
-  const hasFinaleMissionNotice = !!state.newMissionComplete?.reward?.isFinale;
-  const showFeedbackStack = !!state.newMissionComplete && !hasFinaleMissionNotice;
+  const hasFinaleMissionNotice = !state.gameOver && !!state.newMissionComplete?.reward?.isFinale;
+  const showFeedbackStack = !state.gameOver && !!state.newMissionComplete && !hasFinaleMissionNotice;
 
   // V14.34: 右侧调度台默认落到可操作车组,避免长期显示"从左侧选择车组"空状态。
   useEffect(() => {
@@ -316,6 +319,13 @@ function App() {
     });
   };
 
+  const openLeaderboardFromMenu = () => {
+    const leaderboardWindow = window.open('leaderboard.html', '_blank', 'noopener,noreferrer');
+    if (!leaderboardWindow) {
+      window.location.href = 'leaderboard.html';
+    }
+  };
+
   useEffect(() => {
     const closeUtilityModal = () => {
       if (showShop) { setShowShop(false); return true; }
@@ -336,7 +346,7 @@ function App() {
       const target = event.target;
       if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
       event.preventDefault();
-      if (confirmOpts || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showMonthlyReport || state.newEndingUnlocked || state.debtCrisis || state.gameOver) return;
+      if (confirmOpts || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.activeStory || state.showMonthlyReport || state.newEndingUnlocked || state.debtCrisis || state.gameOver) return;
       if (showPauseMenu) {
         closePauseMenu({ resume: true });
         return;
@@ -357,6 +367,7 @@ function App() {
     state.showTutorial,
     state.activeEvent,
     state.activePolicyDecision,
+    state.activePlayerStory,
     state.activeStory,
     state.showMonthlyReport,
     state.newEndingUnlocked,
@@ -452,6 +463,12 @@ function App() {
         <button className={mobileTab === 'inspector' ? 'active' : ''} onClick={() => setMobileTab('inspector')}>调度</button>
       </div>
 
+      {state.activePlayerStory && (
+        <PlayerStoryModal
+          story={state.activePlayerStory}
+          onButton={() => dispatch({type: 'PLAYER_STORY_SHOWN', skipTutorial: skipOnboarding})}
+        />
+      )}
       {state.showTutorial && <Tutorial onClose={() => dispatch({type: 'CLOSE_TUTORIAL'})} />}
       {state.activeEvent && <EventModal event={state.activeEvent} state={state}
         onResolve={(idx) => dispatch({type: 'RESOLVE_EVENT', optionIdx: idx})}
@@ -510,7 +527,7 @@ function App() {
       )}
       {showShop && <ShopModal state={state} onClose={() => setShowShop(false)} onBuyVehicle={(t) => { dispatch({type: 'BUY_VEHICLE', templateId: t}); setShowShop(false); }} />}
       {showRoadmap && <UnlockRoadmapModal state={state} initialTab={roadmapInitialTab} onClose={() => setShowRoadmap(false)} onOpenShop={() => setShowShop(true)} />}
-      {state.gameOver && <EndingModal ending={state.gameOver} onReset={() => dispatch({type: 'RESET'})} />}
+      {state.gameOver && <EndingModal ending={state.gameOver} state={state} onReset={() => dispatch({type: 'RESET'})} />}
       {confirmOpts && (
         <ConfirmModal
           {...confirmOpts}
@@ -529,6 +546,7 @@ function App() {
           onToggleCrt={toggleCrt}
           onToggleSkipOnboarding={toggleSkipOnboarding}
           onShowTutorial={() => { closePauseMenu({ resume: false }); dispatch({type: 'OPEN_TUTORIAL'}); }}
+          onOpenLeaderboard={openLeaderboardFromMenu}
           onExportDiagnostics={() => exportGameDiagnostics(state)}
         />
       )}

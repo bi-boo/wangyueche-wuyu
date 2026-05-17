@@ -569,7 +569,7 @@ const SECTIONS = [
     label: '任务奖励',
     group: '事件终局',
     type: 'array',
-    desc: 'V15.36d:10 条显式主线 + 5 条静默里程碑。check 函数代码不可在此编辑。',
+    desc: 'V15.40a:7 条常驻主线 + 1 条口碑风险触发主线 + 5 条静默里程碑。check 函数代码不可在此编辑。',
     cols: [
       { key: 'id', label: 'ID', readonly: true, width: 200 },
       { key: 'title', label: '标题' },
@@ -696,6 +696,24 @@ const SECTIONS = [
     },
   },
   {
+    id: 'PLAYER_STORIES',
+    label: '玩家故事',
+    group: '事件终局',
+    type: 'object',
+    desc: '开局玩家身份故事和 IPO 终局故事。正式游戏先展示开局故事,再进入新手引导。',
+    fields: {
+      'opening_layoff.title': { label: '开局标题' },
+      'opening_layoff.tag': { label: '开局标签' },
+      'opening_layoff.image': { label: '开局插画' },
+      'opening_layoff.buttons.0': { label: '开局按钮' },
+      'finale_ipo_heir.title': { label: 'IPO 标题' },
+      'finale_ipo_heir.tag': { label: 'IPO 标签' },
+      'finale_ipo_heir.image': { label: 'IPO 插画' },
+      'finale_ipo_heir.buttons.0': { label: 'IPO 主按钮' },
+      'finale_ipo_heir.buttons.1': { label: 'IPO 次按钮' },
+    },
+  },
+  {
     id: 'ENDINGS',
     label: '结局目标',
     group: '事件终局',
@@ -789,7 +807,7 @@ function exportDataJs(data) {
   const exports = [
     'GAME', 'BACKGROUNDS', 'VEHICLES', 'ORDERS', 'ZONES',
     'TRAININGS', 'EVENTS', 'INVESTOR_PRESSURE', 'POLICY_EVENTS', 'INVESTOR_REVIEW',
-    'FIRST_NAMES', 'MISSIONS', 'ENDINGS',
+    'FIRST_NAMES', 'MISSIONS', 'ENDINGS', 'PLAYER_STORIES',
     'RECRUIT_TICKETS', 'RARITY_META', 'RARITY_STAT_CAPS', 'RARITY_LOYALTY_RULES',
     'EVENT_NPCS', 'UI_GATES',
   ];

@@ -1,13 +1,14 @@
 /* 网约车物语 V3 - 游戏引擎 (reducer + 工具 + 任务系统) */
 (function () {
   const D = window.WYCWY_DATA;
-  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, INVESTOR_PRESSURE, POLICY_EVENTS, INVESTOR_REVIEW, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES, UI_GATES } = D;
+  const { GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES, TRAININGS, EVENTS, FIRST_NAMES, MISSIONS, ENDINGS, PLAYER_STORIES, INVESTOR_PRESSURE, POLICY_EVENTS, INVESTOR_REVIEW, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES, UI_GATES } = D;
 
   let driverIdCounter = 100;
   let vehicleIdCounter = 100;
   let orderOfferIdCounter = 0;
   let logIdCounter = 0;
   let actionHistoryIdCounter = 0;
+  let decisionHistoryIdCounter = 0;
 
   // 工具
   const rand = (min, max) => Math.random() * (max - min) + min;
@@ -30,11 +31,22 @@
   const DEBT_RESTRUCTURE_MAX_DAYS = 60;
   const SNOW_RESCUE_EVENT_ID = 'snow_night_breakthrough';
 
+  function clonePlayerStory(id) {
+    const story = PLAYER_STORIES?.[id];
+    if (!story) return null;
+    return {
+      ...story,
+      buttons: [...(story.buttons || [])],
+      paragraphs: [...(story.paragraphs || [])],
+    };
+  }
+
   function isRealTimeRunning(state) {
     return !!state.hasStarted
       && !state.paused
       && !state.activeEvent
       && !state.activePolicyDecision
+      && !state.activePlayerStory
       && !state.activeStory
       && !state.showTutorial
       && !state.showMonthlyReport
@@ -308,11 +320,12 @@
     return Number(cap(1 + crewScale + fundsScale + repScale, 1, 15).toFixed(2));
   }
 
-  function scaleEventMoneyDelta(amount, state) {
+  function scaleEventMoneyDelta(amount, state, opts = {}) {
     if (!amount) return amount;
     const scale = getEventBusinessScale(state);
-    // 奖励也随规模走,但弱一些,避免后期事件变成主要赚钱方式。
-    const factor = amount > 0 ? 1 + (scale - 1) * 0.35 : scale;
+    // 普通奖励弱放大;拿钱换口碑/忠诚的逐利选项要更像诱惑,收益随规模明显放大。
+    const gainScale = opts.profitSeeking ? 0.8 : 0.35;
+    const factor = amount > 0 ? 1 + (scale - 1) * gainScale : scale;
     return roundEventMoney(amount * factor);
   }
 
@@ -320,8 +333,38 @@
     if (!delta) return delta;
     if (delta > 0) return Math.round(delta);
     const rep = Math.max(0, state?.reputation || 0);
-    const factor = rep >= 800 ? 8 : rep >= 500 ? 5 : rep >= 300 ? 3.5 : rep >= 120 ? 2 : 1;
-    return -Math.min(80, Math.max(1, Math.round(Math.abs(delta) * factor)));
+    const tier = rep >= 1200 ? { factor: 10, cap: 300 }
+      : rep >= 800 ? { factor: 7, cap: 220 }
+      : rep >= 500 ? { factor: 5, cap: 170 }
+      : rep >= 300 ? { factor: 3.5, cap: 110 }
+      : rep >= 120 ? { factor: 2, cap: 70 }
+      : { factor: 1, cap: 40 };
+    return -Math.min(tier.cap, Math.max(1, Math.round(Math.abs(delta) * tier.factor)));
+  }
+
+  function isProfitSeekingEffect(effect) {
+    if (!effect || effect.funds <= 0) return false;
+    return (effect.reputation || 0) < 0
+      || (effect.allLoyalty || 0) < 0
+      || (effect.trustLoyalty || 0) < 0;
+  }
+
+  function getAverageDriverLoyalty(state) {
+    const drivers = state?.drivers || [];
+    if (drivers.length === 0) return 60;
+    const total = drivers.reduce((sum, d) => sum + (d.loyalty ?? 50), 0);
+    return total / drivers.length;
+  }
+
+  function scaleEventLoyaltyDelta(delta, state) {
+    if (!delta) return delta;
+    const avg = getAverageDriverLoyalty(state);
+    const factor = delta > 0
+      ? (avg < 50 ? 1.4 : avg > 75 ? 0.7 : 1)
+      : (avg < 50 ? 0.7 : avg > 75 ? 1.3 : 1);
+    const capAbs = delta > 0 ? 35 : 45;
+    const abs = Math.min(capAbs, Math.max(1, Math.round(Math.abs(delta) * factor)));
+    return delta > 0 ? abs : -abs;
   }
 
   function scaleEventSalaryRaise(amount, state) {
@@ -333,9 +376,10 @@
   function scaleEventEffect(rawEffect, state) {
     const eff = { ...(rawEffect || {}) };
     const scale = getEventBusinessScale(state);
+    const profitSeeking = isProfitSeekingEffect(eff);
     let dynamic = false;
     if (eff.funds !== undefined) {
-      const next = scaleEventMoneyDelta(eff.funds, state);
+      const next = scaleEventMoneyDelta(eff.funds, state, { profitSeeking });
       dynamic = dynamic || next !== eff.funds;
       eff.funds = next;
     }
@@ -344,6 +388,16 @@
       dynamic = dynamic || next !== eff.reputation;
       eff.reputation = next;
     }
+    if (eff.allLoyalty !== undefined) {
+      const next = scaleEventLoyaltyDelta(eff.allLoyalty, state);
+      dynamic = dynamic || next !== eff.allLoyalty;
+      eff.allLoyalty = next;
+    }
+    if (eff.trustLoyalty !== undefined) {
+      const next = scaleEventLoyaltyDelta(eff.trustLoyalty, state);
+      dynamic = dynamic || next !== eff.trustLoyalty;
+      eff.trustLoyalty = next;
+    }
     if (eff.salaryRaise !== undefined) {
       const next = scaleEventSalaryRaise(eff.salaryRaise, state);
       dynamic = dynamic || next !== eff.salaryRaise;
@@ -351,8 +405,9 @@
     }
     if (eff.accidentRisk) {
       const risk = { ...eff.accidentRisk };
+      const riskProfitSeeking = isProfitSeekingEffect(risk);
       if (risk.funds !== undefined) {
-        const next = scaleEventMoneyDelta(risk.funds, state);
+        const next = scaleEventMoneyDelta(risk.funds, state, { profitSeeking: riskProfitSeeking });
         dynamic = dynamic || next !== risk.funds;
         risk.funds = next;
       }
@@ -360,6 +415,16 @@
         const next = scaleEventReputationDelta(risk.reputation, state);
         dynamic = dynamic || next !== risk.reputation;
         risk.reputation = next;
+      }
+      if (risk.allLoyalty !== undefined) {
+        const next = scaleEventLoyaltyDelta(risk.allLoyalty, state);
+        dynamic = dynamic || next !== risk.allLoyalty;
+        risk.allLoyalty = next;
+      }
+      if (risk.trustLoyalty !== undefined) {
+        const next = scaleEventLoyaltyDelta(risk.trustLoyalty, state);
+        dynamic = dynamic || next !== risk.trustLoyalty;
+        risk.trustLoyalty = next;
       }
       eff.accidentRisk = risk;
     }
@@ -655,6 +720,7 @@
     orderOfferIdCounter = 0;
     logIdCounter = 0;
     actionHistoryIdCounter = 0;
+    decisionHistoryIdCounter = 0;
     const initialNames = new Set();
     const d1 = genUniqueDriver({ background: BACKGROUNDS[0], name: '老张' }, initialNames);
     const d2 = genUniqueDriver({ background: BACKGROUNDS[3] }, initialNames);
@@ -686,14 +752,22 @@
         { id: ++logIdCounter, time: '6:00', text: `车队成立! 初始资金 ¥${(GAME.STARTING_FUNDS || 0).toLocaleString()}`, level: 'event' },
       ],
       actionHistory: [],
+      decisionHistory: [],
       activeEvent: null,
-      showTutorial: true,
+      activePlayerStory: clonePlayerStory('opening_layoff'),
+      showTutorial: false,
       gameOver: null,
       todayCompleted: 0,
       todayEarned: 0,
       todayGood: 0,
       todayBad: 0,
       reviewBank: 0,                // 每 3 个好评沉淀为 1 点城市口碑,避免开局口碑暴涨
+      reputationDropStreak: {
+        last: GAME.STARTING_REPUTATION,
+        anchor: GAME.STARTING_REPUTATION,
+        drop: 0,
+        direction: 'flat',
+      },
       todayLost: 0,                  // V12: 今日订单流失数(运力不足)
       todayRepLoss: 0,               // V12: 今日因流失扣的口碑数
       hourSupplyTotal: 0,            // V12: 上一小时刷出的订单总数(用于运力徽章)
@@ -841,7 +915,7 @@
   }
 
   function checkMission(state) {
-    let s = state;
+    let s = updateReputationDropStreak(state);
     if (s.newMissionComplete) return s;
 
     // V15.16:乱序检查 — 找未完成且 check pass 的任务,支持 hidden 任务并行完成
@@ -852,6 +926,7 @@
       const completedSet = new Set(s.completedMissionIds || []);
       for (const mission of MISSIONS) {
         if (completedSet.has(mission.id)) continue;
+        if (!isMissionAvailable(s, mission)) continue;
         if (!mission.check(s)) continue;
 
         const reward = mission.reward || {};
@@ -861,7 +936,7 @@
 
         // currentMissionIdx 重新指向第一个未完成的非 hidden 任务(MissionBar 显示用)
         const newCompleted = new Set(s.completedMissionIds);
-        const firstActiveIdx = MISSIONS.findIndex((m) => !newCompleted.has(m.id) && !m.hidden);
+        const firstActiveIdx = MISSIONS.findIndex((m) => !newCompleted.has(m.id) && !m.hidden && isMissionAvailable(s, m));
         s.currentMissionIdx = firstActiveIdx >= 0 ? firstActiveIdx : MISSIONS.length;
 
         const rewardText = reward.funds ? ` (+¥${reward.funds})` : '';
@@ -896,7 +971,42 @@
     if (type === 'mission') return (state.completedMissionIds || []).includes(value);
     if (type === 'day') return (state.day || 0) >= value;
     if (type === 'low_loyalty') return hasLowLoyaltyDriver(state);
+    if (type === 'reputation_drop') return hasReputationDropStreak(state, value);
     return false;
+  }
+
+  function updateReputationDropStreak(state) {
+    const current = Math.max(0, Math.round(state?.reputation ?? GAME.STARTING_REPUTATION));
+    const prev = state?.reputationDropStreak || {};
+    const last = Number.isFinite(prev.last) ? prev.last : current;
+    let anchor = Number.isFinite(prev.anchor) ? prev.anchor : last;
+    let direction = prev.direction || 'flat';
+
+    if (current < last) {
+      if (direction !== 'down') anchor = last;
+      direction = 'down';
+    } else if (current > last) {
+      anchor = current;
+      direction = 'up';
+    }
+
+    const drop = direction === 'down' ? Math.max(0, anchor - current) : 0;
+    const next = { last: current, anchor, drop, direction };
+    if (prev.last === next.last && prev.anchor === next.anchor && prev.drop === next.drop && prev.direction === next.direction) {
+      return state;
+    }
+    return { ...state, reputationDropStreak: next };
+  }
+
+  function hasReputationDropStreak(state, value = 10) {
+    return (state?.reputationDropStreak?.drop || 0) > value;
+  }
+
+  function isMissionAvailable(state, mission) {
+    if (!mission) return false;
+    if (mission.requiresGate) return isUIGateUnlocked(state, mission.requiresGate);
+    if (mission.requiresReputationDrop) return hasReputationDropStreak(state, mission.requiresReputationDrop);
+    return true;
   }
 
   function unlockUIGate(state, gate) {
@@ -920,7 +1030,7 @@
   // 每帧/每 dispatch 后扫一遍 gate,把已经满足条件的解锁
   function scanUIGates(state) {
     if (!UI_GATES || UI_GATES.length === 0) return state;
-    let s = state;
+    let s = updateReputationDropStreak(state);
     for (const gate of UI_GATES) {
       if (isUIGateUnlocked(s, gate.id)) continue;
       if (!isUIGateTriggered(s, gate)) continue;
@@ -1012,6 +1122,108 @@
     };
   }
 
+  function addDecisionTag(tags, key, delta = 1) {
+    if (!key || !delta) return tags;
+    tags[key] = (tags[key] || 0) + delta;
+    return tags;
+  }
+
+  function cleanDecisionTags(tags) {
+    return Object.keys(tags || {}).reduce((acc, key) => {
+      const value = Number(tags[key] || 0);
+      if (value !== 0) acc[key] = cap(Math.round(value * 10) / 10, -5, 5);
+      return acc;
+    }, {});
+  }
+
+  function serializableDetail(value) {
+    try {
+      return JSON.parse(JSON.stringify(value || {}));
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function pushDecisionHistory(state, decision) {
+    if (!state || !decision) return state;
+    const before = decision.before || null;
+    const entry = {
+      id: ++decisionHistoryIdCounter,
+      time: `${state.day}日${state.hour}:00`,
+      day: state.day,
+      hour: state.hour,
+      category: decision.category || 'operation',
+      type: decision.type || 'DECISION',
+      label: decision.label || '',
+      tags: cleanDecisionTags(decision.tags || {}),
+      details: serializableDetail(decision.details || {}),
+      before: before ? snapshotActionMetrics(before) : null,
+      after: snapshotActionMetrics(state),
+      diff: before ? diffActionMetrics(before, state) : {},
+      realTimestamp: state.realTime?.lastUpdatedAt ? new Date(state.realTime.lastUpdatedAt).toISOString() : new Date().toISOString(),
+    };
+    return {
+      ...state,
+      decisionHistory: [entry, ...(state.decisionHistory || [])].slice(0, 400),
+    };
+  }
+
+  function inferEventDecisionTags(event, option, effect, eventDetail = '') {
+    const tags = { ...(option?.analysisTags || option?.decisionTags || {}) };
+    const eff = effect || {};
+    const text = `${event?.title || ''} ${event?.tag || ''} ${event?.desc || ''} ${option?.label || ''} ${option?.detail || ''} ${eventDetail || ''}`;
+
+    if (eff.funds > 0) addDecisionTag(tags, 'profit', 2);
+    if (eff.funds < 0) addDecisionTag(tags, 'profit', -1);
+    if (eff.reputation > 0) addDecisionTag(tags, 'reputationFirst', 2);
+    if (eff.reputation < 0) addDecisionTag(tags, 'reputationFirst', -1);
+    if (eff.allLoyalty > 0) addDecisionTag(tags, 'driverCare', 2);
+    if (eff.allLoyalty < 0) addDecisionTag(tags, 'driverCare', -2);
+    if (eff.trustLoyalty > 0) {
+      addDecisionTag(tags, 'driverCare', 1);
+      addDecisionTag(tags, 'trustBuilding', 2);
+    }
+    if (eff.trustLoyalty < 0) {
+      addDecisionTag(tags, 'driverCare', -1);
+      addDecisionTag(tags, 'trustBuilding', -2);
+    }
+    if (eff.orderBoost > 1) addDecisionTag(tags, 'growth', 1);
+    if (eff.orderBoost > 1 && (eff.allLoyalty || 0) < 0) addDecisionTag(tags, 'riskTaking', 1);
+    if (eff.commissionRate !== undefined) addDecisionTag(tags, 'costControl', eff.commissionRate <= 0 ? 2 : -1);
+    if (eff.keepBest || eff.salaryRaise) {
+      addDecisionTag(tags, 'driverCare', 2);
+      addDecisionTag(tags, 'trustBuilding', 1);
+      addDecisionTag(tags, 'profit', -1);
+    }
+    if (eff.loseBest) {
+      addDecisionTag(tags, 'driverCare', -2);
+      addDecisionTag(tags, 'growth', -1);
+      addDecisionTag(tags, 'costControl', 1);
+    }
+    if (eff.addDrivers || eff.addVehicles) addDecisionTag(tags, 'growth', 2);
+    if (eff.debtAmount || eff.debtPrincipal) addDecisionTag(tags, 'riskTaking', 2);
+    if (eff.accidentRisk) addDecisionTag(tags, 'riskTaking', 2);
+
+    if (/合规|培训|备案|报警|记录|拒绝|不许|严令|澄清|保密|公开/.test(text)) addDecisionTag(tags, 'compliance', 1);
+    if (/刷单|虚开|灰|违规|压下去|默许|别的号|走灰/.test(text)) {
+      addDecisionTag(tags, 'compliance', -2);
+      addDecisionTag(tags, 'riskTaking', 2);
+      addDecisionTag(tags, 'shortTermism', 1);
+    }
+    if (/借给|补偿|全薪|慰问|公司全付|全担|担下来|包下|加薪|挽留/.test(text)) {
+      addDecisionTag(tags, 'driverCare', 1);
+      addDecisionTag(tags, 'trustBuilding', 1);
+    }
+    if (/钱保住|自付|劝退|不准假|装作没|不管|放走|硬扛/.test(text)) {
+      addDecisionTag(tags, 'profit', 1);
+      addDecisionTag(tags, 'driverCare', -1);
+      addDecisionTag(tags, 'shortTermism', 1);
+    }
+    if (/贷款|高利贷|赌|窗口期|豪赌|抢单|冲一下/.test(text)) addDecisionTag(tags, 'riskTaking', 1);
+
+    return cleanDecisionTags(tags);
+  }
+
   function pushNotif(state, text, level = 'info') {
     const next = {
       ...state,
@@ -1064,6 +1276,14 @@
     s.gachaCards = cards;
     s.gachaTicketId = ticketId;
     s = pushLog(s, `使用 ${ticket.name} 抽卡 (-¥${ticket.cost})`, 'event');
+    s = pushDecisionHistory(s, {
+      category: 'operation',
+      type: 'GACHA_START',
+      label: `购买招募券: ${ticket.name}`,
+      before: state,
+      tags: { growth: 1, profit: -1, riskTaking: ticket.id === 'normal' ? 0.5 : 1 },
+      details: { ticketId, ticketName: ticket.name, cost: ticket.cost, cardCount: cards.length },
+    });
     return s;
   }
 
@@ -1076,6 +1296,14 @@
     let s = { ...state, funds: state.funds - ticket.cost };
     s.gachaCards = cards;
     s = pushLog(s, `重新抽 ${ticket.name} (-¥${ticket.cost})`, 'event');
+    s = pushDecisionHistory(s, {
+      category: 'operation',
+      type: 'GACHA_REROLL',
+      label: `重新抽招募券: ${ticket.name}`,
+      before: state,
+      tags: { growth: 1, profit: -1, riskTaking: 1 },
+      details: { ticketId: state.gachaTicketId, ticketName: ticket.name, cost: ticket.cost, cardCount: cards.length },
+    });
     return s;
   }
 
@@ -1103,6 +1331,20 @@
       s = pushLog(s, `自动配车: ${card.name} 开上 ${vd.name}`, 'success');
     }
     s = checkMission(s);
+    s = pushDecisionHistory(s, {
+      category: 'operation',
+      type: 'RECRUIT_DRIVER',
+      label: `招募司机: ${card.name}`,
+      before: state,
+      tags: { growth: 2, driverCare: 0.5 },
+      details: {
+        driverId: card.id,
+        driverName: card.name,
+        rarity: card.rarity,
+        bgName: card.bgName,
+        autoAssignedVehicleId: emptyVehicle?.id || null,
+      },
+    });
     return s;
   }
 
@@ -1152,7 +1394,7 @@
   }
 
   function tick(state) {
-    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.showTutorial || state.activeStory || state.debtCrisis) return state;
+    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.showTutorial || state.activeStory || state.debtCrisis) return state;
     let s = { ...state };
     s = openDueMonthlyReport(s);
     if (s.showMonthlyReport) return s;
@@ -1250,7 +1492,7 @@
 
     // V7: 故事线触发 — 司机完单数刚好达到里程碑且未展示过
     // codex review fix(High):用 driver.shownStoryMilestones 去重,避免每 tick 重复触发
-    const canShowStory = !s.activeStory && s.speed < 4 && (s.day - (s.lastStoryDay || -999)) >= 3;
+    const canShowStory = !s.activePlayerStory && !s.activeStory && s.speed < 4 && (s.day - (s.lastStoryDay || -999)) >= 3;
     if (canShowStory) {
       for (let i = 0; i < drivers.length; i++) {
         const d = drivers[i];
@@ -1490,7 +1732,7 @@
     // V15.16 audit fix:已有 activeEvent / activePolicyDecision / activeStory 弹着时跳过本次结局检测,
     // 让玩家先处理完当前弹窗,下次 endOfDay 再检测结局,避免双弹窗同屏。
     // forceEnd 强制结局例外:Tier 5 IPO 这种关键收尾仍立刻触发(不会和事件冲突,因为 forceEnd 直接 gameOver)
-    const hasOpenModal = s.activeEvent || s.activePolicyDecision || s.activeStory;
+    const hasOpenModal = s.activeEvent || s.activePolicyDecision || s.activePlayerStory || s.activeStory;
     if (!s.gameOver && !hasOpenModal) {
       const nextEnding = ENDINGS.find((e) => e.tier === s.unlockedEndingTier + 1);
       if (nextEnding && nextEnding.check(s)) {
@@ -2020,6 +2262,24 @@
       }
       s = pushLog(s, `【投资人 review】二次提醒:扣款 ¥${fee.toLocaleString()}(${feeLabel || '闲置资源占用费'}),Day ${s.investorReviewDeadlineDay} 前未扩到 ${getInvestorReviewTargetCrews()} 个车组将撤资`, 'warn');
     }
+    s = pushDecisionHistory(s, {
+      category: 'risk',
+      type: 'INVESTOR_REVIEW_ACK',
+      label: `投资人扩张提醒: ${ev.title}`,
+      before: state,
+      tags: stage === 'early_final'
+        ? { growth: -1, riskControl: -1, shortTermism: 1 }
+        : { riskControl: 0.5 },
+      details: {
+        stage,
+        eventId: ev.id,
+        fee,
+        feeLabel,
+        targetCrews: ev.investorReviewTargetCrews || INVESTOR_REVIEW?.targetCrews || 0,
+        currentCrews: getOperatingCrewCount(s),
+        deadlineDay: s.investorReviewDeadlineDay || null,
+      },
+    });
     return openDueMonthlyReport(s);
   }
 
@@ -2255,6 +2515,26 @@
     if (delta !== 0 && choiceId === 'B' && extraToggles && extraToggles.loan) {
       // 贷款是 +funds,已记录在 log,不再重复累计到 monthlyEventImpact(避免月报误读为"经营事件收入")
     }
+    s = pushDecisionHistory(s, {
+      category: 'policy',
+      type: 'POLICY_DECISION',
+      label: choiceId === 'A' ? '监管决策: 先补齐车队材料' : '监管决策: 先抢扩张窗口期',
+      before: state,
+      tags: choiceId === 'A'
+        ? { compliance: 3, riskControl: 2, profit: -1, growth: -0.5 }
+        : { growth: 2, riskTaking: 2, compliance: -1, profit: extraToggles?.loan ? 1 : 0 },
+      details: {
+        eventId: apd.eventId,
+        stage: apd.stage,
+        choiceId,
+        extraToggles: extraToggles || {},
+        refMonthlyRevenue: r0,
+        fundsDelta: delta,
+        decision: s.policyState?.govBan?.decision || '',
+        loanTaken: !!s.policyState?.govBan?.loanTaken,
+        loanAmount: s.policyState?.govBan?.loanAmount || 0,
+      },
+    });
     return s;
   }
 
@@ -2362,6 +2642,7 @@
     return s.day >= nextReportDay
       && !s.showMonthlyReport
       && !s.activeEvent
+      && !s.activePlayerStory
       && !s.activeStory
       && !s.gameOver;
   }
@@ -2505,13 +2786,28 @@
       const newVal = Math.min(limit, d.stats[t.stat] + gain);
       const realGain = Math.max(0, newVal - d.stats[t.stat]);
       pendingLog = realGain > 0
-        ? `${d.name} 完成 ${t.name},花费 ¥${trainCost.toLocaleString()},${statName(t.stat)} +${realGain} / 上限 ${limit}`
+        ? `${d.name} 完成${t.name},花费 ¥${trainCost.toLocaleString()},${statName(t.stat)} +${realGain} / 上限 ${limit}`
         : `${d.name} 的${statName(t.stat)}已经达到${D.RARITY_META[d.rarity]?.name || ''}上限 ${limit}`;
       return { ...d, stats: { ...d.stats, [t.stat]: newVal } };
     });
     s = { ...s, drivers: nextDrivers };
     if (pendingLog) s = pushLog(s, pendingLog, 'success');
     s = checkMission(s);
+    s = pushDecisionHistory(s, {
+      category: 'operation',
+      type: 'TRAIN_DRIVER',
+      label: `提升司机能力: ${targetDriver.name} · ${t.name}`,
+      before: state,
+      tags: { growth: 2, driverCare: 0.5, profit: -1 },
+      details: {
+        driverId,
+        driverName: targetDriver.name,
+        trainingId,
+        trainingName: t.name,
+        stat: t.stat,
+        cost: trainCost,
+      },
+    });
     return s;
   }
 
@@ -2595,6 +2891,14 @@
       // V14.67: 显示与 InvestorPressureModal 一致,把 bankruptcyGraceBonus 算进破产倒计时。
       const daysLeft = Math.max(0, GAME.DEATH_FUNDS_DAYS + (s.bankruptcyGraceBonus || 0) - (s.negFundsDays || 0));
       s = pushNotif(s, `${daysLeft} 天内资金未回正就会破产`, 'warn');
+      s = pushDecisionHistory(s, {
+        category: 'risk',
+        type: 'INVESTOR_PRESSURE_HOLD_ON',
+        label: '投资人压力: 选择硬扛',
+        before: state,
+        tags: { riskTaking: 2, shortTermism: 1, costControl: -1 },
+        details: { choices: c, daysLeft, deficit: plan.deficit },
+      });
       return openDueMonthlyReport(s);
     }
 
@@ -2666,6 +2970,28 @@
       title: '投资人压力',
       label: took.length ? took.join(' + ') : '硬扛',
       detail: '卖车回血 / 借款等现金变动',
+    });
+    s = pushDecisionHistory(s, {
+      category: 'risk',
+      type: 'INVESTOR_PRESSURE_PLAN',
+      label: `投资人压力: ${took.length ? took.join(' + ') : '未选择方案'}`,
+      before: state,
+      tags: {
+        costControl: c.fire || c.sell ? 2 : 0,
+        driverCare: c.fire ? -2 : 0,
+        growth: c.sell ? -1 : 0,
+        riskTaking: c.debt ? 2 : 0,
+        shortTermism: c.debt || c.fire || c.sell ? 1 : 0,
+      },
+      details: {
+        choices: c,
+        took,
+        deficit: plan.deficit,
+        fireCount: c.fire ? plan.fireDrivers.length : 0,
+        sellCount: c.sell ? plan.sellVehicles.length : 0,
+        debtPrincipal: c.debt ? plan.debtPrincipal : 0,
+        debtRepay: c.debt ? plan.debtRepay : 0,
+      },
     });
     return openDueMonthlyReport(s);
   }
@@ -2863,6 +3189,26 @@
       label: opt.label,
       detail: eventDetail || `事件已弹出并处理: ${opt.label}`,
     });
+    s = pushDecisionHistory(s, {
+      category: ev.eventType === 'scripted' || ev.scripted ? 'scripted-event' : 'event',
+      type: 'EVENT_CHOICE',
+      label: `事件「${ev.title}」: ${opt.label}`,
+      before: state,
+      tags: inferEventDecisionTags(ev, opt, eff, eventDetail),
+      details: {
+        eventId: ev.id,
+        eventTitle: ev.title,
+        eventTag: ev.tag || '',
+        eventType: ev.eventType || '',
+        chainId: getEventChainId(ev) || '',
+        optionIdx,
+        optionLabel: opt.label,
+        optionDetail: opt.detail || '',
+        choiceKey: opt.choiceKey ?? null,
+        effect: eff,
+        eventDetail,
+      },
+    });
     if (ev.id === SNOW_RESCUE_EVENT_ID) {
       s = policyEventTick(s);
       if (!s.activeEvent && !s.activePolicyDecision) s = investorReviewTick(s);
@@ -2896,6 +3242,20 @@
       s = pushLog(s, `自动配车: ${unassignedDriver.name} 开上 ${t.name}`, 'success');
     }
     s = checkMission(s);
+    s = pushDecisionHistory(s, {
+      category: 'operation',
+      type: 'BUY_VEHICLE',
+      label: `购车扩张: ${t.name}`,
+      before: state,
+      tags: { growth: 2, profit: -1 },
+      details: {
+        templateId,
+        vehicleName: t.name,
+        price: t.price,
+        autoAssignedDriverId: unassignedDriver?.id || null,
+        autoAssignedDriverName: unassignedDriver?.name || '',
+      },
+    });
     return s;
   }
 
@@ -2949,6 +3309,23 @@
       s = pushLog(s, `${driver.name} 换上 ${vd.name}`, 'event');
       s = pushNotif(s, `${driver.name} 已换上 ${vd.name}`, 'success');
     }
+    s = pushDecisionHistory(s, {
+      category: 'operation',
+      type: 'ASSIGN_VEHICLE',
+      label: occupied
+        ? `车辆调度: ${driver.name} 与 ${occupied.name} 交换车辆`
+        : `车辆调度: ${driver.name} 换上 ${vd.name}`,
+      before: state,
+      tags: { operations: 1, growth: driver.vehicleId ? 0 : 1 },
+      details: {
+        driverId,
+        driverName: driver.name,
+        vehicleId,
+        vehicleName: vd.name,
+        swappedDriverId: occupied?.id || null,
+        swappedDriverName: occupied?.name || '',
+      },
+    });
     return s;
   }
 
@@ -2974,6 +3351,20 @@
       s.monthlyDriverData = { ...s.monthlyDriverData, [driverId]: { ...s.monthlyDriverData[driverId], leftDay: s.day } };
     }
     s = pushLog(s, `解雇 ${d.name},支付 2 个月补偿 ¥${severance}`, 'warn');
+    s = pushDecisionHistory(s, {
+      category: 'operation',
+      type: 'FIRE_DRIVER',
+      label: `解雇司机: ${d.name}`,
+      before: state,
+      tags: { costControl: 2, driverCare: -3, growth: -1, riskControl: 1 },
+      details: {
+        driverId,
+        driverName: d.name,
+        salary: d.salary,
+        severance,
+        interruptedOrder: d.status === 'driving' && d.currentOrder ? d.currentOrder.orderName : '',
+      },
+    });
     return s;
   }
 
@@ -3000,6 +3391,18 @@
     s.funds += refund;
     s = pushLog(s, `卖出 ${td.name},回收 ¥${refund}`, 'warn');
     s = pushNotif(s, `已卖出 ${td.name},回血 ¥${refund}`, 'success');
+    s = pushDecisionHistory(s, {
+      category: 'operation',
+      type: 'SELL_VEHICLE',
+      label: `卖车回款: ${td.name}`,
+      before: state,
+      tags: { costControl: 2, profit: 1, growth: -1, riskControl: 1 },
+      details: {
+        vehicleId,
+        vehicleName: td.name,
+        refund,
+      },
+    });
     return s;
   }
 
@@ -3023,7 +3426,15 @@
           stats: snapshotStats(state),
         },
       };
-      return pushActionHistory(next, {
+      const withDecision = pushDecisionHistory(next, {
+        category: 'risk',
+        type: 'DEBT_CRISIS_BANKRUPT',
+        label: '债务危机: 放弃经营并破产结算',
+        before: state,
+        tags: { riskControl: -2, shortTermism: 2, costControl: -1 },
+        details: { totalDue: crisis.totalDue || 0, shortfall: crisis.shortfall || 0 },
+      });
+      return pushActionHistory(withDecision, {
         category: 'player',
         type: 'DEBT_CRISIS_BANKRUPT',
         label: '玩家在债务危机中选择破产结算',
@@ -3059,6 +3470,19 @@
     });
     next = pushLog(next, `债务重组: ${debts.length} 笔债务合并为 ¥${newRepay.toLocaleString()},${newPeriodDays} 天后到期`, 'warn');
     next = pushNotif(next, `债务已重组 · +5% 后待还 ¥${newRepay.toLocaleString()}`, 'warn');
+    next = pushDecisionHistory(next, {
+      category: 'risk',
+      type: 'DEBT_RESTRUCTURE',
+      label: '债务危机: 选择重组债务',
+      before: state,
+      tags: { riskTaking: 2, riskControl: 1, shortTermism: 1 },
+      details: {
+        debtCount: debts.length,
+        oldTotal: totalRepay,
+        newTotal: newRepay,
+        newPeriodDays,
+      },
+    });
     return pushActionHistory(next, {
       category: 'player',
       type: 'DEBT_RESTRUCTURE',
@@ -3126,6 +3550,28 @@
           before: state,
         });
         return openDueMonthlyReport(logged);
+      }
+      case 'PLAYER_STORY_SHOWN': {
+        if (!state.activePlayerStory) return state;
+        const story = state.activePlayerStory;
+        const showTutorialNext = story.id === 'opening_layoff' && !action.skipTutorial;
+        const allGateIds = (UI_GATES || []).map((g) => g.id);
+        const next = {
+          ...state,
+          activePlayerStory: null,
+          showTutorial: showTutorialNext,
+          paused: true,
+          unlockedUIGates: action.skipTutorial ? allGateIds : state.unlockedUIGates,
+          activeUnlockSplash: action.skipTutorial ? null : state.activeUnlockSplash,
+          spotlight: action.skipTutorial ? null : state.spotlight,
+        };
+        return pushActionHistory(next, {
+          category: 'player',
+          type: 'PLAYER_STORY_SHOWN',
+          label: `玩家看完主线故事: ${story.title}`,
+          before: state,
+          details: { storyId: story.id, showTutorial: showTutorialNext },
+        });
       }
       case 'TRAIN': return doTrain(state, action.driverId, action.trainingId);
       case 'RESOLVE_EVENT': return resolveEvent(state, action.optionIdx);
@@ -3218,7 +3664,15 @@
       case 'CLAIM_ENDING': {
         const ending = ENDINGS.find((e) => e.tier === state.unlockedEndingTier);
         if (!ending) return state;
-        const next = { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+        let next = { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+        next = pushDecisionHistory(next, {
+          category: 'ending',
+          type: 'CLAIM_ENDING',
+          label: `领取结局: ${ending.name}`,
+          before: state,
+          tags: { riskControl: 1 },
+          details: { endingId: ending.id, tier: ending.tier },
+        });
         return pushActionHistory(next, {
           category: 'player',
           type: 'CLAIM_ENDING',
@@ -3233,7 +3687,15 @@
           return pushNotif(state, '还未达成任何结局,继续运营吧', 'warn');
         }
         const ending = ENDINGS.find((e) => e.tier === state.unlockedEndingTier);
-        const next = { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+        let next = { ...state, gameOver: { type: 'win', endingId: ending.id, endingName: ending.name, endingDesc: ending.desc, stats: snapshotStats(state) } };
+        next = pushDecisionHistory(next, {
+          category: 'ending',
+          type: 'CONCEDE',
+          label: `主动结束运营: ${ending.name}`,
+          before: state,
+          tags: { riskControl: 1, ambition: ending.forceEnd ? 2 : -0.5 },
+          details: { endingId: ending.id, tier: ending.tier },
+        });
         return pushActionHistory(next, {
           category: 'player',
           type: 'CONCEDE',
@@ -3282,6 +3744,18 @@
           : `${effect.delta >= 0 ? '+' : ''}${effect.delta} → ${updatedDriver.loyalty}`;
         let s = { ...state, drivers: updatedDrivers };
         s = pushLog(s, `给 ${driver.name} 调薪 +${pct}%(¥${oldSalary.toLocaleString()} → ¥${newSalary.toLocaleString()},忠诚 ${loyaltyText})`, effect.delta < 0 ? 'warn' : 'event');
+        s = pushDecisionHistory(s, {
+          category: 'operation',
+          type: 'RAISE_DRIVER_SALARY',
+          label: `调薪司机: ${driver.name} +${pct}%`,
+          before: state,
+          tags: {
+            driverCare: effect.delta < 0 ? -1 : pct >= 50 ? 3 : 2,
+            trustBuilding: effect.delta > 0 || effect.fillMax ? 1 : 0,
+            profit: -1,
+          },
+          details: { driverId, driverName: driver.name, pct, oldSalary, newSalary, loyaltyDelta: effect.delta, fillMax: effect.fillMax },
+        });
         return pushActionHistory(s, {
           category: 'player',
           type: 'RAISE_DRIVER_SALARY',
@@ -3306,6 +3780,7 @@
     computeFare, rollGoodReview, getDriverGoodReviewRate, getDriverLoyaltyMultiplier, getDriverQuitRisk,
     getDriverTryRateBreakdown, hasLowLoyaltyDriver,
     isUIGateUnlocked, UI_GATES,
+    isMissionAvailable, hasReputationDropStreak,
     getTrainingCost,
     buildHourlySupply,
     gameReducer, makeInitialState,

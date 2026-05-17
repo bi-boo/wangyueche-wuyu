@@ -9,6 +9,7 @@ function PauseMenu({
   onToggleCrt,
   onToggleSkipOnboarding,
   onShowTutorial,
+  onOpenLeaderboard,
   onExportDiagnostics,
 }) {
   const continueLabel = state.hasStarted ? '继续游戏' : '返回游戏';
@@ -29,6 +30,10 @@ function PauseMenu({
             <button className="pause-command is-danger" onClick={onNewGame}>
               <span className="pause-command-mark">新</span>
               <span><b>开始游戏</b></span>
+            </button>
+            <button className="pause-command" onClick={onOpenLeaderboard}>
+              <span className="pause-command-mark">榜</span>
+              <span><b>经营榜单</b></span>
             </button>
           </div>
         </div>

@@ -340,7 +340,7 @@ function getDriverOrderDiagnosis(driver, vehicleData, reputation) {
   ];
 }
 
-// V15.17:canTrain 和 canRaiseSalary 控制车技/服务训练 + 按钮 / 忠诚行调薪 + 按钮的可见性
+// V15.17:canTrain 和 canRaiseSalary 控制车技/服务提升 + 按钮 / 忠诚行调薪 + 按钮的可见性
 function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, loyaltyMeta, onRequestSalaryRaise, canTrain = true, canRaiseSalary = true }) {
   // V14.65: 忠诚、车技、服务统一成同一种属性行;差异只体现在是否可主动训练。
   const goodRate = Math.round(E.getDriverGoodReviewRate(driver) * 100);
@@ -401,8 +401,8 @@ function DriverAttributeRows({ driver, statCaps, funds, dispatch, vehicleData, l
               <button
                 className="driver-attr-action"
                 disabled={!row.enough || row.maxed}
-                title={row.maxed ? '已到上限' : `花 ¥${row.trainCost.toLocaleString()},${row.label} +${t.gainMin}~${t.gainMax}`}
-                aria-label={row.maxed ? `${row.label}已到上限` : `花 ${row.trainCost.toLocaleString()} 提升${row.label}`}
+                title={row.maxed ? '已到上限' : `花 ¥${row.trainCost.toLocaleString()} 做${t.name},${row.label} +${t.gainMin}~${t.gainMax}`}
+                aria-label={row.maxed ? `${row.label}已到上限` : `花 ${row.trainCost.toLocaleString()} 做${t.name}`}
                 onClick={() => dispatch({type: 'TRAIN', driverId: driver.id, trainingId: t.id})}
               >
                 {row.maxed ? '满' : '+'}
@@ -674,7 +674,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
         )}
 
         {/* V15.22: 换车/分配、解雇、卖车统一收到底部,避免训练区被低频操作打断。
-            解雇和卖车仍受 day 60 UI 解锁限制,并保留二次确认。 */}
+            V15.40b:组建第三车组后解锁解雇/卖车,并保留二次确认。 */}
         {driver && (
           <details className="inspector-section inspector-other-actions" open>
             <summary className="inspector-section-title">其他操作</summary>

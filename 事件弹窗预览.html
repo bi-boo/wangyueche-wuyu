@@ -138,6 +138,16 @@
     max-height: calc(100vh - 112px);
     overflow-y: auto;
   }
+  .story-preview-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .story-preview-state-tag {
+    background: #1d1a18;
+    color: #ffcc66;
+  }
   .story-image-frame {
     height: clamp(188px, 29vw, 270px);
     margin: 12px 0 16px;
@@ -307,10 +317,13 @@
     );
   }
 
-  function summarizeApplyEffect(option, state) {
+  function summarizeApplyEffect(event, option, state) {
     if (typeof option?.apply !== 'function') return [];
     try {
-      const effect = option.apply(state) || {};
+      const raw = option.apply(state) || {};
+      const effect = (event?.skipScale || raw.skipScale || !E.scaleEventEffect)
+        ? raw
+        : E.scaleEventEffect(raw, state);
       const items = [];
       const add = (text, tone = '') => items.push({ text, tone });
       if (effect.funds !== undefined) add(`资金 ${effect.funds > 0 ? '+' : ''}${formatMoney(effect.funds).replace('¥-', '-¥')}`, getToneByValue(effect.funds));
@@ -354,7 +367,10 @@
     return (
       <div className="modal-overlay">
         <div className="modal event-modal story-preview-modal">
-          <div className="modal-tag">{story.tag}</div>
+          <div className="story-preview-tag-row">
+            <div className="modal-tag">{story.tag}</div>
+            <div className="modal-tag story-preview-state-tag">预览状态</div>
+          </div>
           <div className="modal-title">{story.title}</div>
           <StoryPreviewImage story={story} />
           <div className="story-dialogue">
@@ -448,11 +464,12 @@
           <PreviewResourceSnapshot state={state} />
           <div className="modal-options">
             {(event.options || []).map((option, idx) => {
-              const effectItems = event.blindOptions ? [] : summarizeApplyEffect(option, state);
+              const effectItems = event.blindOptions ? [] : summarizeApplyEffect(event, option, state);
+              const optionDetail = event.blindOptions || effectItems.length === 0 ? option.detail : '';
               return (
                 <button key={idx} className="modal-option" onClick={() => onResolve(idx)}>
                   <div className="modal-option-label">{option.label}</div>
-                  {option.detail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{normalizeNarrativePunctuation(option.detail)}</div>}
+                  {optionDetail && <div className="modal-option-effect" style={{whiteSpace: 'pre-line'}}>{normalizeNarrativePunctuation(optionDetail)}</div>}
                   <PreviewEffectChips items={effectItems} />
                 </button>
               );
@@ -580,37 +597,7 @@
   const D = window.WYCWY_DATA;
   const E = window.WYCWY_ENGINE;
 
-  const STORY_PREVIEWS = [
-    {
-      id: 'story_opening_layoff',
-      title: '被裁那天，我买下了第一辆车',
-      tag: '开局剧情',
-      image: 'assets/pixel/story/opening-layoff.png',
-      buttons: ['开始运营'],
-      paragraphs: [
-        '你抱着纸箱走出写字楼，手机里弹出最后一条工资到账通知。',
-        '回家的车上，你看着窗外堵成红色的三环，突然改口：',
-        '“不回家了。带我去二手车市场。”',
-        '从今天开始，你不再等别人派活。',
-        '你要自己养司机、买车、抢订单，把这座城市一点点跑下来。',
-      ],
-    },
-    {
-      id: 'story_finale_ipo_heir',
-      title: 'IPO 上市 · 真正的接班',
-      tag: '终局剧情',
-      image: 'assets/pixel/story/finale-ipo-heir.png',
-      buttons: ['继承家业', '再开一局'],
-      paragraphs: [
-        '交易所大屏亮起那一刻，你的公司代码跳了出来。',
-        '司机群里刷满红包，投资人终于没再催你。',
-        '就在你准备发表上市感言时，楼顶传来直升机的轰鸣。',
-        '舱门打开，一个真正掌管出行帝国的人走下来。',
-        '他看了看你身后的车队，又看了看屏幕上的市值，笑了一下，说道：',
-        '“你通过了董事会的考验，嘀嘀接下来就交给你了。”',
-      ],
-    },
-  ];
+  const STORY_PREVIEWS = Object.values(D.PLAYER_STORIES || {});
 
   // 政策事件:每个 stage 一个左侧栏项
   function buildPolicySidebarItems() {
@@ -737,7 +724,7 @@
     return STORY_PREVIEWS.map((story) => ({
       id: story.id,
       title: story.title,
-      stageTag: story.stageTag,
+      stageTag: story.id === 'opening_layoff' ? '游戏开始' : 'IPO 终局',
       kind: 'storyPreview',
       storyId: story.id,
     }));
@@ -905,7 +892,7 @@
 
   function StorybookApp() {
     const [r0, setR0] = useState(10000);
-    const [activeId, setActiveId] = useState(() => window.location.hash.replace(/^#/, '') || 'story_opening_layoff');
+    const [activeId, setActiveId] = useState(() => window.location.hash.replace(/^#/, '') || 'opening_layoff');
 
     const policyItems = useMemo(buildPolicySidebarItems, []);
     const { chainGroups, single: singleItems, scripted: scriptedItems } = useMemo(buildRandomEventSidebarItems, []);

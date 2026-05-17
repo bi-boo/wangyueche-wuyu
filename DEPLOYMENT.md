@@ -1,7 +1,7 @@
 # 网约车物语 — 线上部署记录
 
-> 记录日期: 2026-05-15  
-> 目的: 换电脑或后续迭代时,能快速找到线上位置、同步命令和重复部署排查方式。
+> 记录日期: 2026-05-17
+> 目的: 换电脑或后续迭代时,能快速找到线上位置、同步命令、AI 复盘代理和重复部署排查方式。
 
 ---
 
@@ -45,7 +45,7 @@ https://yuanfengai.cn/didichuxing/baozheng/wycwy/网约车物语-V3.html
 
 ## 部署方式
 
-本项目是纯静态游戏,不需要 PM2 / Node 服务常驻。部署就是把整个项目目录同步到 nginx 静态目录。
+本项目主体仍是静态游戏,但 V15.36 起新增 AI 运营复盘,线上需要一个只暴露 `/api/run-analysis` 的 Node 代理服务。静态资源仍同步到 nginx 目录,模型密钥只放服务器环境变量。
 
 从本地项目根目录执行:
 
@@ -71,6 +71,55 @@ ssh nextype 'cp /var/www/nextype-website/didichuxing/baozheng/wycwy/网约车物
 - `tmp/`、`archive/`、`.git/` 不上传,避免把本地临时文件和历史快照带到线上。
 - `admin.html` 会同步到线上,用于数值调参预览。若后续不想公开,部署命令里加 `--exclude='admin.html'`。
 
+### AI 复盘代理
+
+线上服务使用 PM2 管理,进程名:
+
+```text
+wycwy-ai-review
+```
+
+服务启动命令从 `/etc/wycwy-ai-review.env` 读取环境变量,再启动:
+
+```bash
+PORT=8877 node scripts/ai-review-server.mjs
+```
+
+必要环境变量:
+
+```bash
+WYCWY_AI_API_KEY=你的火山方舟 API Key
+WYCWY_AI_MODEL=doubao-seed-2-0-lite-260428
+WYCWY_AI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3/responses
+```
+
+榜单数据默认写入 PM2 用户的数据目录:
+
+```text
+/home/ubuntu/.local/share/wycwy/leaderboard.jsonl
+```
+
+如果要迁移位置,在 `/etc/wycwy-ai-review.env` 增加:
+
+```bash
+WYCWY_LEADERBOARD_FILE=/path/to/leaderboard.jsonl
+```
+
+nginx 只需要把子路径 API 反代给本机 Node:
+
+```nginx
+location /didichuxing/baozheng/wycwy/api/ {
+    proxy_pass http://127.0.0.1:8877/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+前端默认请求相对路径 `api/run-analysis`,所以本地 `http://localhost:8877/网约车物语-V3.html` 和线上子目录部署都能走同一套代码。
+
 ---
 
 ## 部署后验证
@@ -79,6 +128,8 @@ ssh nextype 'cp /var/www/nextype-website/didichuxing/baozheng/wycwy/网约车物
 curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/
 curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/wycwy-data.js
 curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/src/app/90-app.jsx
+curl -sS -X POST https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/run-analysis -H 'Content-Type: application/json' --data '{"payload":{"schemaVersion":"wycwy-ai-review-v1","gameResult":{"type":"lose"},"valueProfile":{"axes":[]},"keyDecisions":[]}}'
+curl -sS https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/leaderboard?sort=score
 ```
 
 期望:
@@ -86,6 +137,8 @@ curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/src/ap
 - 主页面返回 `200 OK`
 - `wycwy-data.js` 返回 `200 OK`
 - `src/app/*.jsx` 返回 `200 OK`
+- AI 复盘接口返回 `source:"ai"` 表示模型已生效;返回 `source:"local"` 表示代理可用但密钥未配置或上游临时失败,前端会展示本地简评兜底
+- 榜单接口返回 `ok:true` 和 `entries` 数组;没有人入榜时数组为空
 
 注意: nginx 可能把 `.jsx` 返回为 `application/octet-stream`,Babel standalone 通常仍能 fetch 并编译。若页面白屏,优先用浏览器控制台查 JSX 加载和 Babel 编译错误。
 
@@ -157,4 +210,3 @@ ssh nextype 'sudo rm -rf /var/www/nextype-website/didichuxing/baozheng/wycwy'
 ```bash
 curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/
 ```
-

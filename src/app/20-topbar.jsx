@@ -1,7 +1,7 @@
 function MissionBar({ state, onOpenRoadmap }) {
   // V15.16:进度只数非 hidden 任务,被动等型/复合首单 hidden 后台静默达成
   const completedSet = new Set(state.completedMissionIds || []);
-  const visibleMissions = MISSIONS.filter((m) => !m.hidden);
+  const visibleMissions = MISSIONS.filter((m) => !m.hidden && (!E.isMissionAvailable || E.isMissionAvailable(state, m)));
   const completedVisibleCount = visibleMissions.filter((m) => completedSet.has(m.id)).length;
   const currentMission = visibleMissions.find((m) => !completedSet.has(m.id));
 
@@ -41,11 +41,25 @@ function MissionBar({ state, onOpenRoadmap }) {
 
 /* ============== V3: 顶栏 ============== */
 
-const APP_VERSION = 'V15.29';
+const APP_VERSION = 'V15.40d';
 const RUN_HISTORY_KEY = 'wycwy-run-history-v1';
 const CURRENT_RUN_KEY = 'wycwy-current-run-v1';
 const AUTOSAVE_KEY = 'wycwy-autosave-v1';
 const RUN_HISTORY_LIMIT = 20;
+const DECISION_TAG_META = {
+  profit: { label: '利润优先', polarity: 'business' },
+  driverCare: { label: '照顾司机', polarity: 'people' },
+  trustBuilding: { label: '长期忠诚', polarity: 'people' },
+  compliance: { label: '合规底线', polarity: 'risk' },
+  riskTaking: { label: '冒险扩张', polarity: 'risk' },
+  growth: { label: '扩张投入', polarity: 'business' },
+  reputationFirst: { label: '口碑优先', polarity: 'public' },
+  costControl: { label: '成本控制', polarity: 'business' },
+  shortTermism: { label: '短期止血', polarity: 'risk' },
+  riskControl: { label: '风险控制', polarity: 'risk' },
+  operations: { label: '运营调度', polarity: 'business' },
+  ambition: { label: '终局野心', polarity: 'business' },
+};
 
 function isoOrNull(ms) {
   return ms ? new Date(ms).toISOString() : null;
@@ -59,6 +73,7 @@ function isRealTimeRunningForState(state) {
   return !!state.hasStarted
     && !state.paused
     && !state.activeEvent
+    && !state.activePlayerStory
     && !state.activeStory
     && !state.showTutorial
     && !state.showMonthlyReport
@@ -92,9 +107,79 @@ function buildRealTimePayload(state, exportedAtMs) {
   };
 }
 
+function normalizeDecisionHistoryForAnalysis(history = []) {
+  return [...(history || [])]
+    .sort((a, b) => (a.day - b.day) || (a.hour - b.hour) || (a.id - b.id));
+}
+
+function buildDecisionValueProfile(history = []) {
+  const totals = {};
+  const counts = {};
+  (history || []).forEach((entry) => {
+    Object.keys(entry.tags || {}).forEach((key) => {
+      const value = Number(entry.tags[key] || 0);
+      if (!value) return;
+      totals[key] = (totals[key] || 0) + value;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+  });
+  const axes = Object.keys(totals)
+    .map((key) => ({
+      key,
+      label: DECISION_TAG_META[key]?.label || key,
+      score: Number(totals[key].toFixed(1)),
+      count: counts[key] || 0,
+      polarity: DECISION_TAG_META[key]?.polarity || 'other',
+    }))
+    .sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
+  return {
+    totalDecisions: history.length,
+    axes,
+    dominant: axes.slice(0, 5),
+  };
+}
+
+function getDecisionImportance(entry) {
+  const tagWeight = Object.values(entry.tags || {}).reduce((sum, val) => sum + Math.abs(Number(val || 0)), 0);
+  const diff = entry.diff || {};
+  const moneyWeight = diff.funds ? Math.min(4, Math.abs((diff.funds.after || 0) - (diff.funds.before || 0)) / 5000) : 0;
+  const reputationWeight = diff.reputation ? Math.min(3, Math.abs((diff.reputation.after || 0) - (diff.reputation.before || 0)) / 10) : 0;
+  const categoryWeight = ['risk', 'policy', 'ending'].includes(entry.category) ? 3 : entry.category === 'event' ? 2 : 0;
+  return tagWeight + moneyWeight + reputationWeight + categoryWeight;
+}
+
+function compactDecisionEntry(entry) {
+  return {
+    id: entry.id,
+    day: entry.day,
+    hour: entry.hour,
+    category: entry.category,
+    type: entry.type,
+    label: entry.label,
+    tags: entry.tags || {},
+    details: entry.details || {},
+    before: entry.before,
+    after: entry.after,
+    diff: entry.diff || {},
+  };
+}
+
+function pickKeyDecisionsForAnalysis(history = [], limit = 24) {
+  return [...history]
+    .map((entry) => ({ entry, score: getDecisionImportance(entry) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((item) => item.entry)
+    .sort((a, b) => (a.day - b.day) || (a.hour - b.hour) || (a.id - b.id))
+    .map(compactDecisionEntry);
+}
+
 function buildGameDiagnosticsPayload(state, extra = {}) {
   const exportedAtMs = Date.now();
   const realTime = buildRealTimePayload(state, exportedAtMs);
+  const decisionHistory = state.decisionHistory || [];
+  const decisionValueProfile = buildDecisionValueProfile(decisionHistory);
   return {
     exportedAt: new Date(exportedAtMs).toISOString(),
     version: APP_VERSION,
@@ -152,8 +237,37 @@ function buildGameDiagnosticsPayload(state, extra = {}) {
     },
     diagnosticsLatest: state.diagnostics || [],  // 最近 720 tick = 30 游戏日
     actionHistory: state.actionHistory || [],    // 结构化复盘日志:玩家操作 + 关键数值变化
+    decisionHistory,
+    decisionValueProfile,
     log: state.log || [],
     notifications: state.notifications || [],
+  };
+}
+
+function buildRunAnalysisPayload(state) {
+  const diagnostics = buildGameDiagnosticsPayload(state, { savedReason: state.gameOver ? 'game-over-ai-review' : 'current-ai-review' });
+  const chronologicalDecisions = normalizeDecisionHistoryForAnalysis(diagnostics.decisionHistory || []);
+  return {
+    schemaVersion: 'wycwy-ai-review-v1',
+    exportedAt: diagnostics.exportedAt,
+    version: diagnostics.version,
+    reviewLanguage: 'zh-CN',
+    reviewTone: 'objective_sharp',
+    gameResult: {
+      type: state.gameOver?.type || 'in_progress',
+      deathCause: state.gameOver?.deathCause || null,
+      endingId: state.gameOver?.endingId || null,
+      endingName: state.gameOver?.endingName || null,
+      reason: state.gameOver?.reason || state.gameOver?.endingDesc || '',
+    },
+    summary: diagnostics.summary,
+    valueProfile: diagnostics.decisionValueProfile,
+    keyDecisions: pickKeyDecisionsForAnalysis(chronologicalDecisions),
+    decisions: chronologicalDecisions.slice(-180).map(compactDecisionEntry),
+    drivers: diagnostics.drivers,
+    vehicles: diagnostics.vehicles,
+    monthly: diagnostics.monthly,
+    finalLog: (diagnostics.log || []).slice(0, 80).reverse(),
   };
 }
 
@@ -189,6 +303,8 @@ function buildRunRecord(state, { savedReason = 'game-over', idPrefix = 'run' } =
     vehicles: payload.vehicles,
     monthly: payload.monthly,
     realTime: payload.realTime,
+    decisionValueProfile: payload.decisionValueProfile,
+    decisionHistory: (payload.decisionHistory || []).slice(0, 300),
     diagnosticsLatest: (payload.diagnosticsLatest || []).slice(-240),
     actionHistory: (payload.actionHistory || []).slice(0, 300),
     log: (payload.log || []).slice(0, 120),
@@ -437,7 +553,7 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
             <strong className="ts-value green">{repDisplay ?? state.reputation}</strong>
             {repSubText && <span className={`ts-rep-sub ${repSubCls}`}>{repSubText}</span>}
             <TopbarHelp id="rep-help-popover" title="口碑规则">
-              <HelpRow label="怎么涨">司机完单拿到好评会累计,每 3 个好评 → 城市口碑 +1;训练“服务”能提高好评率。</HelpRow>
+              <HelpRow label="怎么涨">司机完单拿到好评会累计,每 3 个好评 → 城市口碑 +1;提升服务质量能提高好评率。</HelpRow>
               <HelpRow label="怎么降">投诉会让口碑 -2;订单 1 小时没人接会流失,每流失 1 单 → 城市口碑 -1。</HelpRow>
               <HelpRow label="片区">口碑达到门槛会自动解锁片区;跌破门槛会反锁,回升后自动恢复。已解锁:{unlockedZoneText}<br /><span className="rep-help-next">下一片区:{nextZoneText}</span></HelpRow>
             </TopbarHelp>
@@ -622,7 +738,7 @@ function getLoyaltyMeta(driver) {
   const quitLine = E.getDriverQuitLine ? E.getDriverQuitLine(driver) : 30;
   const normalCap = E.getDriverLoyaltyCap ? E.getDriverLoyaltyCap(driver) : 100;
   const effect = loyalty > normalCap
-    ? '信任已经超过普通上限,别让负面事件把关系打回去'
+    ? '忠诚已经超过普通上限,别让负面事件把关系打回去'
     : `忠诚影响接单积极性,低于 ${quitLine} 有离队风险`;
   if (loyalty < quitLine) {
     return {

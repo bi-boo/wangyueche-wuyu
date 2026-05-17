@@ -521,7 +521,7 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
               addPreview(`全员忠诚 ${eff.allLoyalty > 0 ? '+' : ''}${eff.allLoyalty}`, eff.allLoyalty < 0 ? 'negative' : 'positive');
             }
             if (eff.trustLoyalty !== undefined) {
-              addPreview(`全员信任 ${eff.trustLoyalty > 0 ? '+' : ''}${eff.trustLoyalty}`, eff.trustLoyalty < 0 ? 'negative' : 'positive');
+              addPreview(`全员忠诚 ${eff.trustLoyalty > 0 ? '+' : ''}${eff.trustLoyalty}`, eff.trustLoyalty < 0 ? 'negative' : 'positive');
             }
             if (eff.salaryRaise && eff.keepBest && bestDriver) {
               addPreview(`${bestDriver.name} 月薪 +¥${eff.salaryRaise} → ¥${salaryAfter}`, 'negative');
@@ -538,14 +538,14 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
                 `${Math.round(eff.accidentRisk.chance * 100)}% 事故风险` +
                 `${eff.accidentRisk.funds ? ` · 修车 ${eff.accidentRisk.funds.toLocaleString()}` : ''}` +
                 `${eff.accidentRisk.allLoyalty ? ` · 全员忠诚 ${eff.accidentRisk.allLoyalty}` : ''}` +
-                `${eff.accidentRisk.trustLoyalty ? ` · 全员信任 ${eff.accidentRisk.trustLoyalty}` : ''}` +
+                `${eff.accidentRisk.trustLoyalty ? ` · 全员忠诚 ${eff.accidentRisk.trustLoyalty}` : ''}` +
                 `${eff.accidentRisk.reputation ? ` · 口碑 ${eff.accidentRisk.reputation}` : ''}`,
                 'negative'
               );
             }
             if (eff.previewError) addPreview('事件预览异常,请选择其他方案', 'negative');
             const optionDetail = event.isInvestorReview
-              ? ''
+              ? normalizeNarrativePunctuation(o.detail || '')
               : (event.blindOptions ? normalizeNarrativePunctuation(o.detail || '') : getEventOptionDetail(o, effectPreviewItems.length > 0));
             // V15.x: blindOptions 事件(如 rival_pricing 4 选项盲选)隐藏 effect chips,选完才揭晓
             if (event.blindOptions) {
@@ -923,7 +923,7 @@ function StoryModal({ story, drivers, onClose }) {
   const rewardLines = [];
   if (r.funds) rewardLines.push(`资金 +¥${r.funds}`);
   if (r.reputation) rewardLines.push(`口碑 +${r.reputation}`);
-  if (r.loyalty) rewardLines.push(`信任 +${r.loyalty}`);
+  if (r.loyalty) rewardLines.push(`忠诚 +${r.loyalty}`);
   if (r.badge) rewardLines.push(`称号「${r.badge}」`);
   return (
     <div className="modal-overlay game-feedback-overlay">
@@ -1242,9 +1242,10 @@ const MISSION_ORDER_TARGETS = {
 function getMissionRouteRows(state, orderStatusById) {
   // V15.16:路线只展示玩家需要主动推进的任务;hidden 里程碑在后台静默完成。
   const completedSet = new Set(state.completedMissionIds || []);
-  const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && !m.hidden);
+  const missionVisible = (m) => !m.hidden && (!E.isMissionAvailable || E.isMissionAvailable(state, m));
+  const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && missionVisible(m));
   return MISSIONS
-    .filter((mission) => !mission.hidden)
+    .filter(missionVisible)
     .map((mission, idx) => {
     const orderId = MISSION_ORDER_TARGETS[mission.id];
     const orderStatus = orderId ? orderStatusById[orderId] : null;
