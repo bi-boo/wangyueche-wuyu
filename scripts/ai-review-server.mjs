@@ -226,7 +226,6 @@ function normalizeLeaderboardEntry(input = {}) {
     id: clampText(input.id || randomUUID(), 80),
     clientRunId: clampText(input.clientRunId || '', 140),
     submittedAt: now,
-    version: clampText(input.version || '', 24),
     profile: clampText(profile, 40) || '未命名经营者',
     styleTag,
     styleKey,

@@ -258,7 +258,6 @@ function buildLeaderboardEntry(payload, review) {
   ].filter(Boolean).join('|');
   return {
     clientRunId: `${clientId}:${runSeed}`,
-    version: payload.version,
     profile: review?.headline || '未命名经营者',
     styleTag: suspicious ? '作弊者' : styleTag.label,
     styleKey: suspicious ? 'cheater' : styleTag.key,

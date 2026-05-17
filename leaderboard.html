@@ -109,7 +109,7 @@ function renderRows(entries) {
     return `
       <div class="row">
         <div class="rank">#${entry.rank}</div>
-        <div class="name"><strong>${escapeHtml(entry.profile)}</strong><span>${escapeHtml(entry.version || '')} · ${formatDate(entry.submittedAt)}</span></div>
+        <div class="name"><strong>${escapeHtml(entry.profile)}</strong><span>${formatDate(entry.submittedAt)}</span></div>
         <div class="cell">${entry.days}</div>
         <div class="cell money ${moneyClass}">${formatMoney(entry.funds)}</div>
         <div class="cell">${entry.reputation}</div>
