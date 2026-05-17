@@ -3,6 +3,8 @@ const AI_REVIEW_DEFAULT_ENDPOINT = 'api/run-analysis';
 const LEADERBOARD_ENDPOINT_KEY = 'wycwy-leaderboard-endpoint';
 const LEADERBOARD_DEFAULT_ENDPOINT = 'api/leaderboard';
 const LEADERBOARD_CLIENT_KEY = 'wycwy-leaderboard-client-id';
+const AI_REVIEW_EXPECTED_SECONDS = 20;
+const AI_REVIEW_TIMEOUT_SECONDS = 45;
 
 function getAiReviewEndpoint() {
   return window.WYCWY_AI_REVIEW_ENDPOINT
@@ -345,10 +347,51 @@ function getLeaderboardHref() {
   return 'leaderboard.html';
 }
 
+function getAiReviewLoadingStage(elapsedSeconds) {
+  if (elapsedSeconds < 4) return '打包本局流水和关键选择';
+  if (elapsedSeconds < 10) return '读取加薪、扩张和风险偏好';
+  if (elapsedSeconds < 18) return '对照经营画像生成判断';
+  if (elapsedSeconds < 32) return '写复盘结论和下一局建议';
+  return '网络有点慢,45 秒内会先返回本地简评';
+}
+
+function getAiReviewProgressPercent(elapsedSeconds) {
+  if (elapsedSeconds <= AI_REVIEW_EXPECTED_SECONDS) {
+    const eased = Math.pow(elapsedSeconds / AI_REVIEW_EXPECTED_SECONDS, 0.82);
+    return Math.min(80, 8 + eased * 72);
+  }
+  if (elapsedSeconds <= AI_REVIEW_TIMEOUT_SECONDS) {
+    const ratio = (elapsedSeconds - AI_REVIEW_EXPECTED_SECONDS) / (AI_REVIEW_TIMEOUT_SECONDS - AI_REVIEW_EXPECTED_SECONDS);
+    return Math.min(96, 80 + Math.pow(ratio, 0.65) * 16);
+  }
+  return Math.min(98.6, 96 + Math.log1p(elapsedSeconds - AI_REVIEW_TIMEOUT_SECONDS) * 0.8);
+}
+
 function RunAiReviewPanel({ state }) {
   const [status, setStatus] = useState('idle');
   const [review, setReview] = useState(null);
   const [leaderboard, setLeaderboard] = useState(null);
+  const [aiReviewProgress, setAiReviewProgress] = useState({
+    percent: 0,
+    elapsedSeconds: 0,
+    stage: getAiReviewLoadingStage(0),
+  });
+
+  useEffect(() => {
+    if (status !== 'loading') return undefined;
+    const startedAt = performance.now();
+    const updateProgress = () => {
+      const elapsedSeconds = Math.max(0, (performance.now() - startedAt) / 1000);
+      setAiReviewProgress({
+        percent: getAiReviewProgressPercent(elapsedSeconds),
+        elapsedSeconds,
+        stage: getAiReviewLoadingStage(elapsedSeconds),
+      });
+    };
+    updateProgress();
+    const timer = setInterval(updateProgress, 360);
+    return () => clearInterval(timer);
+  }, [status]);
 
   const handleGenerate = async () => {
     if (!state) return;
@@ -374,7 +417,23 @@ function RunAiReviewPanel({ state }) {
         </button>
       )}
       {status === 'loading' && (
-        <div className="ai-review-loading">正在读取本局选择...</div>
+        <div
+          className="ai-review-loading"
+          style={{ '--ai-review-progress': aiReviewProgress.percent / 100 }}
+          aria-live="polite"
+        >
+          <div className="ai-review-loading-main">
+            <strong>{aiReviewProgress.stage}</strong>
+            <span>预计约 {AI_REVIEW_EXPECTED_SECONDS} 秒,已等待 {Math.floor(aiReviewProgress.elapsedSeconds)} 秒</span>
+          </div>
+          <div className="ai-review-progress" aria-hidden="true">
+            <div className="ai-review-progress-fill" />
+          </div>
+          <div className="ai-review-loading-foot">
+            <span>正在读取本局选择...</span>
+            <em>{Math.round(aiReviewProgress.percent)}%</em>
+          </div>
+        </div>
       )}
       {status === 'ready' && review && (
         <div className="ai-review-result">

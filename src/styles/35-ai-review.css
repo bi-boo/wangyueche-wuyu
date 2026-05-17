@@ -36,14 +36,99 @@
 }
 
 .ai-review-loading {
-  min-height: 42px;
+  --ai-review-progress: 0.08;
+  min-height: 96px;
   display: grid;
-  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 10px 12px;
   color: var(--ink-2);
   font-size: 14px;
-  font-weight: 800;
   border: 1px dashed var(--line-ui);
   background: color-mix(in srgb, var(--card) 70%, var(--sub) 30%);
+}
+
+.ai-review-loading-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ai-review-loading-main strong {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.ai-review-loading-main span,
+.ai-review-loading-foot {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.ai-review-progress {
+  position: relative;
+  height: 14px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--sub) 72%, var(--ink) 28%);
+  border: 2px solid var(--line-ui);
+  box-shadow: inset 0 0 0 1px rgba(255,248,231,0.34);
+}
+
+.ai-review-progress::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(42,35,32,0.16);
+  pointer-events: none;
+}
+
+.ai-review-progress-fill {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(var(--ai-review-progress));
+  transform-origin: left center;
+  transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,248,231,0.26) 0,
+      rgba(255,248,231,0.26) 8px,
+      transparent 8px,
+      transparent 14px
+    ),
+    linear-gradient(90deg, var(--accent), var(--accent-deep));
+  animation: ai-review-progress-scan 0.9s linear infinite;
+}
+
+.ai-review-loading-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ai-review-loading-foot em {
+  flex: 0 0 auto;
+  color: var(--ink);
+  font-style: normal;
+}
+
+@keyframes ai-review-progress-scan {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 28px 0, 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-review-progress-fill {
+    transition: none;
+    animation: none;
+  }
 }
 
 .ai-review-result {
@@ -117,7 +202,7 @@
 }
 
 .ai-review-leaderboard a:hover {
-  color: var(--accent-strong);
+  color: var(--accent-deep);
 }
 
 .player-story-finale .ai-review-panel {
