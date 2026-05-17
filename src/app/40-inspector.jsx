@@ -261,38 +261,42 @@ function getOrderMissingText(order, driver) {
   return missing.join('、');
 }
 
+function getOrderShortName(order) {
+  return (order?.name || '订单').replace(/订单$/, '');
+}
+
 function getOrderOpportunityDiagnosis(reputation) {
   if (reputation >= 520) {
-    return { key: 'opportunity', label: '客源', state: '很旺', tone: 'strong', hint: '高价片区热起来了,好单更多' };
+    return { key: 'opportunity', label: '订单机会', state: '很多', tone: 'strong', hint: '高价片区更活跃,好单更多' };
   }
   if (reputation >= 180) {
-    return { key: 'opportunity', label: '客源', state: '稳定', tone: 'normal', hint: '客流够用,稳住好评就行' };
+    return { key: 'opportunity', label: '订单机会', state: '正常', tone: 'normal', hint: '订单够用,继续稳住好评' };
   }
   if (reputation >= 90) {
-    return { key: 'opportunity', label: '客源', state: '稳定', tone: 'normal', hint: '基础片区够跑,继续攒口碑开新区' };
+    return { key: 'opportunity', label: '订单机会', state: '正常', tone: 'normal', hint: '基础片区有单,攒口碑开新区' };
   }
-  return { key: 'opportunity', label: '客源', state: '偏冷', tone: 'warn', hint: '街坊还不熟,先攒好评再扩片区' };
+  return { key: 'opportunity', label: '订单机会', state: '偏少', tone: 'warn', hint: '口碑还低,先稳完单和服务' };
 }
 
 function getDriverWillingnessDiagnosis(driver) {
   const loyalty = driver.loyalty ?? 50;
   const bonus = driver.orderRateBonus || 1;
-  const bonusText = bonus > 1 ? `,自带人气能多带点单` : '';
+  const bonusText = bonus > 1 ? `,自带人气加成` : '';
   if (loyalty >= 80) {
-    return { key: 'willingness', label: '干劲', state: '很足', tone: 'strong', hint: `心气足,愿意多跑几单${bonusText}` };
+    return { key: 'willingness', label: '接单意愿', state: '很高', tone: 'strong', hint: `忠诚高,愿意多接单${bonusText}` };
   }
   if (loyalty >= 50) {
-    return { key: 'willingness', label: '干劲', state: '稳定', tone: 'normal', hint: `状态稳,不用急着调薪${bonusText}` };
+    return { key: 'willingness', label: '接单意愿', state: '正常', tone: 'normal', hint: `忠诚正常,不用急着调薪${bonusText}` };
   }
   if (loyalty >= 30) {
-    return { key: 'willingness', label: '干劲', state: '偏低', tone: 'warn', hint: `心气有点散,加薪或好事能拉回来${bonusText}` };
+    return { key: 'willingness', label: '接单意愿', state: '偏低', tone: 'warn', hint: `忠诚偏低,可能少接单,建议加薪${bonusText}` };
   }
-  return { key: 'willingness', label: '干劲', state: '危险', tone: 'danger', hint: '快留不住了,接单会少' };
+  return { key: 'willingness', label: '接单意愿', state: '危险', tone: 'danger', hint: '忠诚危险,少接单且有离职风险' };
 }
 
 function getOrderAbilityDiagnosis(driver, vehicleData) {
   if (!vehicleData) {
-    return { key: 'ability', label: '单型', state: '断档', tone: 'danger', hint: '还没配车,先找辆车上路' };
+    return { key: 'ability', label: '可接订单', state: '未配车', tone: 'danger', hint: '先分配车辆,司机才能出车' };
   }
   const vehicleOrders = ORDERS.filter((order) => vehicleData.eligible.includes(order.id));
   const readyOrders = vehicleOrders.filter((order) =>
@@ -305,30 +309,30 @@ function getOrderAbilityDiagnosis(driver, vehicleData) {
     const next = lockedByStats[0];
     return {
       key: 'ability',
-      label: '单型',
+      label: '可接订单',
       state: '受限',
       tone: 'warn',
       hint: next ? `${next.name}还差${getOrderMissingText(next, driver)}` : '这辆车暂时没合适的单',
     };
   }
   if (bestReady.id === 'luxury') {
-    return { key: 'ability', label: '单型', state: '全开', tone: 'strong', hint: '豪华车订单也能接' };
+    return { key: 'ability', label: '可接订单', state: getOrderShortName(bestReady), tone: 'strong', hint: '最高可跑豪华车订单' };
   }
   if (bestReady.id === 'airport') {
     return {
       key: 'ability',
-      label: '单型',
-      state: '可跑',
+      label: '可接订单',
+      state: getOrderShortName(bestReady),
       tone: 'normal',
-      hint: nextLocked ? `专车能跑,${nextLocked.name}还差${getOrderMissingText(nextLocked, driver)}` : '专车订单能跑',
+      hint: nextLocked ? `最高可跑专车,${getOrderShortName(nextLocked)}还差${getOrderMissingText(nextLocked, driver)}` : '最高可跑专车订单',
     };
   }
   return {
     key: 'ability',
-    label: '单型',
-    state: '可跑',
+    label: '可接订单',
+    state: getOrderShortName(bestReady),
     tone: 'normal',
-    hint: nextLocked ? `${bestReady.name}能跑,${nextLocked.name}还差${getOrderMissingText(nextLocked, driver)}` : `${bestReady.name}能跑`,
+    hint: nextLocked ? `最高可跑${getOrderShortName(bestReady)},${getOrderShortName(nextLocked)}还差${getOrderMissingText(nextLocked, driver)}` : `最高可跑${bestReady.name}`,
   };
 }
 
@@ -585,7 +589,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                         </div>
                       ))}
                     </div>
-                    <div className="tryrate-hint">单子少时,先看客源、干劲和单型。</div>
+                    <div className="tryrate-hint">单子少时,先看订单机会、接单意愿和可接订单。</div>
                   </>
                 );
               })()}

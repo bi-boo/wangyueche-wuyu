@@ -1424,7 +1424,7 @@
     {
       id: 'tryrate_card',
       title: '接单诊断',
-      desc: '司机档案里会多出三项状态:客源、干劲、单型。单子少时,先看是哪一项拖住了车队。',
+      desc: '司机档案里会多出三项状态:订单机会、接单意愿、可接订单。单子少时,先看是哪一项拖住了车队。',
       hint: '右侧调度台 · 司机档案',
       trigger: { type: 'mission', value: 'm5_third_crew' },
       splash: false,
