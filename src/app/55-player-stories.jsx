@@ -1,6 +1,7 @@
 function PlayerStoryModal({ story, onButton, children, className = '' }) {
   if (!story) return null;
-  const labels = story.buttons && story.buttons.length ? story.buttons : ['继续'];
+  const isOpeningStory = story.id === 'opening_layoff';
+  const labels = isOpeningStory ? ['开始游戏'] : (story.buttons && story.buttons.length ? story.buttons : ['继续']);
   const storyIdClass = story.id ? `player-story-${String(story.id).replace(/[^a-z0-9_-]/gi, '-')}` : '';
   return (
     <div className="modal-overlay player-story-overlay">

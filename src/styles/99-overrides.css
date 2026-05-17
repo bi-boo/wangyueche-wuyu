@@ -876,6 +876,11 @@
     backdrop-filter: none !important;
     background: rgba(40,25,15,0.50) !important;
   }
+  .player-story-overlay {
+    backdrop-filter: blur(9px) saturate(0.72) !important;
+    -webkit-backdrop-filter: blur(9px) saturate(0.72) !important;
+    background: rgba(28,20,14,0.76) !important;
+  }
   .modal,
   .story-modal,
   .game-feedback-card {
