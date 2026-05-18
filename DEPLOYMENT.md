@@ -47,10 +47,14 @@ https://yuanfengai.cn/didichuxing/baozheng/wycwy/网约车物语-V3.html
 
 本项目主体仍是静态游戏,但 V15.36 起新增 AI 运营复盘,线上需要一个只暴露 `/api/run-analysis` 的 Node 代理服务。静态资源仍同步到 nginx 目录,模型密钥只放服务器环境变量。
 
+V15.41 起主入口已做并发进场优化:`网约车物语-V3.html` 加载 `dist/` 里的预构建 CSS/JS 和 `vendor/` 里的 React production UMD,不再让每个玩家浏览器下载 Babel 并现场编译 `src/app/*.jsx`。部署前必须先构建入口资源。
+
 从本地项目根目录执行:
 
 ```bash
 cd "/Users/baozheng/代码文件/网约车物语"
+
+node scripts/build-entry-assets.mjs
 
 ssh nextype 'sudo mkdir -p /var/www/nextype-website/didichuxing/baozheng/wycwy && sudo chown -R ubuntu:ubuntu /var/www/nextype-website/didichuxing/baozheng/wycwy'
 
@@ -68,6 +72,7 @@ ssh nextype 'cp /var/www/nextype-website/didichuxing/baozheng/wycwy/网约车物
 说明:
 
 - `--delete` 会让线上目录严格等于本地目录。执行前确认目标目录就是本项目目录,不要指到站点根目录。
+- `dist/` 和 `vendor/` 必须上传,它们是主入口实际加载的资源。
 - `tmp/`、`archive/`、`.git/` 不上传,避免把本地临时文件和历史快照带到线上。
 - `admin.html` 会同步到线上,用于数值调参预览。若后续不想公开,部署命令里加 `--exclude='admin.html'`。
 
@@ -118,6 +123,29 @@ location /didichuxing/baozheng/wycwy/api/ {
 }
 ```
 
+静态入口资源已在 `nextype` 的 nginx server block 中加压缩和缓存:
+
+```nginx
+# WYCWY static entry optimization
+gzip on;
+gzip_vary on;
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+location ~* ^/didichuxing/baozheng/wycwy/(dist|vendor|assets)/ {
+    expires 7d;
+    add_header Cache-Control "public, max-age=604800, immutable";
+    try_files $uri =404;
+}
+
+location ~* ^/didichuxing/baozheng/wycwy/(wycwy-data|wycwy-engine)\.js$ {
+    expires 1h;
+    add_header Cache-Control "public, max-age=3600";
+    try_files $uri =404;
+}
+```
+
 前端默认请求相对路径 `api/run-analysis`,所以本地 `http://localhost:8877/网约车物语-V3.html` 和线上子目录部署都能走同一套代码。
 
 ---
@@ -127,7 +155,8 @@ location /didichuxing/baozheng/wycwy/api/ {
 ```bash
 curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/
 curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/wycwy-data.js
-curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/src/app/90-app.jsx
+curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/dist/wycwy-app.bundle.js
+curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/vendor/react-18.3.1.production.min.js
 curl -sS -X POST https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/run-analysis -H 'Content-Type: application/json' --data '{"payload":{"schemaVersion":"wycwy-ai-review-v1","gameResult":{"type":"lose"},"valueProfile":{"axes":[]},"keyDecisions":[]}}'
 curl -sS https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/leaderboard?sort=score
 ```
@@ -136,11 +165,11 @@ curl -sS https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/leaderboard?sort=s
 
 - 主页面返回 `200 OK`
 - `wycwy-data.js` 返回 `200 OK`
-- `src/app/*.jsx` 返回 `200 OK`
+- `dist/wycwy-app.bundle.js` 和 `vendor/react-18.3.1.production.min.js` 返回 `200 OK`
 - AI 复盘接口返回 `source:"ai"` 表示模型已生效;返回 `source:"local"` 表示代理可用但密钥未配置或上游临时失败,前端会展示本地简评兜底
 - 榜单接口返回 `ok:true` 和 `entries` 数组;没有人入榜时数组为空
 
-注意: nginx 可能把 `.jsx` 返回为 `application/octet-stream`,Babel standalone 通常仍能 fetch 并编译。若页面白屏,优先用浏览器控制台查 JSX 加载和 Babel 编译错误。
+注意:若页面白屏,优先检查 `dist/wycwy-app.bundle.js` 是否已由最新 `src/app/*.jsx` 构建,再看浏览器控制台错误。
 
 ---
 

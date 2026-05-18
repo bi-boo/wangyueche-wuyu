@@ -6,7 +6,6 @@
 *.pem
 
 node_modules/
-dist/
 build/
 test-results/
 __pycache__/

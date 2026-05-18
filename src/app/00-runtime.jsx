@@ -1,6 +1,5 @@
-/* 网约车物语 — runtime / helpers / hooks(V14.93 反向拆分入口文件) */
-/* HTML 是 106 行薄壳,用 <script type="text/babel" src="src/app/*.jsx"> 加载本文件及其同级文件。 */
-/* 修改本文件后直接刷新浏览器(http:// 协议) — 不需要构建步骤,Babel standalone 在浏览器内编译。 */
+/* 网约车物语 — runtime / helpers / hooks */
+/* HTML 线上入口加载 dist/wycwy-app.bundle.js;修改 src/app 后运行 scripts/build-entry-assets.mjs。 */
 const { useState, useReducer, useEffect, useRef, useMemo } = React;
 
 /* ============== 8-bit 音效引擎 ============== */
