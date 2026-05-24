@@ -1,6 +1,6 @@
 # 网约车物语 — 项目开发约定
 
-> 这份文档给 Claude Code 在迭代本项目时使用。包含项目结构、迭代规则、关键陷阱、视觉资产替换流程。
+> 这份文档给 Codex / Claude Code 在迭代本项目时使用。`AGENTS.md` 是指向本文件的软链接,项目约定只维护这一份。
 
 ---
 
@@ -13,19 +13,18 @@
 
 ---
 
-## 文件结构（V15.42 engine/styles 结构拆分后）
+## 文件结构(V15.42 engine/styles 结构拆分后)
 
 ```
 网约车物语/
 ├── 网约车物语-V3.html           主入口薄壳(只引用 dist/、vendor/、data/engine)
 ├── wycwy-data.js                游戏配置(司机/车辆/订单/任务/结局/事件)
 ├── wycwy-engine.js              游戏引擎构建产物(由 src/engine 生成,入口仍直接加载它)
-├── ark-pixel-16px.woff2         字体存档(已决策不启用,见 PRODUCT.md)
-├── zcool-qingke-huangyou.ttf    字体存档(同上)
 ├── admin.html                   数值调参后台(独立工具页)
 ├── GAME_DESIGN.md               游戏机制文档(每次改动同步更新)
-├── PRODUCT.md / DESIGN.md       impeccable 设计上下文
-├── CLAUDE.md                    本文件
+├── PRODUCT.md / DESIGN.md       品牌定位与设计系统
+├── CLAUDE.md                    项目协作约定真实文件
+├── AGENTS.md                    → CLAUDE.md 软链接
 ├── dist/                        线上入口构建产物(CSS bundle + React app bundle)
 ├── vendor/                      线上本地化 React production UMD
 ├── src/
@@ -83,9 +82,28 @@
 │   ├── generate-pixel-assets.mjs (像素资产生成)
 │   ├── smoke-server.mjs          (本地服务/API/榜单写入冒烟验证)
 │   └── sim-strategies.js         (策略模拟)
-├── assets/                      像素图素材(司机头像 / 车辆图 / 改装件)
-└── archive/                     历史版本(v1 / v2)
+└── assets/                      像素图素材(司机头像 / 车辆图 / NPC 立绘)
 ```
+
+**关键变化**:V14.93 之前 `网约车物语-V3.html` 是 2700+ 行内嵌组件的单文件;V14.93 反向拆分后所有 React/CSS 移到 `src/` 下。V15.41 起线上入口不再加载 Babel,而是加载 `dist/wycwy-styles.bundle.css` + `dist/wycwy-app.bundle.js`。V15.42 起 `wycwy-engine.js` 也成为构建产物,维护入口是 `src/engine/*.js`;修改 engine 后必须运行 `node scripts/build-engine.mjs`。
+
+---
+
+## 线上部署记录
+
+详见 `DEPLOYMENT.md`。当前 canonical 线上地址:
+
+```text
+https://yuanfengai.cn/didichuxing/baozheng/wycwy/
+```
+
+服务器 SSH 别名 `nextype`,nginx 目录:
+
+```text
+/var/www/nextype-website/didichuxing/baozheng/wycwy
+```
+
+换电脑部署前,先按 `DEPLOYMENT.md` 的「避免重复部署」命令在 `yuanfengai.cn` 上搜索 `网约车物语` / `WYCWY_DATA` / `wycwy-data.js` / `wycwy-engine.js`,避免重复占目录。
 
 ---
 
@@ -106,27 +124,36 @@
 | 加结局 | 「六、五种结局」表格 |
 | 调死亡阈值 | 「七、残酷死亡条件」 |
 | 加事件 | 「八、随机事件链」 |
-| 改车型/改装件 | 「九、车辆与改装」 |
+| 改车型/车辆素材 | 「九、车辆系统」 |
 | 改司机背景 | 「十、司机背景」 |
 | 视觉/字体改 | 「十二、UI/视觉规范」 |
 
-### 约定 2:按层修改对应文件(V15.42 结构拆分后)
+### 约定 2:按层修改对应文件
 
 - **纯数值调整**(单价、阈值、门槛、奖励金额)→ `wycwy-data.js`
 - **逻辑变化**(派单算法、死亡判定、结局判定)→ `src/engine/*.js`,再运行 `node scripts/build-engine.mjs`
-- **UI/视觉**(布局、颜色、动画)→ `src/styles/*.css` 对应章节文件
-- **React 组件**(组件逻辑)→ `src/app/*.jsx` 对应职责文件
-- **HTML 主入口**(网约车物语-V3.html)是薄壳,只放 `<link>` 和 `<script>` 引用。**绝对不要再往这里塞内嵌 style 或 babel 代码**
-- **入口构建产物**(`wycwy-engine.js` / `dist/`)由构建脚本生成,不要手改;修改 `src/engine` 后运行 `node scripts/build-engine.mjs`,修改 `src/app` 或 `src/styles` 后运行 `node scripts/build-entry-assets.mjs`。
+- **UI/视觉**(布局、颜色、动画)→ `src/styles/*.css`,再运行 `node scripts/build-entry-assets.mjs`
+- **React 组件**(组件逻辑)→ `src/app/*.jsx`,再运行 `node scripts/build-entry-assets.mjs`
+- **HTML 主入口**(`网约车物语-V3.html`)是薄壳,只放 `<link>` 和 `<script>` 引用。不要再往这里塞内嵌 style 或 Babel 代码。
+
+**重要**:`网约车物语-V3.html` 仍是实际入口,但维护入口是 `src/engine/*.js` + `src/styles/*.css` + `src/app/*.jsx`。改完按影响范围运行:
+
+```bash
+cd "/Users/baozheng/代码文件/网约车物语"
+node scripts/build-engine.mjs          # 改 src/engine 时运行
+node scripts/build-entry-assets.mjs
+```
+
+`wycwy-engine.js` 和 `dist/` 都是构建产物,不要手改。线上 HTML 使用本地 `vendor/react-18.3.1.production.min.js`、`vendor/react-dom-18.3.1.production.min.js`、`wycwy-engine.js` 和 `dist/` bundle。
 
 **判断 React 组件归哪个文件**:
 - 顶栏/KPI/速度控制/底部 HUD → `src/app/20-topbar.jsx`
 - 左栏车队卡 → `src/app/30-fleet.jsx`
-- 右栏 inspector(司机/车辆/区片详情) → `src/app/40-inspector.jsx`
-- 弹窗(教程/事件/招募/月报/故事) → `src/app/50-modals.jsx`
+- 右栏 inspector(司机/车辆/片区详情) → `src/app/40-inspector.jsx`
+- 弹窗(教程/事件/招募/月报/故事) → `src/app/50-modals.jsx` 及相邻职责文件
 - 路线图/成就墙/历史记录 → `src/app/60-roadmap.jsx`
 - 结局相关弹窗 / Toast / Confirm → `src/app/70-endings.jsx`
-- App 主组件 → `src/app/90-app.jsx`(只动这里加新 state / 新 modal 渲染)
+- App 主组件 → `src/app/90-app.jsx`
 
 **判断 CSS 归哪个文件**:看构建加载顺序(后定义覆盖前定义),按章节归到 `src/styles` 的数字前缀文件。新组件优先放对应章节文件;只有跨章节末端修正才放 `99-*` 覆盖层。
 
@@ -145,47 +172,26 @@
 
 ### 陷阱 1:线上入口不再走 Babel,改 src 后必须重建 dist
 
-**历史**:Babel 用 fetch 加载 JSX 文件,Chrome 在 file:// 下禁止跨域 fetch,所以 V11-V14.92 期间 React 组件代码全部**内嵌**在 HTML 的单一 `<script type="text/babel">` 块里。
-
-**V14.93 改造**:反向拆分到 `src/app/*.jsx`,HTML 放 `<script type="text/babel" src="...">` 引用。**前提:必须用 http:// 协议访问**,不能直接双击 file:// 打开。
-
-**V15.41 入口优化**:线上 HTML 不再加载 Babel,而是加载 `vendor/` 里的 React production UMD 和 `dist/` 里的 CSS/JS bundle。
-
-**V15.42 engine 拆分**:`wycwy-engine.js` 也改为构建产物,维护入口是 `src/engine/*.js`。修改 `src/engine/*.js` 后运行 `node scripts/build-engine.mjs`;修改 `src/app/*.jsx` 或 `src/styles/*.css` 后运行:
+**症状**:改了 `src/app/*.jsx`、`src/styles/*.css` 或 `src/engine/*.js`,本地源码看起来变了,但线上页面没变化。
+**原因**:V15.41 起 `网约车物语-V3.html` 只加载 `dist/wycwy-app.bundle.js` 和 `dist/wycwy-styles.bundle.css`;V15.42 起 `wycwy-engine.js` 也由 `src/engine` 构建生成。
+**对策**:维护 `src/` 下源文件,然后按影响范围运行:
 
 ```bash
+cd "/Users/baozheng/代码文件/网约车物语"
 node scripts/build-engine.mjs
 node scripts/build-entry-assets.mjs
 ```
 
-**本地测试方式**(替代双击 file://):
-```bash
-# 在项目根目录起一个 http server
-python3 -m http.server 8765
-# 浏览器打开 http://localhost:8765/网约车物语-V3.html
-```
+本地测试用 `python3 -m http.server 8765` 打开 `http://localhost:8765/网约车物语-V3.html`;不要再依赖 `file://` 双击。
 
-**部署方式**:先运行 `node scripts/build-engine.mjs && node scripts/build-entry-assets.mjs`,再把整个项目目录(含 dist/ vendor/ src/ wycwy-data.js wycwy-engine.js 字体 assets)上传到 Web server,玩家通过 https://yoursite.com/网约车物语-V3.html 访问。
+### 陷阱 2:不要重新启用像素字体
 
-**当前线上部署记录**:详见 `DEPLOYMENT.md`。当前 canonical 线上地址是 `https://yuanfengai.cn/didichuxing/baozheng/wycwy/`,服务器 SSH 别名 `nextype`,目录 `/var/www/nextype-website/didichuxing/baozheng/wycwy`。部署前先按 `DEPLOYMENT.md` 的「避免重复部署」命令排查旧目录。
+当前版本统一使用系统中文黑体:`PingFang SC / Hiragino Sans GB / Microsoft YaHei`。中文像素字体在 14px 主力字号下可读性差,复古感由像素 PNG、硬边框、暖黄底色和硬阴影承担。
 
-**Babel 多 script 作用域 PoC 验证**(V14.93):多个 `<script type="text/babel" src=...>` **共享全局作用域**——`function Foo() {}` 和 `const x = ...` 跨文件可见,**不需要** `Object.assign(window, ...)` 显式导出。所以 src/app/*.jsx 各文件可以直接互相调用对方定义的组件,只需保证文件名 0-9 数字前缀的加载顺序。
-
-### 陷阱 2:像素字体必须按"原生设计尺寸的整数倍"渲染
-
-**Ark Pixel 16px** 设计原生 16px,所以:
-- 16px ✅ 1× 完美
-- 24px ⚠️ 1.5× 可接受
-- 32px ✅ 2×
-- 48px ✅ 3×
-- **18/20/22/26 ❌ 子像素插值,糊**
-- **12/14 ❌ 小于原生**
-
-**全局字号阶梯严格遵守 14/18/24 三档**(虽然 14 略小于 16,但配合 `font-smoothing: none + image-rendering: pixelated` 仍清晰)。
-
-加新字号时:
-- 选 14/18/24 之一,不要新增其他尺寸
-- 必须配 `image-rendering: pixelated; -webkit-font-smoothing: none;`
+加新样式时:
+- 字号优先从 14 / 18 / 24 中选,小标签可用 11px
+- 不要重新引入 `Ark Pixel` / `ZCOOL QingKe HuangYou`
+- 不要新增根目录字体文件,除非明确要做字体回退实验
 
 ### 陷阱 3:游戏一屏化 — 禁止整页滚动
 
@@ -215,7 +221,7 @@ const URL = 'file:///Users/.../%E7%BD%91%E7%BA%A6%E8%BD%A6%E7%89%A9%E8%AF%AD-V3.
 ### 陷阱 5:Playwright 跑测试要从 skill 目录
 
 ```bash
-cd /Users/baozheng/.claude/plugins/cache/playwright-skill/playwright-skill/4.1.0/skills/playwright-skill
+cd /Users/baozheng/.Codex/plugins/cache/playwright-skill/playwright-skill/4.1.0/skills/playwright-skill
 node run.js /tmp/test.js
 ```
 
@@ -236,10 +242,10 @@ node run.js /tmp/test.js
 - `avatar-headset` 网红
 
 ### 车辆图标
-搜 `data-asset="vehicle-santana"` 等 5 种:
-- `vehicle-santana` `vehicle-camry` `vehicle-han_ev` `vehicle-odyssey` `vehicle-benz_e`
+搜 `data-asset="vehicle-taxi"` 等 4 种:
+- `vehicle-taxi` `vehicle-didi_d1` `vehicle-camry` `vehicle-benz_e`
 
-### 改装件 / 订单 / 时钟 / 成就
+### 订单 / 时钟 / 成就反馈
 都是 `data-asset="..."` 标记。grep 一下能看到所有可替换位置。
 
 替换时同步更新 `GAME_DESIGN.md` 的「十二、UI/视觉规范」章节。
@@ -282,7 +288,7 @@ for (const vp of [{w:1280,h:720}, {w:1440,h:900}, {w:1920,h:1080}]) {
 
 ---
 
-## 给未来 Claude 的速查清单
+## 给未来 Codex / Claude Code 的速查清单
 
 接到本项目任务时,首先:
 
@@ -292,10 +298,10 @@ for (const vp of [{w:1280,h:720}, {w:1440,h:900}, {w:1920,h:1080}]) {
 4. 改动前判断:
    - 是数值调整?改 `wycwy-data.js`
    - 是逻辑变化?改 `src/engine/*.js`,再运行 `node scripts/build-engine.mjs`
-   - 是 UI?改 HTML 的 style + babel 块
-   - 是组件结构?改 HTML babel 块(也可同步 wycwy-app.js)
+   - 是 UI?改 `src/styles/*.css`,再运行 `node scripts/build-entry-assets.mjs`
+   - 是组件结构?改 `src/app/*.jsx`,再运行 `node scripts/build-entry-assets.mjs`
 5. 改完后:
    - 更新 `GAME_DESIGN.md`
    - Playwright 验证
    - Chrome 打开看实物
-6. **每次重大改版**做新版本号(V4/V5/V6),旧版本归档到 `archive/`
+6. **每次重大改版**做新版本号;如确需保留历史快照,先明确创建/更新 `archive/`,不要默认生成散落副本
