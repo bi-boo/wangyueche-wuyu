@@ -1,6 +1,6 @@
 {
   "buildMode": "reproducible",
-  "inputHash": "58f7d3964cbe90fba4a06b73e5e97a0dde6efeb1c57361c9ce9b53a714cc5e3f",
+  "inputHash": "9c3a8d35a152f8fc0d120a6e3b1dfa32d19e7888e0a224c523f590db4bbfc0e7",
   "esbuildVersion": "0.28.0",
   "inputs": {
     "styles": [
@@ -8,14 +8,23 @@
       "src/styles/10-base.css",
       "src/styles/20-topbar.css",
       "src/styles/30-modals.css",
+      "src/styles/32-shop-coach-notifications.css",
       "src/styles/35-ai-review.css",
       "src/styles/40-tasks-list.css",
       "src/styles/50-feedback.css",
       "src/styles/60-inspector.css",
+      "src/styles/62-inspector-zones.css",
+      "src/styles/64-inspector-crew-training.css",
       "src/styles/70-pixel-flytext.css",
       "src/styles/80-map-hud.css",
+      "src/styles/82-roadmap-history.css",
+      "src/styles/84-fleet-cards.css",
+      "src/styles/86-monthly-investor.css",
       "src/styles/90-toggles-recruit.css",
-      "src/styles/99-overrides.css"
+      "src/styles/99-00-overrides-base.css",
+      "src/styles/99-10-compact-layout.css",
+      "src/styles/99-20-interactions-modals.css",
+      "src/styles/99-30-policy-overrides.css"
     ],
     "app": [
       "src/app/00-runtime.jsx",

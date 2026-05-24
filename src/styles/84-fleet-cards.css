@@ -1,0 +1,264 @@
+  /* V14.9: .fleet-tabs 系列已删除 — V14.2 删 crews/pending 两 tab 后无 DOM 命中 */
+  .fleet-list {
+    padding-right: 6px;
+  }  .fleet-action-row.warn .fleet-action-dot { background: var(--gold); }
+  .fleet-action-row.danger .fleet-action-dot { background: var(--warn); }  .fleet-focus-card.vehicle {
+    background: linear-gradient(180deg, #FFF8E7, var(--green-soft));
+  }  .crew-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
+    min-height: 90px;
+    padding: 10px;
+  }
+  .crew-card .cc-info {
+    min-width: 0;
+  }
+  .crew-stack {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+  }
+  .crew-entity {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .crew-entity.crew-person {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+  .crew-entity.crew-vehicle {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .crew-inspector .crew-entity.crew-vehicle {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+  .crew-entity.crew-person.empty {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+  .crew-entity.crew-vehicle .ph-vehicle {
+    justify-self: center;
+  }
+  .crew-entity.empty {
+    color: var(--ink-3);
+  }
+  .crew-entity-copy {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+  }
+  .crew-entity-copy strong,
+  .crew-entity-copy span {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .crew-entity-copy strong {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.15;
+  }
+  .crew-entity-copy span {
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .crew-entity.crew-vehicle .crew-entity-copy span {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+  .vehicle-order-copy {
+    align-self: center;
+    overflow: visible;
+  }
+  .crew-order-summary {
+    display: inline-block;
+    max-width: none;
+    overflow: visible;
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+  .crew-entity.empty .crew-entity-copy strong,
+  .crew-entity.crew-vehicle.empty .crew-entity-copy strong {
+    color: var(--ink-3);
+  }  .crew-pair-icons .ph-vehicle {
+    justify-self: end;
+  }
+  .crew-no-vehicle,
+  .crew-empty-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 24px;
+    background: rgba(255,255,255,0.68);
+    border: 2px dashed var(--border-soft);
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .crew-empty-avatar {
+    width: 48px;
+    height: 48px;
+  }  .crew-side {
+    display: grid;
+    justify-items: end;
+    align-content: start;
+    gap: 5px;
+    min-width: 70px;
+  }
+  .crew-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 18px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .crew-status-pill.idle { color: var(--ink-2); }
+  .crew-status-pill.driving { color: var(--green); }
+  .crew-status-pill.tired { color: var(--warn); }
+  .crew-status-pill.empty { color: var(--accent-deep); }
+  .crew-status-pill .cc-status-light {
+    display: inline-block;
+  }
+  .crew-loyalty-mini {
+    display: inline-flex;
+    align-items: center;
+    min-height: 18px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .crew-loyalty-mini.warn,
+  .crew-loyalty-mini.danger {
+    color: var(--warn);
+  }
+  .crew-loyalty-mini.good {
+    color: var(--green);
+  }
+  /* V15.16:调薪入口移到右侧 inspector 「能力训练」忠诚行,复用 .driver-attr-action 样式 */
+
+  /* V15.16:调薪弹窗内部样式 */
+  .salary-raise-modal .salary-raise-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 18px 0 10px;
+  }
+  .salary-raise-modal .salary-raise-slider {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+  .salary-raise-modal .salary-raise-pct {
+    min-width: 60px;
+    text-align: right;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--ink);
+  }
+  .salary-raise-modal .salary-raise-pct.negative { color: var(--warn); }
+  .salary-raise-modal .salary-raise-pct.positive { color: var(--accent-deep); }
+  .salary-raise-modal .salary-raise-preview {
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+    padding: 12px 14px;
+    border-radius: 3px;
+    display: grid;
+    gap: 8px;
+  }
+  .salary-raise-modal .salary-raise-row {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 14px;
+  }
+  .salary-raise-modal .salary-raise-row > span {
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .salary-raise-modal .salary-raise-row > strong {
+    color: var(--ink);
+    font-weight: 900;
+  }
+  .salary-raise-modal .salary-raise-row > em {
+    font-style: normal;
+    font-size: 13px;
+  }
+  .salary-raise-modal .salary-raise-row strong.negative,
+  .salary-raise-modal .salary-raise-row em.negative { color: var(--warn); }
+  .salary-raise-modal .salary-raise-row strong.positive,
+  .salary-raise-modal .salary-raise-row em.positive { color: var(--green); }
+  .salary-raise-modal .salary-raise-hint {
+    margin-top: 2px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+  .salary-raise-modal .salary-raise-hint.negative { color: var(--warn); }
+  .salary-raise-modal .salary-raise-hint.positive { color: var(--accent-deep); }
+
+  .stat-bar-track {
+    position: relative;
+  }
+  .stat-cap-marker {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    background: var(--ink);
+    opacity: 0.55;
+    transform: translateX(-1px);
+  }
+  .stat-bar-row.with-cap .stat-bar-num {
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .city-panel {
+    flex: 1;
+  }
+  .city-wrap {
+    min-height: 300px;
+    border: 2px solid var(--ink) !important;
+    border-left: none !important;
+    border-right: none !important;
+    background:
+      linear-gradient(135deg, rgba(255,248,231,0.90), rgba(240,226,188,0.92)),
+      var(--bg) !important;
+  }
+  .district polygon,
+  .district circle {
+    stroke: var(--ink);
+    stroke-width: 0.65;
+  }
+  .district.unlocked polygon {
+    filter: drop-shadow(1px 1px 0 rgba(42,35,32,0.18));
+  }

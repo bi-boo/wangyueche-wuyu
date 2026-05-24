@@ -1,0 +1,734 @@
+  /* V14.7 战争迷雾下不再用虚线 stroke;此规则保留为空避免影响其他选择器优先级 */
+  .city-car {
+    animation: carBob 2.2s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  @keyframes carBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-0.28px); }
+  }  .event-modal {
+    max-width: 660px;
+  }
+  .chain-event-modal {
+    max-width: 800px;
+    padding: 18px 18px 20px;
+    overflow: visible;
+  }
+  .event-modal-header {
+    margin-bottom: 12px;
+  }
+  .event-modal-header .modal-desc {
+    margin-bottom: 0;
+    white-space: pre-line;
+  }
+  .event-dialog-shell {
+    display: grid;
+    grid-template-columns: 208px minmax(0, 1fr);
+    align-items: end;
+    min-height: 222px;
+    margin: -78px 0 0 -42px;
+  }
+  .event-npc-frame {
+    position: relative;
+    grid-column: 1;
+    align-self: end;
+    z-index: 3;
+    width: 248px;
+    height: 286px;
+    margin: 0 -18px -4px 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .event-npc-frame::before {
+    content: "";
+    position: absolute;
+    left: 48px;
+    right: 34px;
+    bottom: 8px;
+    height: 22px;
+    background: rgba(42,35,32,0.22);
+    border-radius: 50%;
+    filter: blur(1px);
+  }
+  .event-npc-frame img {
+    position: absolute;
+    left: -8px;
+    bottom: 0;
+    z-index: 1;
+    width: 292px;
+    height: 292px;
+    object-fit: contain;
+    object-position: center bottom;
+    filter: drop-shadow(4px 4px 0 rgba(42,35,32,0.24));
+    image-rendering: pixelated;
+  }
+  .event-dialog-card {
+    position: relative;
+    grid-column: 2;
+    align-self: start;
+    z-index: 1;
+    min-height: 126px;
+    margin-top: 78px;
+    padding: 14px 16px 16px;
+    background: #FFF8E7;
+    border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.24);
+  }
+  .event-dialog-card::before {
+    content: none;
+  }
+  .event-dialog-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .chain-tag {
+    margin-bottom: 0;
+    background: var(--ink);
+    color: var(--gold);
+    border: 1px solid var(--ink);
+  }
+  .event-npc-name {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 2px 8px;
+    background: var(--gold);
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.24);
+  }
+  .chain-event-borrow .event-npc-frame {
+    transform: translateY(-2px);
+  }
+  .chain-event-platform .event-npc-frame,
+  .chain-event-accident .event-npc-frame {
+    transform: translateY(0);
+  }
+  .chain-event-rival .event-npc-frame {
+    transform: translateY(-1px);
+  }
+  .event-resource-snapshot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 0;
+    margin: 12px 0 16px;
+    padding: 7px 10px;
+    background: rgba(255,248,231,0.34);
+    border-top: 1px dashed rgba(42,35,32,0.22);
+    border-bottom: 1px dashed rgba(42,35,32,0.22);
+  }
+  .event-resource-snapshot > div {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    padding: 0 12px;
+    border-right: 1px solid rgba(42,35,32,0.16);
+  }
+  .event-resource-snapshot > div:first-child {
+    padding-left: 0;
+  }
+  .event-resource-snapshot > div:last-child {
+    padding-right: 0;
+    border-right: none;
+  }
+  .event-resource-snapshot span {
+    display: block;
+    font-size: 14px;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .event-resource-snapshot strong {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 18px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .event-resource-snapshot strong.danger {
+    color: var(--warn);
+  }
+  .event-modal .modal-options,
+  .debt-crisis-modal .modal-options {
+    gap: 10px;
+  }
+  .event-modal .modal-option,
+  .debt-crisis-modal .modal-option {
+    position: relative;
+    cursor: pointer;
+    border: 2px solid var(--ink) !important;
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.28) !important;
+    padding: 13px 14px;
+  }
+  .event-modal .modal-option {
+    background: #FFF8E7 !important;
+  }
+  /* V15.16 audit:删除右上角"选择"伪元素角标 — 整张卡片本身已是 button,角标冗余 */
+  .event-modal .modal-option:hover,
+  .event-modal .modal-option:focus-visible,
+  .debt-crisis-modal .modal-option:hover,
+  .debt-crisis-modal .modal-option:focus-visible {
+    border-color: var(--accent-deep) !important;
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.36) !important;
+    outline: none;
+    transform: translateY(-1px);
+  }
+  .event-modal .modal-option:hover,
+  .event-modal .modal-option:focus-visible {
+    background: #FFF8E7 !important;
+  }
+  @media (max-width: 760px) {
+    .chain-event-modal {
+      padding: 14px;
+    }
+    .event-dialog-shell {
+      grid-template-columns: 108px minmax(0, 1fr);
+      min-height: 138px;
+      margin: -34px 0 0 -8px;
+    }
+    .event-npc-frame {
+      width: 116px;
+      height: 150px;
+      margin: 0 -8px -3px 0;
+    }
+    .event-npc-frame img {
+      left: -4px;
+      width: 142px;
+      height: 142px;
+    }
+    .event-dialog-card {
+      min-height: 104px;
+      margin-top: 42px;
+      padding: 10px 11px 12px 12px;
+      border-width: 2px;
+    }
+  }
+  /* V14: 月度结算弹窗 */
+  .monthly-report-modal {
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .monthly-day-tag {
+    margin-left: 12px;
+    font-size: 14px;
+    color: var(--ink-3);
+    font-weight: normal;
+  }
+  .monthly-section {
+    margin: 14px 0;
+    padding: 12px 14px;
+    background: #FFF8E7;
+    border: 2px solid var(--ink-1);
+  }
+  .monthly-section-title {
+    font-size: 14px;
+    color: var(--ink-3);
+    margin-bottom: 8px;
+    font-weight: 700;
+    border-bottom: 1px dashed var(--ink-1);
+    padding-bottom: 6px;
+  }
+  .monthly-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0;
+    font-size: 14px;
+  }
+  .monthly-row strong { font-size: 14px; }
+  .monthly-row.danger { color: var(--warn); }
+  .monthly-row.positive { color: var(--green); }
+  .monthly-row.monthly-subtotal {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ink-1);
+    font-weight: 700;
+  }
+  .monthly-empty-row {
+    color: var(--ink-3);
+    font-size: 14px;
+    padding: 4px 0;
+  }
+  .monthly-event-section {
+    background: #FFF3D7;
+  }
+  .monthly-event-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .monthly-event-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 9px;
+    background: rgba(255,255,255,0.62);
+    border: 1px dashed rgba(42,35,32,0.22);
+  }
+  .monthly-event-copy {
+    min-width: 0;
+  }
+  .monthly-event-copy strong {
+    display: block;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.25;
+  }
+  .monthly-event-copy span {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .monthly-event-copy .monthly-event-detail {
+    white-space: normal;
+  }
+  .monthly-event-item em {
+    font-style: normal;
+    font-weight: 800;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .monthly-event-item.positive em { color: var(--green); }
+  .monthly-event-item.danger em { color: var(--warn); }
+  /* V15.16 audit:当月净利润改为「总结句」样式,不再像 button */
+  .monthly-net-profit {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 14px 0 8px;
+    padding: 12px 16px;
+    background: transparent;
+    border-top: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    box-shadow: none;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+  }
+  .monthly-net-profit.positive strong { color: var(--green); }
+  .monthly-net-profit.danger strong { color: var(--warn); }
+  .monthly-net-profit strong { font-size: 28px; font-weight: 900; }
+  .monthly-section-hint {
+    font-size: 11px;
+    font-style: normal;
+    color: var(--ink-3);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .monthly-driver-list { display: flex; flex-direction: column; gap: 6px; }
+  .monthly-driver-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    background: #FFF8E7;
+    border: 1px solid var(--ink-1);
+  }
+  .monthly-driver-row.negative { background: rgba(228,62,53,0.08); }
+  .monthly-driver-row.left-team { opacity: 0.55; background: #F5F0E8; }
+  .monthly-driver-rank {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ink); color: var(--accent);
+    font-weight: 700; font-size: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .monthly-driver-body { flex: 1; min-width: 0; }
+  .monthly-driver-name { font-weight: 700; font-size: 14px; }
+  .monthly-driver-name em { color: var(--ink-3); font-style: normal; font-size: 11px; margin-left: 4px; }
+  .monthly-left-tag {
+    margin-left: 6px; font-size: 11px; padding: 1px 6px;
+    background: var(--ink-3); color: #FFF8E7; border-radius: 3px;
+  }
+  .monthly-driver-stats { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .monthly-driver-contrib {
+    font-size: 14px; font-weight: 700;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .monthly-driver-contrib.danger { color: var(--warn); }
+  .monthly-driver-contrib.positive { color: var(--green); }
+  .monthly-warn-tag {
+    display: block; font-size: 11px; font-weight: normal;
+    margin-top: 2px;
+  }
+  .monthly-final-state .monthly-final-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    text-align: center;
+  }
+  .monthly-final-grid > div { padding: 6px; }
+  .monthly-final-grid span { display: block; font-size: 11px; color: var(--ink-3); }
+  .monthly-final-grid strong { display: block; font-size: 18px; margin-top: 2px; }
+  /* V15.16 audit:继续运营按钮强化 — 区分于上方「当月净利润」总结句 */
+  .monthly-continue {
+    width: 100%; margin-top: 16px;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+  }
+  /* V14: 投资人多选弹窗 */
+  .investor-choices {
+    display: flex; flex-direction: column; gap: 10px;
+    margin: 16px 0;
+  }
+  .investor-choice {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px; border: 2px solid var(--ink-1);
+    background: #FFF8E7; cursor: pointer; user-select: none;
+  }
+  .investor-choice:hover { background: #FFF8E0; }
+  .investor-choice input[type="checkbox"] { margin-top: 4px; transform: scale(1.3); }
+  .investor-choice.disabled { opacity: 0.45; cursor: not-allowed; }
+  .investor-choice-body { flex: 1; }
+  .investor-choice-label { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .investor-choice-detail { font-size: 14px; color: var(--ink-3); }
+  .investor-actions {
+    display: flex; flex-direction: column; align-items: stretch; gap: 10px;
+    margin-top: 8px;
+  }
+  .investor-actions .btn { padding: 12px; font-size: 14px; }
+  .investor-hold-note {
+    margin-top: -4px;
+    padding: 0 4px;
+    color: var(--ink-3);
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: center;
+  }
+  .investor-hold-note strong {
+    color: var(--warn);
+  }
+  .investor-divider {
+    text-align: center; color: var(--ink-3); font-size: 11px;
+    position: relative; padding: 4px 0;
+  }
+  .investor-divider::before, .investor-divider::after {
+    content: ''; position: absolute; top: 50%;
+    width: 40%; height: 1px; background: var(--ink-1); opacity: 0.3;
+  }
+  .investor-divider::before { left: 0; }
+  .investor-divider::after { right: 0; }
+  .event-effect-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .event-effect-preview span {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid var(--hairline);
+    padding: 2px 6px;
+    font-size: 14px;
+    color: var(--ink-3);
+  }
+  .event-effect-preview .positive {
+    color: var(--green);
+    border-color: rgba(95,173,65,0.35);
+  }
+  .event-effect-preview .negative {
+    color: var(--warn);
+    border-color: rgba(232,69,69,0.35);
+  }
+  .game-feedback-stack {
+    width: min(460px, calc(100vw - 36px));
+  }
+
+  @media (max-width: 1180px) {
+    .main-v3 {
+      grid-template-columns: 260px minmax(360px, 1fr) 320px;
+      gap: 10px;
+      padding: 10px;
+    }
+    .topbar {
+      grid-template-columns: minmax(145px, 1fr) minmax(520px, 620px) minmax(120px, 1fr);
+    }
+    .topbar-kpis {
+      grid-template-columns: minmax(130px, 1.15fr) repeat(3, minmax(100px, 1fr));
+      max-width: 620px;
+    }
+    .topbar-stat {
+      padding: 4px 6px;
+    }
+    .bottom-hud {
+      min-height: 58px;
+    }
+    .hud-controls {
+      justify-content: space-between;
+    }
+    .inspector-col {
+      display: flex;
+    }  }
+
+  @media (max-width: 760px) {
+    html, body {
+      overflow: hidden;
+      height: 100%;
+    }
+    body {
+      height: 100vh;
+      min-height: 0;
+    }
+    #root {
+      height: 100vh;
+      min-height: 0;
+    }
+    .shop-modal {
+      max-width: 520px;
+    }
+    .shop-grid {
+      grid-template-columns: 1fr;
+    }
+    .shop-orders {
+      min-height: 0;
+    }
+    .topbar {
+      display: flex;
+      position: static;
+      height: 96px !important;
+      min-height: 96px;
+      flex-wrap: wrap;
+      align-items: center;
+      align-content: center;
+      gap: 6px;
+      padding: 6px 8px;
+      overflow: hidden;
+    }
+    .topbar h1 {
+      font-size: 14px !important;
+      max-width: 116px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .topbar h1 .v {
+      display: none;
+    }
+    .topbar-left {
+      flex: 1 0 100%;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+      padding-right: 70px;
+    }    .topbar-stats {
+      position: relative;
+      width: 100%;
+      flex: 1 0 100%;
+      margin-left: 0;
+      flex-wrap: nowrap;
+      gap: 0;
+      min-width: 0;
+    }
+    .topbar-kpis {
+      width: 100%;
+      max-width: none;
+      flex: 1 1 auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+    }
+    .topbar-stat {
+      padding: 3px 5px;
+      min-width: 0;
+    }
+    .topbar-stat .ts-label,
+    .topbar-stat .ts-sub {
+      font-size: 11px !important;
+      line-height: 1 !important;
+    }
+    .topbar-stat .ts-value {
+      font-size: 14px !important;
+      line-height: 1.05;
+    }
+    .topbar-settings {
+      position: absolute;
+      right: 0;
+      top: -35px;
+      gap: 4px;
+    }
+    .main-v3 {
+      display: block;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      padding: 8px;
+    }
+    .fleet-col,
+    .ops-col,
+    .inspector-col {
+      display: none;
+      height: 100%;
+      min-height: 0;
+    }
+    .main-v3.mobile-fleet .fleet-col,
+    .main-v3.mobile-city .ops-col,
+    .main-v3.mobile-inspector .inspector-col {
+      display: flex;
+    }
+    .panel-tight {
+      min-height: 0;
+    }
+    .fleet-panel .mission-bar {
+      grid-template-columns: 1fr;
+      gap: 6px;
+      padding: 8px;
+    }
+    .fleet-panel .mb-tag {
+      width: fit-content;
+    }
+    .fleet-panel .mb-title {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+    }
+    .fleet-panel .mb-hint {
+      -webkit-line-clamp: 3;
+    }    .fleet-panel-header {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .fleet-actions {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .fleet-actions .btn {
+      width: 100%;
+    }    .city-panel {
+      min-height: 0;
+      flex: 1;
+    }
+    .inspector-col {
+      min-height: 0;
+    }    .bottom-hud {
+      position: static;
+      margin: 0 8px 6px;
+      flex-shrink: 0;
+      z-index: 74;
+      min-height: 54px;
+      display: flex;
+      padding: 6px;
+      border: 2px solid var(--ink);
+      box-shadow: 3px 3px 0 rgba(42,35,32,0.35);
+    }    .hud-controls {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      width: 100%;
+    }
+    .hud-log-btn {
+      display: none;
+    }
+    .speed-controls {
+      flex: 1;
+      justify-content: space-between;
+    }
+    .run-control-group {
+      width: 100%;
+      gap: 6px;
+      flex: 1;
+    }
+    .speed-btn {
+      flex: 1;
+      padding: 6px 4px;
+    }
+    .mobile-tabs {
+      position: static;
+      margin: 0 8px 8px;
+      flex-shrink: 0;
+      z-index: 75;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: rgba(255,248,231,0.96);
+      border: 2px solid var(--ink);
+      box-shadow: 3px 3px 0 rgba(42,35,32,0.35);
+      padding: 6px;
+    }
+    .mobile-tabs button {
+      min-height: 44px;
+      background: var(--sub);
+      border: 2px solid var(--border-soft);
+      font-weight: 800;
+      font-size: 14px;
+    }
+    .mobile-tabs button.active {
+      background: var(--gold);
+      border-color: var(--ink);
+      box-shadow: 2px 2px 0 var(--accent-deep);
+    }
+    .event-resource-snapshot {
+      gap: 6px 0;
+    }
+    .event-resource-snapshot > div {
+      flex: 1 1 48%;
+      padding: 0 8px;
+    }
+    .event-resource-snapshot > div:nth-child(2n) {
+      border-right: none;
+    }
+    .game-feedback-stack {
+      top: 56px;
+      right: 8px;
+      width: calc(100vw - 16px);
+    }
+    .game-feedback-card {
+      grid-template-columns: 42px minmax(0, 1fr);
+      padding: 10px;
+      gap: 10px;
+    }
+    .mission-feedback {
+      grid-template-columns: 42px minmax(0, 1fr);
+      padding: 14px 16px;
+    }
+    .game-feedback-icon {
+      width: 42px;
+      height: 42px;
+    }
+    .game-feedback-card.modal-card {
+      grid-template-columns: 60px minmax(0, 1fr);
+      padding: 14px;
+    }
+    .ticket-list {
+      grid-template-columns: 1fr;
+      overflow-x: visible;
+      padding-bottom: 0;
+    }
+    .gacha-grid {
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .gacha-card {
+      grid-template-columns: 76px 1fr;
+      gap: 8px;
+      padding: 9px 10px;
+    }
+    .gacha-id-block {
+      grid-row: span 2;
+      align-self: start;
+    }
+    .gacha-stats-block,
+    .gacha-card .btn {
+      grid-column: 1 / -1;
+    }
+    .gacha-card .btn {
+      min-height: 40px;
+    }
+    .gacha-rarity {
+      font-size: 14px;
+      white-space: normal;
+      line-height: 1.2;
+    }
+  }
