@@ -75,7 +75,7 @@ ssh nextype 'cp /var/www/nextype-website/didichuxing/baozheng/wycwy/网约车物
 
 - `--delete` 会让线上目录严格等于本地目录。执行前确认目标目录就是本项目目录,不要指到站点根目录。
 - `dist/` 和 `vendor/` 必须上传,它们是主入口实际加载的资源。
-- `node scripts/smoke-server.mjs` 会用临时榜单文件启动本地服务,检查主入口、API 精确路由、路径逃逸、AI 超时兜底、榜单并发写入、重复提交和异常局跳榜。
+- `node scripts/smoke-server.mjs` 会用临时榜单和 telemetry 文件启动本地服务,检查主入口、API 精确路由、路径逃逸、AI 超时兜底、榜单并发写入、重复提交、异常局跳榜和玩家经营日志写入。
 - `tmp/`、`archive/`、`.git/` 不上传,避免把本地临时文件和历史快照带到线上。
 - `admin.html` 会同步到线上,用于数值调参预览。若后续不想公开,部署命令里加 `--exclude='admin.html'`。
 
@@ -107,10 +107,19 @@ WYCWY_AI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3/responses
 /home/ubuntu/.local/share/wycwy/leaderboard.jsonl
 ```
 
+玩家经营日志默认写入同一数据目录:
+
+```text
+/home/ubuntu/.local/share/wycwy/telemetry-events.jsonl
+/home/ubuntu/.local/share/wycwy/telemetry-sessions.jsonl
+```
+
 如果要迁移位置,在 `/etc/wycwy-ai-review.env` 增加:
 
 ```bash
 WYCWY_LEADERBOARD_FILE=/path/to/leaderboard.jsonl
+WYCWY_TELEMETRY_EVENTS_FILE=/path/to/telemetry-events.jsonl
+WYCWY_TELEMETRY_SESSIONS_FILE=/path/to/telemetry-sessions.jsonl
 ```
 
 nginx 只需要把子路径 API 反代给本机 Node:
@@ -162,6 +171,7 @@ curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/dist/w
 curl -I -L --max-time 15 https://yuanfengai.cn/didichuxing/baozheng/wycwy/vendor/react-18.3.1.production.min.js
 curl -sS -X POST https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/run-analysis -H 'Content-Type: application/json' --data '{"payload":{"schemaVersion":"wycwy-ai-review-v1","gameResult":{"type":"lose"},"valueProfile":{"axes":[]},"keyDecisions":[]}}'
 curl -sS https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/leaderboard?sort=score
+curl -sS -X POST https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/telemetry/batch -H 'Content-Type: application/json' --data '{"events":[{"schemaVersion":"wycwy-telemetry-v1","eventId":"verify-1","eventType":"verify","eventName":"deploy_check","createdAt":"2026-05-24T00:00:00.000Z","clientId":"deploy-client","sessionId":"deploy-session","runId":"deploy-run","game":{"day":1},"payload":{"source":"curl"}}]}'
 ```
 
 期望:
@@ -171,6 +181,7 @@ curl -sS https://yuanfengai.cn/didichuxing/baozheng/wycwy/api/leaderboard?sort=s
 - `dist/wycwy-app.bundle.js` 和 `vendor/react-18.3.1.production.min.js` 返回 `200 OK`
 - AI 复盘接口返回 `source:"ai"` 表示模型已生效;返回 `source:"local"` 表示代理可用但密钥未配置或上游临时失败,前端会展示本地简评兜底
 - 榜单接口返回 `ok:true` 和 `entries` 数组;没有人入榜时数组为空
+- telemetry 接口返回 `ok:true` 和 `stored:1`;随后可在服务器数据目录看到 JSONL 追加记录
 
 注意:若页面白屏,优先检查 `dist/wycwy-app.bundle.js` 是否已由最新 `src/app/*.jsx` 构建,再看浏览器控制台错误。
 

@@ -1,6 +1,6 @@
 {
   "buildMode": "reproducible",
-  "inputHash": "9c3a8d35a152f8fc0d120a6e3b1dfa32d19e7888e0a224c523f590db4bbfc0e7",
+  "inputHash": "524ccb9cb42015980b7e42488d2fb7754372ff869028cc3b663dbf8ef27a03b5",
   "esbuildVersion": "0.28.0",
   "inputs": {
     "styles": [
@@ -29,6 +29,7 @@
     "app": [
       "src/app/00-runtime.jsx",
       "src/app/10-icons.jsx",
+      "src/app/17-telemetry.jsx",
       "src/app/18-run-records.jsx",
       "src/app/20-topbar.jsx",
       "src/app/30-fleet.jsx",
@@ -53,7 +54,7 @@
     },
     "app": {
       "file": "dist/wycwy-app.bundle.js",
-      "bytes": 153243
+      "bytes": 161434
     }
   }
 }

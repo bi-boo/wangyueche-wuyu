@@ -13,9 +13,15 @@ const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const DEFAULT_HTML = '网约车物语-V3.html';
 const LEADERBOARD_FILE = process.env.WYCWY_LEADERBOARD_FILE
   || path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'wycwy', 'leaderboard.jsonl');
+const TELEMETRY_EVENTS_FILE = process.env.WYCWY_TELEMETRY_EVENTS_FILE
+  || path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'wycwy', 'telemetry-events.jsonl');
+const TELEMETRY_SESSIONS_FILE = process.env.WYCWY_TELEMETRY_SESSIONS_FILE
+  || path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'wycwy', 'telemetry-sessions.jsonl');
 const MAX_LEADERBOARD_ROWS = Number(process.env.WYCWY_LEADERBOARD_MAX_ROWS || 5000);
 const DEFAULT_LEADERBOARD_LIMIT = 100;
+const MAX_TELEMETRY_BATCH_EVENTS = Number(process.env.WYCWY_TELEMETRY_MAX_BATCH_EVENTS || 200);
 let leaderboardWriteQueue = Promise.resolve();
+let telemetryWriteQueue = Promise.resolve();
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -132,6 +138,25 @@ function clampText(value, maxLength = 80) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, maxLength);
+}
+
+function compactJsonValue(value, depth = 0) {
+  if (depth >= 8) return '[depth-limit]';
+  if (value === null || value === undefined) return value;
+  const type = typeof value;
+  if (type === 'string') return value.slice(0, 4000);
+  if (type === 'number') return Number.isFinite(value) ? value : null;
+  if (type === 'boolean') return value;
+  if (Array.isArray(value)) {
+    return value.slice(0, 400).map((item) => compactJsonValue(item, depth + 1));
+  }
+  if (type === 'object') {
+    return Object.entries(value).slice(0, 180).reduce((acc, [key, item]) => {
+      acc[String(key).slice(0, 120)] = compactJsonValue(item, depth + 1);
+      return acc;
+    }, {});
+  }
+  return String(value).slice(0, 4000);
 }
 
 function toFiniteNumber(value, fallback = 0) {
@@ -389,6 +414,65 @@ function withLeaderboardWriteLock(task) {
   const run = leaderboardWriteQueue.then(task, task);
   leaderboardWriteQueue = run.catch(() => {});
   return run;
+}
+
+function withTelemetryWriteLock(task) {
+  const run = telemetryWriteQueue.then(task, task);
+  telemetryWriteQueue = run.catch(() => {});
+  return run;
+}
+
+async function appendJsonLines(file, rows) {
+  if (!rows.length) return;
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.appendFile(file, `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`, 'utf8');
+}
+
+function normalizeTelemetryEvent(input = {}, receivedAt = new Date().toISOString()) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const clientId = clampText(input.clientId, 120);
+  const sessionId = clampText(input.sessionId, 120);
+  const runId = clampText(input.runId, 160);
+  if (!clientId || !sessionId || !runId) return null;
+  return {
+    receivedAt,
+    schemaVersion: clampText(input.schemaVersion || 'wycwy-telemetry-v1', 40),
+    eventId: clampText(input.eventId || randomUUID(), 160),
+    eventType: clampText(input.eventType || 'event', 40),
+    eventName: clampText(input.eventName || 'unknown', 120),
+    createdAt: clampText(input.createdAt || receivedAt, 60),
+    clientId,
+    sessionId,
+    runId,
+    app: compactJsonValue(input.app || {}),
+    page: compactJsonValue(input.page || {}),
+    game: compactJsonValue(input.game || {}),
+    payload: compactJsonValue(input.payload || {}),
+  };
+}
+
+function normalizeTelemetrySession(input = {}, receivedAt = new Date().toISOString()) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const clientId = clampText(input.clientId, 120);
+  const sessionId = clampText(input.sessionId, 120);
+  const runId = clampText(input.runId, 160);
+  if (!clientId || !sessionId || !runId) return null;
+  return {
+    receivedAt,
+    schemaVersion: clampText(input.schemaVersion || 'wycwy-telemetry-v1', 40),
+    reason: clampText(input.reason || 'session_end', 80),
+    createdAt: clampText(input.createdAt || receivedAt, 60),
+    clientId,
+    sessionId,
+    runId,
+    app: compactJsonValue(input.app || {}),
+    page: compactJsonValue(input.page || {}),
+    game: compactJsonValue(input.game || {}),
+    actionHistory: compactJsonValue(input.actionHistory || []),
+    decisionHistory: compactJsonValue(input.decisionHistory || []),
+    diagnosticsLatest: compactJsonValue(input.diagnosticsLatest || []),
+    log: compactJsonValue(input.log || []),
+  };
 }
 
 function readBody(req) {
@@ -749,6 +833,81 @@ async function handleLeaderboardList(req, res) {
   }
 }
 
+async function handleTelemetryBatch(req, res) {
+  let body;
+  try {
+    body = JSON.parse(await readBody(req) || '{}');
+  } catch (e) {
+    sendJson(res, e.message === 'body_too_large' ? 413 : 400, { error: e.message || 'invalid_json' });
+    return;
+  }
+
+  const rawEvents = Array.isArray(body.events)
+    ? body.events
+    : body.event
+      ? [body.event]
+      : [];
+  if (!rawEvents.length) {
+    sendJson(res, 400, { ok: false, error: 'missing_events' });
+    return;
+  }
+  const receivedAt = new Date().toISOString();
+  const events = rawEvents
+    .slice(0, MAX_TELEMETRY_BATCH_EVENTS)
+    .map((event) => normalizeTelemetryEvent(event, receivedAt))
+    .filter(Boolean);
+  if (!events.length) {
+    sendJson(res, 400, { ok: false, error: 'invalid_events' });
+    return;
+  }
+
+  try {
+    await withTelemetryWriteLock(() => appendJsonLines(TELEMETRY_EVENTS_FILE, events));
+    sendJson(res, 200, {
+      ok: true,
+      stored: events.length,
+      dropped: Math.max(0, rawEvents.length - events.length),
+    });
+  } catch (e) {
+    sendJson(res, 200, {
+      ok: false,
+      error: 'telemetry_write_failed',
+      message: e.message || 'write_failed',
+    });
+  }
+}
+
+async function handleTelemetrySessionEnd(req, res) {
+  let body;
+  try {
+    body = JSON.parse(await readBody(req) || '{}');
+  } catch (e) {
+    sendJson(res, e.message === 'body_too_large' ? 413 : 400, { error: e.message || 'invalid_json' });
+    return;
+  }
+
+  const receivedAt = new Date().toISOString();
+  const session = normalizeTelemetrySession(body.session || body, receivedAt);
+  if (!session) {
+    sendJson(res, 400, { ok: false, error: 'invalid_session' });
+    return;
+  }
+
+  try {
+    await withTelemetryWriteLock(() => appendJsonLines(TELEMETRY_SESSIONS_FILE, [session]));
+    sendJson(res, 200, {
+      ok: true,
+      stored: 1,
+    });
+  } catch (e) {
+    sendJson(res, 200, {
+      ok: false,
+      error: 'telemetry_session_write_failed',
+      message: e.message || 'write_failed',
+    });
+  }
+}
+
 function resolveStaticPath(requestUrl) {
   let pathname;
   try {
@@ -805,6 +964,14 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'GET' && pathname === '/api/leaderboard') {
     handleLeaderboardList(req, res);
+    return;
+  }
+  if (req.method === 'POST' && pathname === '/api/telemetry/batch') {
+    handleTelemetryBatch(req, res);
+    return;
+  }
+  if (req.method === 'POST' && pathname === '/api/telemetry/session-end') {
+    handleTelemetrySessionEnd(req, res);
     return;
   }
   if (req.method === 'GET' || req.method === 'HEAD') {

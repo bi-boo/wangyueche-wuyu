@@ -1,5 +1,6 @@
 function App() {
   const [state, dispatch] = useReducer(E.gameReducer, null, () => E.makeInitialState());
+  const telemetry = usePlayerTelemetry(state);
   const savedGameOverKeyRef = useRef(null);
   const lastCurrentRunSaveRef = useRef(0);
   // V12.2: 暴露给测试脚本(Playwright)用,生产可见但只读取/写入,无 UI 影响
@@ -15,6 +16,7 @@ function App() {
     saveCurrentRunRecord,
     clearAutosave,
     clearCurrentRunRecord,
+    telemetry,
     get requestConfirm() { return requestConfirm; },
   };
   const [selectedDriverId, setSelectedDriverId] = useState(null);
@@ -257,6 +259,7 @@ function App() {
     SFX.click();
   };
   const selectZone = (zoneId) => {
+    telemetry.trackUiEvent('select_zone', { zoneId });
     setSelectedZoneId(zoneId);
     setSelectedDriverId(null);
     setSelectedVehicleId(null);
@@ -272,6 +275,7 @@ function App() {
   };
 
   const openRoadmap = (tab = 'missions') => {
+    telemetry.trackUiEvent('open_roadmap', { tab });
     setRoadmapInitialTab(tab);
     setShowRoadmap(true);
   };
@@ -286,6 +290,7 @@ function App() {
   };
 
   const openPauseMenu = () => {
+    telemetry.trackUiEvent('open_pause_menu', { paused: state.paused, hasStarted: state.hasStarted });
     if (!state.paused && !state.gameOver) {
       dispatch({ type: 'TOGGLE_PAUSE' });
       setResumeAfterPauseMenu(true);
@@ -296,6 +301,7 @@ function App() {
   };
 
   const startNewGameFromMenu = () => {
+    telemetry.trackUiEvent('request_new_game_from_pause_menu', { day: state.day, funds: state.funds }, { flush: true });
     setShowPauseMenu(false);
     setResumeAfterPauseMenu(false);
     requestConfirm({
@@ -305,6 +311,7 @@ function App() {
       confirmLabel: '开始游戏',
       danger: true,
       onConfirm: () => {
+        telemetry.sendSessionEnd('restart_from_pause_menu');
         clearAutosave();
         clearCurrentRunRecord();
         resetUiSelection();
@@ -320,6 +327,7 @@ function App() {
   };
 
   const openLeaderboardFromMenu = () => {
+    telemetry.trackUiEvent('open_leaderboard_from_pause_menu', {}, { flush: true });
     const leaderboardWindow = window.open('leaderboard.html', '_blank', 'noopener,noreferrer');
     if (!leaderboardWindow) {
       window.location.href = 'leaderboard.html';
@@ -395,11 +403,11 @@ function App() {
             selectedVehicleId={selectedVehicleId}
             selectedVehicle={selectedVehicle}
             selectedDriver={selectedDriver}
-            onSelectDriver={(driverId) => { setSelectedZoneId(null); setSelectedVehicleId(null); setSelectedDriverId(driverId); setInspectorTab('details'); setMobileTab('inspector'); }}
-            onSelectVehicle={(vehicleId) => { setSelectedZoneId(null); setSelectedDriverId(null); setSelectedVehicleId(vehicleId); setInspectorTab('details'); setMobileTab('inspector'); }}
-            onClearSelection={() => { setSelectedZoneId(null); setSelectedDriverId(null); setSelectedVehicleId(null); }}
-            onRecruit={() => setShowRecruit(true)}
-            onShop={() => setShowShop(true)}
+            onSelectDriver={(driverId) => { telemetry.trackUiEvent('select_driver', { driverId }); setSelectedZoneId(null); setSelectedVehicleId(null); setSelectedDriverId(driverId); setInspectorTab('details'); setMobileTab('inspector'); }}
+            onSelectVehicle={(vehicleId) => { telemetry.trackUiEvent('select_vehicle', { vehicleId }); setSelectedZoneId(null); setSelectedDriverId(null); setSelectedVehicleId(vehicleId); setInspectorTab('details'); setMobileTab('inspector'); }}
+            onClearSelection={() => { telemetry.trackUiEvent('clear_selection'); setSelectedZoneId(null); setSelectedDriverId(null); setSelectedVehicleId(null); }}
+            onRecruit={() => { telemetry.trackUiEvent('open_recruit_modal'); setShowRecruit(true); }}
+            onShop={() => { telemetry.trackUiEvent('open_shop_modal'); setShowShop(true); }}
             onOpenRoadmap={() => openRoadmap('missions')}
           />
         </div>
@@ -446,9 +454,9 @@ function App() {
                 reputation={state.reputation}
                 state={state}
                 requestConfirm={requestConfirm}
-                onSelectVehicle={(vid) => { setSelectedDriverId(null); setSelectedVehicleId(vid); setInspectorTab('details'); }}
-                onSelectDriver={(did) => { setSelectedVehicleId(null); setSelectedDriverId(did); setInspectorTab('details'); }}
-                onRequestSalaryRaise={(driver) => setSalaryRaiseDriverId(driver.id)}
+                onSelectVehicle={(vid) => { telemetry.trackUiEvent('inspector_select_vehicle', { vehicleId: vid }); setSelectedDriverId(null); setSelectedVehicleId(vid); setInspectorTab('details'); }}
+                onSelectDriver={(did) => { telemetry.trackUiEvent('inspector_select_driver', { driverId: did }); setSelectedVehicleId(null); setSelectedDriverId(did); setInspectorTab('details'); }}
+                onRequestSalaryRaise={(driver) => { telemetry.trackUiEvent('open_salary_raise_modal', { driverId: driver.id }); setSalaryRaiseDriverId(driver.id); }}
               />
             ) : (
               <InspectorEmpty state={state} />
@@ -458,9 +466,9 @@ function App() {
       </div>
 
       <div className="mobile-tabs" role="tablist" aria-label="游戏主区域">
-        <button className={mobileTab === 'fleet' ? 'active' : ''} onClick={() => setMobileTab('fleet')}>车队</button>
-        <button className={mobileTab === 'city' ? 'active' : ''} onClick={() => setMobileTab('city')}>城市</button>
-        <button className={mobileTab === 'inspector' ? 'active' : ''} onClick={() => setMobileTab('inspector')}>调度</button>
+        <button className={mobileTab === 'fleet' ? 'active' : ''} onClick={() => { telemetry.trackUiEvent('mobile_tab_change', { tab: 'fleet' }); setMobileTab('fleet'); }}>车队</button>
+        <button className={mobileTab === 'city' ? 'active' : ''} onClick={() => { telemetry.trackUiEvent('mobile_tab_change', { tab: 'city' }); setMobileTab('city'); }}>城市</button>
+        <button className={mobileTab === 'inspector' ? 'active' : ''} onClick={() => { telemetry.trackUiEvent('mobile_tab_change', { tab: 'inspector' }); setMobileTab('inspector'); }}>调度</button>
       </div>
 
       {state.activePlayerStory && (
@@ -525,7 +533,7 @@ function App() {
           onClose={() => { setShowRecruit(false); dispatch({type: 'GACHA_CANCEL'}); }}
         />
       )}
-      {showShop && <ShopModal state={state} onClose={() => setShowShop(false)} onBuyVehicle={(t) => { dispatch({type: 'BUY_VEHICLE', templateId: t}); setShowShop(false); }} />}
+      {showShop && <ShopModal state={state} onClose={() => { telemetry.trackUiEvent('close_shop_modal'); setShowShop(false); }} onBuyVehicle={(t) => { telemetry.trackUiEvent('buy_vehicle_click', { templateId: t }, { flush: true }); dispatch({type: 'BUY_VEHICLE', templateId: t}); setShowShop(false); }} />}
       {showRoadmap && <UnlockRoadmapModal state={state} initialTab={roadmapInitialTab} onClose={() => setShowRoadmap(false)} onOpenShop={() => setShowShop(true)} />}
       {state.gameOver && <EndingModal ending={state.gameOver} state={state} onReset={() => dispatch({type: 'RESET'})} />}
       {confirmOpts && (

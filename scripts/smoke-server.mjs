@@ -90,6 +90,8 @@ function makeEntry(id, overrides = {}) {
 async function run() {
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'wycwy-smoke-'));
   const leaderboardFile = path.join(tmpDir, 'leaderboard.jsonl');
+  const telemetryEventsFile = path.join(tmpDir, 'telemetry-events.jsonl');
+  const telemetrySessionsFile = path.join(tmpDir, 'telemetry-sessions.jsonl');
   const port = 19100 + Math.floor(Math.random() * 1000);
   const upstreamPort = 18100 + Math.floor(Math.random() * 1000);
   const slowUpstream = http.createServer(() => {});
@@ -99,6 +101,8 @@ async function run() {
       ...process.env,
       PORT: String(port),
       WYCWY_LEADERBOARD_FILE: leaderboardFile,
+      WYCWY_TELEMETRY_EVENTS_FILE: telemetryEventsFile,
+      WYCWY_TELEMETRY_SESSIONS_FILE: telemetrySessionsFile,
       WYCWY_AI_API_KEY: 'smoke-test-key',
       WYCWY_AI_MODEL: 'smoke-test-model',
       WYCWY_AI_BASE_URL: `http://127.0.0.1:${upstreamPort}/slow`,
@@ -198,13 +202,68 @@ async function run() {
     });
     assert(suspicious.json?.skipped && suspicious.json?.suspicious, '异常局应跳过榜单写入');
 
+    const telemetryBatch = await requestJson(port, '/api/telemetry/batch', {
+      method: 'POST',
+      body: JSON.stringify({
+        events: [
+          {
+            schemaVersion: 'wycwy-telemetry-v1',
+            eventId: 'evt-smoke-1',
+            eventType: 'action',
+            eventName: 'SET_SPEED',
+            createdAt: new Date().toISOString(),
+            clientId: 'client-smoke',
+            sessionId: 'session-smoke',
+            runId: 'run-smoke',
+            game: { day: 1, hour: 6, funds: 30000 },
+            payload: { label: '玩家开始运营' },
+          },
+          {
+            schemaVersion: 'wycwy-telemetry-v1',
+            eventId: 'evt-smoke-2',
+            eventType: 'snapshot',
+            eventName: 'periodic_state',
+            createdAt: new Date().toISOString(),
+            clientId: 'client-smoke',
+            sessionId: 'session-smoke',
+            runId: 'run-smoke',
+            game: { day: 2, hour: 10, funds: 32000 },
+            payload: { snapshotReason: 'interval' },
+          },
+        ],
+      }),
+    });
+    assert(telemetryBatch.json?.ok && telemetryBatch.json?.stored === 2, `telemetry batch 应写入 2 条,实际 ${telemetryBatch.text}`);
+
+    const telemetrySession = await requestJson(port, '/api/telemetry/session-end', {
+      method: 'POST',
+      body: JSON.stringify({
+        session: {
+          schemaVersion: 'wycwy-telemetry-v1',
+          reason: 'game_over',
+          createdAt: new Date().toISOString(),
+          clientId: 'client-smoke',
+          sessionId: 'session-smoke',
+          runId: 'run-smoke',
+          game: { day: 12, hour: 20, funds: -1000, gameOver: { type: 'lose' } },
+          actionHistory: [{ type: 'SET_SPEED' }],
+          decisionHistory: [{ type: 'RESOLVE_EVENT' }],
+        },
+      }),
+    });
+    assert(telemetrySession.json?.ok && telemetrySession.json?.stored === 1, `telemetry session 应写入 1 条,实际 ${telemetrySession.text}`);
+
     const finalList = await requestJson(port, '/api/leaderboard?sort=recent&limit=30');
     assert(finalList.json?.total === 21, `XSS 文本、重复和异常提交后应为 21 条,实际 ${finalList.json?.total}`);
 
     const stored = await readFile(leaderboardFile, 'utf8');
     assert(stored.trim().split(/\n+/).length === 21, 'JSONL 文件应只有 21 行有效记录');
+    const telemetryEventsStored = await readFile(telemetryEventsFile, 'utf8');
+    assert(telemetryEventsStored.trim().split(/\n+/).length === 2, 'telemetry events JSONL 应有 2 行');
+    const telemetrySessionsStored = await readFile(telemetrySessionsFile, 'utf8');
+    assert(telemetrySessionsStored.trim().split(/\n+/).length === 1, 'telemetry sessions JSONL 应有 1 行');
 
-    console.log('smoke-server ok: main=200 head=200 traversal=403 malformed=403 api-nearmiss=404 ai-timeout=local concurrent=20 xss-text=sanitized duplicate=ok suspicious=skipped');
+    console.log('smoke-server ok: main=200 head=200 traversal=403 malformed=403 api-nearmiss=404 ai-timeout=local concurrent=20 xss-text=sanitized duplicate=ok suspicious=skipped telemetry=ok');
   } finally {
     await new Promise((resolve) => slowUpstream.close(resolve));
     if (child.exitCode === null && child.signalCode === null) {

@@ -2,6 +2,7 @@
 
 > 本文档定义游戏的核心循环、数值机制、终局条件。**任何 gameplay 改动必须同步更新本文档**。
 > 真正的"实际数值"在 `wycwy-data.js`,本文档只描述机制和原则。
+> V15.41a / 2026-05-24:新增玩家经营日志系统 V1。前端默认匿名采集原始行为、关键选择、周期状态快照和单局结束摘要,服务端写入 `telemetry-events.jsonl` 与 `telemetry-sessions.jsonl`,用于后续按需交给 AI 分析玩家卡点和跳出点。
 > V15.40i / 2026-05-24:校准文档与当前代码事实:节奏基准为 2 秒 / 游戏小时,事件数量按 `EVENTS` 实际结构更新,源码维护入口改为 `src/engine` + `src/app` + `src/styles` 构建链路。
 > V15.40h / 2026-05-18:AI 运营复盘加载态新增预估等待时间、阶段文案和假进度条,降低模型返回前的等待焦虑。
 > V15.40g / 2026-05-18:第 25 天新增月末发薪提醒,提示第 31 天会统一结算过去 30 天所有员工工资,要求玩家提前预留现金。
@@ -282,6 +283,23 @@ AI 接口边界:
 - `/api/run-analysis` 在调用模型前先检测经营摘要是否离谱,包括资金、口碑、车组、司机/车辆关系、完成订单、总流水、单车组日均订单、单车组日均流水、资金增长速度和异常通关速度。
 - 命中异常时不调用模型,直接返回 `source: guardrail` 和固定经营人格「控制台炼金术士」,证据列出触发的异常指标。
 - `/api/leaderboard/submit` 收到 `suspicious` 或 `styleKey: cheater` 时不写入正常榜单,避免明显伪造数据污染排名。
+
+### 玩家经营日志系统(V15.41a)
+
+玩家经营日志系统用于上线后还原玩家真实游玩过程,目标是让后续 AI 能直接读取原始日志,判断玩家在哪些阶段卡住、误解或跳出。V1 默认匿名自动采集,不提供前台提示或开关,也不建设固定分析脚本和指标后台。
+
+前端由 `src/app/17-telemetry.jsx` 负责:
+- 每个浏览器生成持久 `clientId`,每次页面会话生成 `sessionId`,每局游戏按 `state.realTime.createdAt` 生成 `runId`。
+- 采集 `actionHistory`、`decisionHistory`、关键 UI 点击和每 30 秒一次的 `snapshot`。
+- 页面隐藏、关闭、重开或结局时提交 `session-end` 摘要,摘要包含本局 action/decision/diagnostics/log 的原始片段。
+- 上传失败时把最近一小段待传事件留在 localStorage,下次继续补传。
+
+服务端由 `scripts/ai-review-server.mjs` 负责:
+- `POST /api/telemetry/batch` 追加写入原始事件到 `telemetry-events.jsonl`。
+- `POST /api/telemetry/session-end` 追加写入单局摘要到 `telemetry-sessions.jsonl`。
+- 服务端不记录账号、昵称、手机号,业务日志只使用匿名 client/session/run 标识。
+
+后续分析方式保持人工按需触发:当服务器积累一批玩家日志后,直接读取 JSONL 原始日志,按本次问题临时交给 AI 分析,不在 V1 固化日报、看板或固定 prompt。
 
 ---
 
