@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,6 +44,15 @@ function runEsbuild(args) {
   }
 }
 
+function hashInputs(...chunks) {
+  const hash = createHash('sha256');
+  for (const chunk of chunks) {
+    hash.update(chunk);
+    hash.update('\0');
+  }
+  return hash.digest('hex');
+}
+
 async function fileSize(file) {
   return (await stat(file)).size;
 }
@@ -83,7 +93,8 @@ runEsbuild([
 await rm(tmpDir, { recursive: true, force: true });
 
 const manifest = {
-  builtAt: new Date().toISOString(),
+  buildMode: 'reproducible',
+  inputHash: hashInputs(cssInput, appInput),
   esbuildVersion: ESBUILD_VERSION,
   inputs: {
     styles: styleFiles.map((file) => path.relative(ROOT, file)),

@@ -4,9 +4,6 @@ on:
   push:
   pull_request:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -14,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
 
@@ -31,6 +28,9 @@ jobs:
 
       - name: Build entry assets
         run: node scripts/build-entry-assets.mjs
+
+      - name: Check generated assets are current
+        run: git diff --exit-code -- dist/wycwy-app.bundle.js dist/wycwy-styles.bundle.css dist/entry-assets-manifest.json
 
       - name: Run server smoke test
         run: node scripts/smoke-server.mjs

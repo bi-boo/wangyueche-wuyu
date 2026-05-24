@@ -6,25 +6,19 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>事件弹窗预览(实时数据 Storybook)</title>
+<link rel="icon" href="data:,">
 <!-- 预览页直接读取当前 data / engine。弹窗渲染器内置在本页,确保 file:// 双击也能预览。 -->
-<script>
-  window.WYCWY_PREVIEW_VERSION = new URLSearchParams(window.location.search).get('_t') || String(Date.now());
-  [
-    'src/styles/00-tokens.css',
-    'src/styles/10-base.css',
-    'src/styles/20-topbar.css',
-    'src/styles/30-modals.css',
-    'src/styles/40-tasks-list.css',
-    'src/styles/50-feedback.css',
-    'src/styles/60-inspector.css',
-    'src/styles/70-pixel-flytext.css',
-    'src/styles/80-map-hud.css',
-    'src/styles/90-toggles-recruit.css',
-    'src/styles/99-overrides.css',
-  ].forEach((href) => {
-    document.write('<link rel="stylesheet" href="' + href + '?v=' + window.WYCWY_PREVIEW_VERSION + '">');
-  });
-</script>
+<link rel="stylesheet" href="src/styles/00-tokens.css">
+<link rel="stylesheet" href="src/styles/10-base.css">
+<link rel="stylesheet" href="src/styles/20-topbar.css">
+<link rel="stylesheet" href="src/styles/30-modals.css">
+<link rel="stylesheet" href="src/styles/40-tasks-list.css">
+<link rel="stylesheet" href="src/styles/50-feedback.css">
+<link rel="stylesheet" href="src/styles/60-inspector.css">
+<link rel="stylesheet" href="src/styles/70-pixel-flytext.css">
+<link rel="stylesheet" href="src/styles/80-map-hud.css">
+<link rel="stylesheet" href="src/styles/90-toggles-recruit.css">
+<link rel="stylesheet" href="src/styles/99-overrides.css">
 <style>
   html, body { height: 100%; margin: 0; padding: 0; background: #f3eedb; }
   #root { height: 100vh; display: flex; flex-direction: row; overflow: hidden; }
@@ -203,15 +197,12 @@
 <body>
 <div id="root"></div>
 
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<script>
-  ['wycwy-data.js', 'wycwy-engine.js'].forEach((src) => {
-    document.write('<script src="' + src + '?v=' + window.WYCWY_PREVIEW_VERSION + '"><\/script>');
-  });
-</script>
+<script src="wycwy-data.js"></script>
+<script src="wycwy-engine.js"></script>
 
 <script type="text/babel">
   const { useState, useMemo } = React;

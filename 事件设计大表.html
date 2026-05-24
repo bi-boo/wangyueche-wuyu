@@ -7,6 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>事件设计大表 · 实时版</title>
+<link rel="icon" href="data:,">
 <style>
   :root {
     --bg: #F4E4BC;
@@ -184,10 +185,7 @@
     .search { width: 100%; }
   }
 </style>
-<script>
-  window.WYCWY_PREVIEW_VERSION = new URLSearchParams(window.location.search).get('_t') || String(Date.now());
-  document.write('<script src="./wycwy-data.js?v=' + window.WYCWY_PREVIEW_VERSION + '"><\/script>');
-</script>
+<script src="./wycwy-data.js"></script>
 </head>
 <body>
 <div class="top">
@@ -475,7 +473,16 @@
       ['主线任务', visibleMissions + ' + ' + hiddenMissions + ' 静默'],
       ['界面解锁', (D.UI_GATES || []).length],
     ];
-    summary.innerHTML = metrics.map(([label, value]) => '<div class="metric"><span>' + esc(label) + '</span><strong>' + esc(value) + '</strong></div>').join('');
+    summary.replaceChildren(...metrics.map(([label, value]) => {
+      const metric = document.createElement('div');
+      const labelNode = document.createElement('span');
+      const valueNode = document.createElement('strong');
+      metric.className = 'metric';
+      labelNode.textContent = label;
+      valueNode.textContent = value;
+      metric.append(labelNode, valueNode);
+      return metric;
+    }));
   }
 
   function render() {
