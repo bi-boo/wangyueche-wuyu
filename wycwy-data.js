@@ -1,4 +1,4 @@
-/* 网约车物语 V10.14 - 配置数据(虚构都市分区地图,V15.17 谐音化) */
+/* 网约车物语 V15.40h - 配置数据(虚构都市分区地图,V15.17 谐音化) */
 (function () {
   const GAME = {
     STARTING_FUNDS: 10000,
@@ -106,6 +106,39 @@
       forceEnd: true,  // 顶级结局,达成强制结束
     },
   ];
+
+  // 玩家身份主线故事 — 开局先交代玩家是谁,IPO 终局再做身份反转收口。
+  const PLAYER_STORIES = {
+    opening_layoff: {
+      id: 'opening_layoff',
+      title: '被裁那天，我买下了第一辆车',
+      tag: '开局剧情',
+      image: 'assets/pixel/story/opening-layoff.png',
+      buttons: ['开始游戏'],
+      paragraphs: [
+        '你抱着纸箱走出写字楼，手机里弹出最后一条工资到账通知。',
+        '回家的车上，你看着窗外堵成红色的三环，突然改口：',
+        '“不回家了。带我去二手车市场。”',
+        '从今天开始，你不再等别人派活。',
+        '你要自己养司机、买车、抢订单，把这座城市一点点跑下来。',
+      ],
+    },
+    finale_ipo_heir: {
+      id: 'finale_ipo_heir',
+      title: 'IPO 上市 · 真正的接班',
+      tag: '终局剧情',
+      image: 'assets/pixel/story/finale-ipo-heir.png',
+      buttons: ['接管嘀嘀', '再开一局'],
+      paragraphs: [
+        '交易所大屏亮起那一刻，你的公司代码跳了出来。',
+        '司机群里刷满红包，投资人终于没再催你。',
+        '就在你准备发表上市感言时，楼顶传来直升机的轰鸣。',
+        '舱门打开，一个真正掌管出行帝国的人走下来。',
+        '他看了看你身后的车队，又看了看屏幕上的市值，笑了一下，说道：',
+        '“你通过了董事会的考验，嘀嘀接下来就交给你了。”',
+      ],
+    },
+  };
 
   // 司机背景模板
   // V6: 10 种司机 + 4 档稀有度
@@ -557,7 +590,7 @@
   // V14.78: 训练价格按当前属性段位递增。cost 保留为中低段基准价,实际扣费优先读 costTiers。
   // V14.11: 属性 4→2。车技决定高端订单准入和收益,服务影响好评率与口碑增长。
   const TRAININGS = [
-    { id: 'driving', name: '模拟驾驶舱', stat: 'driving', cost: 450, gainMin: 8, gainMax: 12, color: '#FF6B35',
+    { id: 'driving', name: '汽车驾驶技术培训', stat: 'driving', cost: 450, gainMin: 8, gainMax: 12, color: '#FF6B35',
       costTiers: [
         { max: 19, cost: 300 },
         { max: 34, cost: 450 },
@@ -566,7 +599,7 @@
         { max: 84, cost: 1700 },
         { max: 999, cost: 2600 },
       ] },
-    { id: 'service', name: '服务礼仪课', stat: 'service', cost: 500, gainMin: 8, gainMax: 12, color: '#0EA5E9',
+    { id: 'service', name: '服务质量提升', stat: 'service', cost: 500, gainMin: 8, gainMax: 12, color: '#0EA5E9',
       costTiers: [
         { max: 19, cost: 350 },
         { max: 34, cost: 500 },
@@ -629,7 +662,7 @@
       unlockMission: 5,
       desc: '一位女乘客投诉小张言语骚扰。小张说自己只是问了路况,他坚决否认。现在证据还没调齐,平台让你先定处理口径。',
       options: [
-        { label: '先信司机,调取录音和行车记录', detail: '暂不公开定性,全员信任 +15', choiceKey: 'trust_driver', apply: () => ({ trustLoyalty: 15 }) },
+        { label: '先信司机,调取录音和行车记录', detail: '暂不公开定性,全员忠诚 +15', choiceKey: 'trust_driver', apply: () => ({ trustLoyalty: 15 }) },
         { label: '先保护乘客,司机停单待查', detail: '司机停单配合调查,所有司机忠诚 −15', choiceKey: 'protect_passenger', apply: () => ({ allLoyalty: -15 }) },
       ],
     },
@@ -641,7 +674,7 @@
       desc: '平台调回录音,发现司机确实有几句越界玩笑。女乘客把处理过程发到网上,这次外面已经看见了。',
       options: [
         { label: '公开致歉 + 停单培训', detail: '资金 −¥3,000,口碑 −12,所有司机忠诚 −10', apply: () => ({ funds: -3000, reputation: -12, allLoyalty: -10 }) },
-        { label: '压下去,只做内部警告', detail: '口碑 −25,全员信任 −20', apply: () => ({ reputation: -25, trustLoyalty: -20 }) },
+        { label: '压下去,只做内部警告', detail: '口碑 −25,全员忠诚 −20', apply: () => ({ reputation: -25, trustLoyalty: -20 }) },
       ],
     },
     {
@@ -651,7 +684,7 @@
       requireChainChoice: { complaint_harass: 'protect_passenger' },
       desc: '录音显示司机只是提醒路线,没有骚扰。乘客愿意撤回投诉,但司机已经停单几天,车队里都在看你怎么收尾。',
       options: [
-        { label: '补停单损失 + 公开澄清', detail: '资金 −¥2,500,口碑 +5,全员信任 +20', apply: () => ({ funds: -2500, reputation: 5, trustLoyalty: 20 }) },
+        { label: '补停单损失 + 公开澄清', detail: '资金 −¥2,500,口碑 +5,全员忠诚 +20', apply: () => ({ funds: -2500, reputation: 5, trustLoyalty: 20 }) },
         { label: '低调结案', detail: '所有司机忠诚 −25', apply: () => ({ allLoyalty: -25 }) },
       ],
     },
@@ -701,7 +734,7 @@
       unlockMission: 11,
       desc: '凌晨两点,小李在城郊接了一单,被乘客持刀抢走当天现金。人没事,钱没了。',
       options: [
-        { label: '报警 + 公司补偿损失', detail: '−¥1,000,全员信任 +25', apply: () => ({ funds: -1000, trustLoyalty: 25 }) },
+        { label: '报警 + 公司补偿损失', detail: '−¥1,000,全员忠诚 +25', apply: () => ({ funds: -1000, trustLoyalty: 25 }) },
         { label: '自认倒霉,劝他下次别接深夜', detail: '钱保住,所有司机忠诚 −40(寒心)', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
@@ -711,7 +744,7 @@
       unlockMission: 12,
       desc: '老周父亲深夜突发脑梗送医院。他来请假,说至少要七天陪护。',
       options: [
-        { label: '全薪准假 + 慰问金', detail: '−¥2,000,全员信任 +30', apply: () => ({ funds: -2000, trustLoyalty: 30 }) },
+        { label: '全薪准假 + 慰问金', detail: '−¥2,000,全员忠诚 +30', apply: () => ({ funds: -2000, trustLoyalty: 30 }) },
         { label: '不准假', detail: '钱保住,所有司机忠诚 −40', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
@@ -732,7 +765,7 @@
       desc: '机场排队区有人拉你进"保底单群":交一笔茶水费,夜里大单优先推给你家车。规则灰得发亮。',
       options: [
         { label: '先试一个月', detail: '+¥3,000,口碑 −10,所有司机忠诚 −10', apply: () => ({ funds: 3000, reputation: -10, allLoyalty: -10 }) },
-        { label: '不碰灰色单群', detail: '全员信任 +10', apply: () => ({ trustLoyalty: 10 }) },
+        { label: '不碰灰色单群', detail: '全员忠诚 +10', apply: () => ({ trustLoyalty: 10 }) },
       ],
     },
     {
@@ -752,7 +785,7 @@
       desc: '一个企业客户要你把几单车费合成大额发票,愿意额外给手续费。司机觉得这是顺手钱,财务说别碰。',
       options: [
         { label: '配合做一单', detail: '+¥3,000,口碑 −15', apply: () => ({ funds: 3000, reputation: -15 }) },
-        { label: '拒绝并留记录', detail: '全员信任 +10', apply: () => ({ trustLoyalty: 10 }) },
+        { label: '拒绝并留记录', detail: '全员忠诚 +10', apply: () => ({ trustLoyalty: 10 }) },
       ],
     },
     {
@@ -781,8 +814,58 @@
       unlockMission: 13,
       desc: '有人把你后台的司机收入截图发到群里,标题是"老板到底抽了多少"。数字不完整,情绪很完整。',
       options: [
-        { label: '开会把账摊开讲', detail: '全员信任 +20', apply: () => ({ trustLoyalty: 20 }) },
+        { label: '开会把账摊开讲', detail: '全员忠诚 +20', apply: () => ({ trustLoyalty: 20 }) },
         { label: '先查是谁截的图', detail: '所有司机忠诚 −20', apply: () => ({ allLoyalty: -20 }) },
+      ],
+    },
+    {
+      id: 'night_safety_switch', title: '夜间安全开关', tag: '安全', emoji: 'crash', cooldown: 45,
+      eventType: 'random', phase: 'mid', minDay: 35, minCrews: 4, weight: 0.9,
+      unlockMission: 8,
+      desc: '凌晨订单突然爆了,但平台群里同步了新的夜间安全检查:人脸核验、路线偏移预警、一键报警演练都要补。司机群里有人说:"老板,现在关夜单,就是把钱往外推。"',
+      options: [
+        { label: '停掉夜单,先补安全系统', detail: '资金 −¥8,000,口碑 +25,全员忠诚 +8', apply: () => ({ funds: -8000, reputation: 25, allLoyalty: 8 }) },
+        { label: '夜单照跑,先把钱赚回来', detail: '资金 +¥6,000,口碑 −25,全员忠诚 −8', apply: () => ({ funds: 6000, reputation: -25, allLoyalty: -8 }) },
+      ],
+    },
+    {
+      id: 'driver_protection_fund', title: '司机们要一份保障', tag: '人事', emoji: 'people', cooldown: 45,
+      eventType: 'random', phase: 'mid', minDay: 45, minCrews: 4, weight: 0.9,
+      unlockMission: 8,
+      desc: '几个老司机把你堵在停车场:"老板,我们不是要闹事,就是想知道,出了事故、病倒、孩子上学,这家公司到底认不认我们?"',
+      options: [
+        { label: '设立司机保障金', detail: '资金 −¥12,000,口碑 +12,全员忠诚 +30', apply: () => ({ funds: -12000, reputation: 12, allLoyalty: 30 }) },
+        { label: '维持灵活合作,不增加保障', detail: '资金 +¥5,000,口碑 −8,全员忠诚 −28', apply: () => ({ funds: 5000, reputation: -8, allLoyalty: -28 }) },
+      ],
+    },
+    {
+      id: 'data_compliance_audit', title: '用户画像被点名', tag: '监管', emoji: 'gov', cooldown: 45,
+      eventType: 'random', phase: 'late', minDay: 100, minCrews: 6, weight: 0.85,
+      unlockMission: 12,
+      desc: '技术外包发来一套"精准推荐包":能预测乘客是否愿意付高价,也能把高价值用户推给豪华车。同一时间,监管开始抽查 App 权限和订单数据留存。',
+      options: [
+        { label: '删除过度用户画像', detail: '资金 −¥10,000,口碑 +30,全员忠诚 +5', apply: () => ({ funds: -10000, reputation: 30, allLoyalty: 5 }) },
+        { label: '继续用精准推荐抢高价单', detail: '资金 +¥12,000,口碑 −35,全员忠诚 −5', apply: () => ({ funds: 12000, reputation: -35, allLoyalty: -5 }) },
+      ],
+    },
+    {
+      id: 'aggregator_platform_entry', title: '聚合平台给你开入口', tag: '行业', emoji: 'biz', cooldown: 45,
+      eventType: 'random', phase: 'mid', minDay: 75, minCrews: 5, weight: 0.9,
+      unlockMission: 10,
+      desc: '一个大流量入口找上门:"接入我们,今天就能给你单量。"合同最后一页写着:投诉首问、先行赔付、价格展示,都要你配合承担。',
+      options: [
+        { label: '接入聚合平台', detail: '资金 +¥15,000,口碑 −18,全员忠诚 −10', apply: () => ({ funds: 15000, reputation: -18, allLoyalty: -10 }) },
+        { label: '坚持自营入口', detail: '资金 −¥7,000,口碑 +22,全员忠诚 +6', apply: () => ({ funds: -7000, reputation: 22, allLoyalty: 6 }) },
+      ],
+    },
+    {
+      id: 'subsidy_price_war', title: '全城打车券大战', tag: '竞争', emoji: 'rival', cooldown: 45,
+      eventType: 'random', phase: 'late', minDay: 110, minCrews: 6, weight: 0.85,
+      unlockMission: 13,
+      desc: '竞品突然发出"全城 5 折券"。司机群里炸了:"他们这样烧钱,我们还按原价跑,乘客都走了。"财务提醒你:跟进补贴,账面会很疼;不跟,订单会被吸走。',
+      options: [
+        { label: '跟进补贴,保住单量', detail: '资金 −¥15,000,口碑 +10,全员忠诚 −8', apply: () => ({ funds: -15000, reputation: 10, allLoyalty: -8 }) },
+        { label: '不烧补贴,主打准时和服务', detail: '资金 −¥5,000,口碑 +24,全员忠诚 +10', apply: () => ({ funds: -5000, reputation: 24, allLoyalty: 10 }) },
       ],
     },
 
@@ -869,7 +952,7 @@
       requireChainChoice: { borrow_close: 'help' },
       desc: '老张老家批了宅基地,要盖房养老。缺 ¥20,000。这次他没张口,是他老婆在群里发来的语音。',
       options: [
-        { label: '借给他,慢慢还', detail: '−¥20,000,全员信任 +30', apply: () => ({ funds: -20000, trustLoyalty: 30 }) },
+        { label: '借给他,慢慢还', detail: '−¥20,000,全员忠诚 +30', apply: () => ({ funds: -20000, trustLoyalty: 30 }) },
         { label: '婉拒,介绍他银行信用贷', detail: '钱保住,所有司机忠诚 −20', apply: () => ({ allLoyalty: -20 }) },
       ],
     },
@@ -960,7 +1043,7 @@
       requireChainChoice: { accident: 'cover' },
       desc: '小李路口转弯撞了一位骑电瓶车的大妈。大妈腿骨折,要住院。这次不是剐蹭,是真事故。',
       options: [
-        { label: '车队全担医疗费 + 误工费', detail: '−¥15,000,全员信任 +25', choiceKey: 'cover', apply: () => ({ funds: -15000, trustLoyalty: 25 }) },
+        { label: '车队全担医疗费 + 误工费', detail: '−¥15,000,全员忠诚 +25', choiceKey: 'cover', apply: () => ({ funds: -15000, trustLoyalty: 25 }) },
         { label: '让司机一人负责到底', detail: '钱保住,所有司机忠诚 −40,口碑 −10', choiceKey: 'shift', apply: () => ({ allLoyalty: -40, reputation: -10 }) },
       ],
     },
@@ -971,7 +1054,7 @@
       requireChainChoice: { accident: 'shift' },
       desc: '上次让小李自付剐蹭费的事还没消化,这次他撞了行人保险又拒赔——保险公司说当时车队没担责导致维修流程不规范,赔不下来,¥15,000 全要车队出。',
       options: [
-        { label: '公司咬牙担下来', detail: '−¥15,000,全员信任 +30', apply: () => ({ funds: -15000, trustLoyalty: 30 }) },
+        { label: '公司咬牙担下来', detail: '−¥15,000,全员忠诚 +30', apply: () => ({ funds: -15000, trustLoyalty: 30 }) },
         { label: '让小李分期偿还', detail: '钱保住,所有司机忠诚 −40', apply: () => ({ allLoyalty: -40 }) },
       ],
     },
@@ -991,47 +1074,32 @@
   const FIRST_NAMES = ['张', '王', '李', '赵', '刘', '陈', '杨', '黄', '周', '吴', '徐', '孙', '马', '朱', '胡', '林', '何', '高', '罗'];
   // V14.67: LAST_NAMES_M 删除 — engine 用自己内部的 GIVEN_NAMES_SHORT/LONG,本数组从未被引用。
 
-  // 阶段任务链 - 15 步,用小目标牵引玩家理解车组、培训、口碑和订单解锁。
+  // 阶段任务链 - 13 步:7 条常驻主线 + 1 条风险触发主线 + 5 条静默里程碑。
   const MISSIONS = [
     {
       id: 'm2_first_day',
-      title: '跑完第一个运营日',
-      desc: '累计完成 12 单,并运营到第 2 天',
-      hint: '点击开始运营后先让车队完整跑一天,观察地图小车、资金和口碑变化',
-      check: (s) => s.totalCompleted >= 12 && s.day >= 2,
-      reward: { funds: 500, message: '第一天跑稳了,可以开始扩车队。' },
-    },
-    {
-      id: 'm3_buy_third_car',
-      title: '购买第三辆车',
-      desc: '购买 1 辆新车,让车队拥有 3 辆车',
-      hint: '点左侧车队区域的“买车”,先买便宜车补运力',
-      check: (s) => s.vehicles.length >= 3,
-      reward: { funds: 600, message: '车辆到位,下一步招司机。' },
-    },
-    {
-      id: 'm4_recruit_third_driver',
-      title: '招募第三名司机',
-      desc: '招募 1 名新司机,让车队拥有 3 名司机',
-      hint: '点左侧车队区域的“招募”,选择招募券后挑一名司机',
-      check: (s) => s.drivers.length >= 3,
-      reward: { funds: 700, message: '新人入队,把他分配到空车上。' },
+      title: '运营满一周',
+      desc: '让车队正常运营 7 天,进入第 8 天',
+      hint: '点击开始运营后先让车队完整跑一周,观察地图小车、资金和口碑变化;第 10 天再开始扩张车组',
+      check: (s) => s.day >= 8,
+      reward: { funds: 500, message: '车队跑过完整一周,第 10 天可以开始扩张。' },
     },
     {
       id: 'm5_third_crew',
-      title: '补齐第三个车组',
-      desc: '拥有 3 个可运营车组',
-      hint: '把新司机分配到空车上;有车有司机才算 1 个车组',
-      check: (s) => operatingCrewCount(s) >= 3,
-      reward: { funds: 1000, message: '第三个车组开始接单,车队产能提升。' },
+      title: '第 10 天组建第三车组',
+      desc: '买 1 辆车、招 1 名司机,并把司机分配上车',
+      hint: '第 10 天会开放“买车”和“招募”;有车有司机才算 1 个可运营车组',
+      check: (s) => s.day >= 10 && operatingCrewCount(s) >= 3,
+      reward: { funds: 1800, message: '第三个车组开始接单,车队产能提升。' },
     },
     {
       id: 'm6_service_training',
-      title: '训练一次服务',
-      desc: '完成 1 次服务训练',
-      hint: '服务越高,好评率越高;每 3 个好评会沉淀为城市口碑 +1',
+      title: '口碑下滑,提升服务质量',
+      desc: '口碑连续下跌超过 10 点后,完成 1 次服务质量提升',
+      hint: '现在口碑在持续下降,优先提升司机服务;服务越高,好评率越高',
+      requiresGate: 'service_training_guide',
       check: (s) => ((s.trainingCounts && s.trainingCounts.service) || 0) >= 1,
-      reward: { funds: 600, message: '服务训练完成,好评会更稳定。' },
+      reward: { funds: 600, message: '服务质量提升完成,好评会更稳定。' },
     },
     {
       id: 'm7_reputation_90',
@@ -1045,8 +1113,8 @@
     {
       id: 'm8_driving_35',
       title: '培养专车司机',
-      desc: '把任意司机的车技训练到 35',
-      hint: '专车订单需要车技 ≥35,点司机卡后在右侧训练“车技”',
+      desc: '让任意司机完成汽车驾驶技术培训,车技达到 35',
+      hint: '专车订单需要车技 ≥35,点司机卡后在右侧提升车技',
       check: (s) => s.drivers.some((d) => d.stats.driving >= 35),
       reward: { funds: 1200, message: '车技到位,可以准备专车车型。' },
     },
@@ -1062,7 +1130,7 @@
       id: 'm10_reputation_180',
       title: '把口碑提升到 180',
       desc: '城市口碑达到 180,解锁风台区',
-      hint: '风台区专车订单更多;服务训练和稳定完单会让口碑涨得更快',
+      hint: '风台区专车订单更多;提升服务质量和稳定完单会让口碑涨得更快',
       hidden: true,  // V15.16:被动等型
       check: (s) => s.reputation >= 180,
       reward: { funds: 1800, message: '风台区解锁,专车订单开始出现。' },
@@ -1095,7 +1163,7 @@
     {
       id: 'm14_driving_70',
       title: '培养豪华车司机',
-      desc: '把任意司机的车技训练到 70',
+      desc: '让任意司机继续做汽车驾驶技术培训,车技达到 70',
       hint: '豪华车订单需要车技 ≥70,普通司机可能有属性上限,高稀有司机更适合后期培养',
       check: (s) => s.drivers.some((d) => d.stats.driving >= 70),
       reward: { funds: 4000, message: '豪华车司机准备好了,下一步冲高端片区。' },
@@ -1104,7 +1172,7 @@
       id: 'm15_reputation_520',
       title: '把口碑提升到 520',
       desc: '城市口碑达到 520,解锁昭阳区',
-      hint: '昭阳区豪华车订单占比最高;继续用服务训练和高质量完单积累口碑',
+      hint: '昭阳区豪华车订单占比最高;继续提升服务质量,用高质量完单积累口碑',
       hidden: true,  // V15.16:被动等型
       check: (s) => s.reputation >= 520,
       reward: { funds: 4500, message: '昭阳区解锁,豪华车订单会更稳定出现。' },
@@ -1225,39 +1293,42 @@
   // V15.29: 投资人 early review — 早期防挂机护栏。
   // 与 INVESTOR_PRESSURE(资金负时触发的失败兜底)互补:
   //   - INVESTOR_PRESSURE:玩家亏损时触发,救场用
-  //   - INVESTOR_REVIEW:玩家早期迟迟不扩到 3 车组时触发,只做提醒和轻惩罚
+  //   - INVESTOR_REVIEW:玩家早期迟迟不扩张时触发,最终可导向撤资失败
   // 详见 GAME_DESIGN.md 第七章「投资人 early review」小节。
   const INVESTOR_REVIEW = {
     id: 'investor_review',
-    targetCrews: 3,
+    targetCrews: 5,
+    finalDeadlineDays: 10,
     // atDay 是最早触发窗口,不是硬日期。若当天有月报/政策/其他弹窗,会顺延到下一个空闲日。
     schedule: [
-      { atDay: 30, stage: 'early_warning', type: 'warning' },
-      { atDay: 60, stage: 'early_final', type: 'punish' },
+      { atDay: 30, stage: 'early_warning', type: 'warning', targetCrews: 3 },
+      { atDay: 60, stage: 'early_final', type: 'punish', targetCrews: 5 },
     ],
     // 保留 object 结构,便于 admin 和旧调参工具读取;真实判断只看可运营车组。
     kpi: {
-      targetCrews: 3,
+      targetCrews: 5,
     },
     punishment: {
       early_final: {
         fee: 10000,
         minRemainingFunds: 1000,
-        label: '早期资源占用费',
+        label: '闲置资源占用费',
       },
     },
     stages: {
       early_warning: {
         title: '投资人来电',
         tag: '投资人',
-        desc: '投资人打来电话。\n\n"这一个月看下来,你现金流还算稳,但车队规模没有打开。"\n\n"别一直守着两辆车慢慢跑。先把第三个车组补起来,后面的目标和机会才接得住。"',
-        buttonLabel: '知道了',
+        desc: '投资人打来电话。\n\n"这一个月看下来,你还停在 {currentCrews}/{targetCrews} 个可运营车组。我们投的不是两辆车的小生意,而是一支能复制扩张的车队。"\n\n"接下来先把第三个车组补起来:买车、招人、把司机分配上车。第二个月复盘看的就不是 3 组了,而是有没有扩到 5 个车组。"',
+        buttonLabel: '知道了,先扩第三个车组',
+        buttonDetail: '目标:买车 + 招司机 + 分配上车,形成 3 个可运营车组',
       },
       early_final: {
-        title: '资源要重新分配',
+        title: '最后一次扩张提醒',
         tag: '投资人',
-        desc: '第二个月复盘会上,投资人把报表推到你面前。\n\n"我们给的是启动资金,不是存款账户。车队扩张还停在早期节奏,资源周转太慢。"\n\n"这次先收回一笔早期资源占用费 ¥{N}。后面先把运力补稳,再谈更高目标。"',
-        buttonLabel: '签字',
+        desc: '第二个月复盘会上,投资人把报表推到你面前。\n\n"现在仍是 {currentCrews}/{targetCrews} 个可运营车组。问题不是现金不够,而是启动资金没被转成运力:没买车、没招人、没形成新车组。"\n\n"这次扣一笔闲置资源占用费 ¥{N},并给你最后 {D} 天。Day {deadlineDay} 前扩到 5 个可运营车组,投资继续；到期还是 {currentCrews}/{targetCrews},我们就撤资清算。"',
+        buttonLabel: '确认扣款,立刻扩张车队',
+        buttonDetail: '最后期限:Day {deadlineDay} 前扩到 5 个可运营车组,否则投资人撤资失败',
       },
     },
   };
@@ -1313,18 +1384,19 @@
   // gate 触发时按需弹 UnlockSplash 教学卡片,辅助信息可 splash:false 静默开放
   const UI_GATES = [
     {
-      id: 'recruit_btn',
-      title: '招募司机',
-      desc: '新车已经到位,现在缺的是人。熟手更能练,但也更挑待遇。',
-      hint: '车队面板的「+ 招募」',
-      trigger: { type: 'mission', value: 'm3_buy_third_car' },
-    },
-    {
       id: 'shop_btn',
       title: '购买新车',
-      desc: '第一天跑稳了,可以加车扩运力。先买便宜车补空位,后面再换高级车。',
+      desc: '第 10 天可以开始扩张运力。先买一辆便宜车补空位,再招司机把第三个车组跑起来。',
       hint: '车队面板的「+ 买车」',
-      trigger: { type: 'mission', value: 'm2_first_day' },
+      trigger: { type: 'day', value: 10 },
+    },
+    {
+      id: 'recruit_btn',
+      title: '招募司机',
+      desc: '扩张车组不只要车,还要司机。买车后从这里招募新人,再分配到空车上。',
+      hint: '车队面板的「+ 招募」',
+      trigger: { type: 'day', value: 10 },
+      splash: false,
     },
     {
       id: 'supply_chip',
@@ -1336,15 +1408,23 @@
     },
     {
       id: 'training_actions',
-      title: '司机能力训练',
-      desc: '点开司机档案后能看到「车技」「服务」训练入口,花钱可提升属性以解锁专车/豪华车订单。',
+      title: '司机能力提升',
+      desc: '点开司机档案后能看到车技和服务入口。先把能力入口放出来,真正的服务提升提醒会在口碑连续下跌后出现。',
       hint: '右侧调度台 · 能力训练',
       trigger: { type: 'mission', value: 'm5_third_crew' },
+      splash: false,
+    },
+    {
+      id: 'service_training_guide',
+      title: '口碑下滑,提升服务',
+      desc: '最近口碑连续下跌超过 10 点。现在应该补服务质量,让好评率把口碑拉回来。',
+      hint: '右侧调度台 · 服务质量提升',
+      trigger: { type: 'reputation_drop', value: 10 },
     },
     {
       id: 'tryrate_card',
       title: '接单诊断',
-      desc: '司机档案里会多出三项状态:客源、干劲、单型。单子少时,先看是哪一项拖住了车队。',
+      desc: '司机档案里会多出三项状态:订单机会、接单意愿、可接订单。单子少时,先看是哪一项拖住了车队。',
       hint: '右侧调度台 · 司机档案',
       trigger: { type: 'mission', value: 'm5_third_crew' },
       splash: false,
@@ -1359,23 +1439,16 @@
     {
       id: 'risk_actions',
       title: '其他操作',
-      desc: '司机档案底部出现「其他操作」折叠区,换车、解雇司机、卖车都收在这里。解雇和卖车仍需确认。',
+      desc: '第三个车组组好后,你已经会买车和招人了。现在可以在司机档案底部解雇司机或卖车止损,这些操作仍需二次确认。',
       hint: '右侧调度台 · 司机档案底部',
-      trigger: { type: 'day', value: 60 },
-    },
-    {
-      id: 'investor_chip',
-      title: '投资人评估',
-      desc: '顶栏多了「距扩张提醒 N 天」倒计时。投资人会盯一眼早期扩张节奏,别长期只靠两辆车慢慢跑。',
-      hint: '顶栏',
-      trigger: { type: 'day', value: 20 },
+      trigger: { type: 'mission', value: 'm5_third_crew' },
     },
   ];
 
   window.WYCWY_DATA = {
     GAME, BACKGROUNDS, VEHICLES, ORDERS, ZONES,
     TRAININGS, EVENTS, INVESTOR_PRESSURE, POLICY_EVENTS, INVESTOR_REVIEW,
-    FIRST_NAMES, MISSIONS, ENDINGS,
+    FIRST_NAMES, MISSIONS, ENDINGS, PLAYER_STORIES,
     RECRUIT_TICKETS, RARITY_META, RARITY_STAT_CAPS, RARITY_LOYALTY_RULES,
     EVENT_NPCS, UI_GATES,
   };

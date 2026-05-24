@@ -1,7 +1,31 @@
-function EndingModal({ ending, onReset }) {
+function EndingStats({ stats }) {
+  if (!stats) return null;
+  return (
+    <div className="ending-stats">
+      <div className="ending-stat"><div className="ending-stat-label">营运天数</div><div className="ending-stat-value">{stats.days}</div></div>
+      <div className="ending-stat"><div className="ending-stat-label">总流水</div><div className="ending-stat-value">¥{stats.totalEarned.toLocaleString()}</div></div>
+      <div className="ending-stat"><div className="ending-stat-label">完成订单</div><div className="ending-stat-value">{stats.totalCompleted}</div></div>
+      <div className="ending-stat"><div className="ending-stat-label">城市口碑</div><div className="ending-stat-value">{stats.reputation}</div></div>
+      <div className="ending-stat"><div className="ending-stat-label">可运营车组</div><div className="ending-stat-value">{stats.crews ?? Math.min(stats.drivers, stats.vehicles)}</div></div>
+    </div>
+  );
+}
+
+function EndingModal({ ending, state, onReset }) {
   // V6 fix: 优先用 endingName/endingDesc(胜利);失败用 reason;deathCause 作为 fallback(codex review Medium)
   const isWin = ending.type === 'win';
   const isLose = ending.type === 'lose';
+  const finaleStory = isWin && ending.endingId === 'ipo' ? PLAYER_STORIES?.finale_ipo_heir : null;
+  if (finaleStory) {
+    return (
+      <PlayerStoryModal story={finaleStory} onButton={onReset} className="player-story-finale">
+        <div className="player-story-ending-stats">
+          <EndingStats stats={ending.stats} />
+        </div>
+        <RunAiReviewPanel state={state} />
+      </PlayerStoryModal>
+    );
+  }
   const titleMap = { win: '恭喜! 车队跑出来了', end: '一周目结束', lose: '车队破产' };
   const headline = isWin && ending.endingName ? `《${ending.endingName}》` : titleMap[ending.type];
   const story = isWin && ending.endingDesc
@@ -16,13 +40,8 @@ function EndingModal({ ending, onReset }) {
             <div style={{color: 'var(--ink-3)', fontSize: 14, marginBottom: 10}}>{titleMap[ending.type]}</div>
           )}
           <div style={{color: 'var(--ink-2)', marginBottom: 8, lineHeight: 1.6}}>{story}</div>
-          <div className="ending-stats">
-            <div className="ending-stat"><div className="ending-stat-label">营运天数</div><div className="ending-stat-value">{ending.stats.days}</div></div>
-            <div className="ending-stat"><div className="ending-stat-label">总流水</div><div className="ending-stat-value">¥{ending.stats.totalEarned.toLocaleString()}</div></div>
-            <div className="ending-stat"><div className="ending-stat-label">完成订单</div><div className="ending-stat-value">{ending.stats.totalCompleted}</div></div>
-            <div className="ending-stat"><div className="ending-stat-label">城市口碑</div><div className="ending-stat-value">{ending.stats.reputation}</div></div>
-            <div className="ending-stat"><div className="ending-stat-label">可运营车组</div><div className="ending-stat-value">{ending.stats.crews ?? Math.min(ending.stats.drivers, ending.stats.vehicles)}</div></div>
-          </div>
+          <EndingStats stats={ending.stats} />
+          <RunAiReviewPanel state={state} />
           <button className="btn btn-primary btn-block" onClick={onReset} style={{padding: 12}}>再来一遍</button>
         </div>
       </div>
@@ -84,10 +103,10 @@ function MissionToast({ mission, onClose }) {
       tag="任务完成"
       title={mission.title}
       message={mission.reward?.message}
-      reward={rewardAmount > 0 ? { label: '奖励', value: `+¥${rewardAmount}` } : ''}
+      reward={rewardAmount > 0 ? { label: '奖励已到账', value: `+¥${rewardAmount}` } : ''}
       iconLabel="任务"
       asset="mission"
-      actionLabel="领取奖励"
+      actionLabel="知道了"
       onClose={onClose}
       className="mission-feedback"
     />

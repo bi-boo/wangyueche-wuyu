@@ -876,6 +876,11 @@
     backdrop-filter: none !important;
     background: rgba(40,25,15,0.50) !important;
   }
+  .player-story-overlay {
+    backdrop-filter: blur(9px) saturate(0.72) !important;
+    -webkit-backdrop-filter: blur(9px) saturate(0.72) !important;
+    background: rgba(28,20,14,0.76) !important;
+  }
   .modal,
   .story-modal,
   .game-feedback-card {
@@ -908,6 +913,20 @@
   .ending-roadmap-item.next:hover {
     border-color: var(--ink) !important;
     box-shadow: 3px 3px 0 rgba(42,35,32,0.28) !important;
+  }
+
+  /* V15.40c: 开局故事底部是开始游戏主 CTA,不能沿用普通事件选项的弱样式。 */
+  .player-story-opening_layoff .player-story-primary-action {
+    border: 3px solid var(--accent-deep) !important;
+    background: var(--accent) !important;
+    color: #FFF8E7 !important;
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.38) !important;
+  }
+  .player-story-opening_layoff .player-story-primary-action:hover,
+  .player-story-opening_layoff .player-story-primary-action:focus-visible {
+    border-color: var(--ink) !important;
+    background: var(--accent-deep) !important;
+    box-shadow: 5px 5px 0 rgba(42,35,32,0.48) !important;
   }
 
   .modal-tag,
@@ -1179,66 +1198,6 @@
   .order-ticket-zone svg {
     color: currentColor !important;
   }
-
-  /* ========================================================
-   * V15.16: 投资人 review KPI 单元(6 种状态)
-   * 必须放 99-overrides 末尾,确保覆盖前面的 .topbar-stat 渐变背景
-   * 详见 GAME_DESIGN.md 第七章「投资人定期 review」
-   * ======================================================== */
-
-  /* has-investor-review:顶栏 4 列 → 5 列,max-width 从 790 → 960 */
-  .topbar-kpis.has-investor-review {
-    grid-template-columns:
-      minmax(174px, 1.18fr)
-      minmax(150px, 0.95fr)
-      minmax(108px, 0.72fr)
-      minmax(154px, 1fr)
-      minmax(150px, 0.95fr) !important;
-    max-width: 960px !important;
-  }
-
-  /* 状态 2: Q1 警告后(未达标)— 工坊橙边框 + 晨光橙底 + 油渍橙文字 */
-  .topbar-stat.ir-stat--warn1 {
-    background: var(--accent-soft) !important;
-    border-right: 1.5px solid var(--accent) !important;
-    box-shadow: inset 0 0 0 1.5px var(--accent) !important;
-  }
-  .topbar-stat.ir-stat--warn1 .ts-label { color: var(--accent-deep) !important; }
-  .topbar-stat.ir-stat--warn1 .ts-value { color: var(--accent-deep) !important; }
-
-  /* 状态 3: 半年警告后(未达标)— 警告红边框 + 浅红底 + 1.6s 脉冲 */
-  .topbar-stat.ir-stat--warn2 {
-    background: color-mix(in srgb, var(--warn) 14%, var(--card)) !important;
-    border-right: 1.5px solid var(--warn) !important;
-    box-shadow: inset 0 0 0 1.5px var(--warn) !important;
-    animation: ir-pulse-warn 1.6s infinite;
-  }
-  .topbar-stat.ir-stat--warn2 .ts-label { color: var(--warn) !important; }
-  .topbar-stat.ir-stat--warn2 .ts-value { color: var(--warn) !important; }
-  @keyframes ir-pulse-warn {
-    0%, 100% { filter: drop-shadow(0 0 0 transparent); }
-    50%      { filter: drop-shadow(0 0 6px rgba(232,69,69,0.55)); }
-  }
-
-  /* 状态 4: Q3 接受挑战(IPO 模式)— 金币金边框 + 浅金底 + 油渍橙数字 */
-  .topbar-stat.ir-stat--ipo {
-    background: color-mix(in srgb, var(--gold) 22%, var(--card)) !important;
-    border-right: 1.5px solid var(--gold) !important;
-    box-shadow: inset 0 0 0 1.5px var(--gold) !important;
-  }
-  .topbar-stat.ir-stat--ipo .ts-label { color: var(--accent-deep) !important; }
-  .topbar-stat.ir-stat--ipo .ts-value { color: var(--accent-deep) !important; }
-
-  /* 状态 6: Q3 后未撤资(boosted,等年终)— 金币金边框 + 浅金底 + 油墨深棕数字 */
-  .topbar-stat.ir-stat--boosted {
-    background: color-mix(in srgb, var(--gold) 22%, var(--card)) !important;
-    border-right: 1.5px solid var(--gold) !important;
-    box-shadow: inset 0 0 0 1.5px var(--gold) !important;
-  }
-  .topbar-stat.ir-stat--boosted .ts-label { color: var(--ink-2) !important; }
-  .topbar-stat.ir-stat--boosted .ts-value { color: var(--ink) !important; }
-
-  /* 状态 5(撤资 / 选稳着先 → 单元从 DOM 移除,无需 CSS) */
 
   /* V15.17: 政策弹窗专属样式。避免通用 .modal-option 的重黑边框套进复合决策卡。 */
   .policy-decision-modal .modal-options {

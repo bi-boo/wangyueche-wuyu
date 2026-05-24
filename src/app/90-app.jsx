@@ -1,26 +1,18 @@
 function App() {
-  const [state, dispatch] = useReducer(E.gameReducer, null, () => {
-    const autosave = getSavedAutosave();
-    return autosave?.state
-      ? (E.hydrateAutosaveState(autosave.state) || E.makeInitialState())
-      : E.makeInitialState();
-  });
+  const [state, dispatch] = useReducer(E.gameReducer, null, () => E.makeInitialState());
   const savedGameOverKeyRef = useRef(null);
   const lastCurrentRunSaveRef = useRef(0);
-  const lastAutosaveRef = useRef(0);
-  const latestStateRef = useRef(state);
   // V12.2: 暴露给测试脚本(Playwright)用,生产可见但只读取/写入,无 UI 影响
   // V14.89: 加 requestConfirm 暴露,方便 ConfirmModal 视觉验证
   window.__WYCWY_TEST = {
     dispatch,
     state,
     exportGameDiagnostics,
+    buildRunAnalysisPayload,
     getSavedRunHistory,
     getSavedCurrentRun,
-    getSavedAutosave,
     saveRunRecord,
     saveCurrentRunRecord,
-    saveAutosave,
     clearAutosave,
     clearCurrentRunRecord,
     get requestConfirm() { return requestConfirm; },
@@ -95,46 +87,7 @@ function App() {
   }, [state.gameOver, state.day, state.hour, state.funds, state.totalCompleted]);
 
   useEffect(() => {
-    latestStateRef.current = state;
-  }, [state]);
-
-  useEffect(() => {
-    if (!state.hasStarted || state.gameOver) return;
-    const now = Date.now();
-    if (now - lastAutosaveRef.current < 2500) return;
-    lastAutosaveRef.current = now;
-    saveAutosave(state);
-  }, [
-    state.hasStarted,
-    state.gameOver,
-    state.day,
-    state.hour,
-    state.funds,
-    state.reputation,
-    state.totalCompleted,
-    state.totalEarned,
-    state.currentMissionIdx,
-    state.drivers.length,
-    state.vehicles.length,
-    state.debtAmount,
-    state.debtDueDay,
-    state.debtCrisis,
-    state.paused,
-  ]);
-
-  useEffect(() => {
-    const saveLatest = () => saveAutosave(latestStateRef.current);
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') saveLatest();
-    };
-    window.addEventListener('pagehide', saveLatest);
-    window.addEventListener('beforeunload', saveLatest);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      window.removeEventListener('pagehide', saveLatest);
-      window.removeEventListener('beforeunload', saveLatest);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    clearAutosave();
   }, []);
 
   useEffect(() => {
@@ -163,7 +116,7 @@ function App() {
   // 有事则保持 250ms。其他档位维持固定间隔行为不变。
   const lastTickSnapshotRef = useRef(null);
   useEffect(() => {
-    if (state.paused || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showTutorial || state.debtCrisis || state.gameOver) {
+    if (state.paused || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.activeStory || state.showTutorial || state.debtCrisis || state.gameOver) {
       lastTickSnapshotRef.current = null;
       return;
     }
@@ -172,18 +125,20 @@ function App() {
       || prev.totalCompleted !== state.totalCompleted
       || prev.day !== state.day
       || prev.reputation !== state.reputation
+      || prev.activePlayerStory !== !!state.activePlayerStory
       || prev.activeStory !== !!state.activeStory;
     lastTickSnapshotRef.current = {
       totalCompleted: state.totalCompleted,
       day: state.day,
       reputation: state.reputation,
+      activePlayerStory: !!state.activePlayerStory,
       activeStory: !!state.activeStory,
     };
     const baseInterval = GAME.TICK_MS / state.speed;
     const interval = (state.speed === 8 && !eventful) ? 50 : baseInterval;
     const t = setTimeout(() => dispatch({type: 'TICK'}), interval);
     return () => clearTimeout(t);
-  }, [state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activeStory, state.showTutorial, state.debtCrisis, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
+  }, [state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activePlayerStory, state.activeStory, state.showTutorial, state.debtCrisis, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
 
   useEffect(() => {
     if (!selectedZoneId) return;
@@ -265,8 +220,8 @@ function App() {
     : selectedVehicle;
   const selectedZone = ZONES.find((z) => z.id === selectedZoneId);
   // V14.9: dispatchOffers 已删除,不再 derive selectedZoneOffers
-  const hasFinaleMissionNotice = !!state.newMissionComplete?.reward?.isFinale;
-  const showFeedbackStack = !!state.newMissionComplete && !hasFinaleMissionNotice;
+  const hasFinaleMissionNotice = !state.gameOver && !!state.newMissionComplete?.reward?.isFinale;
+  const showFeedbackStack = !state.gameOver && !!state.newMissionComplete && !hasFinaleMissionNotice;
 
   // V14.34: 右侧调度台默认落到可操作车组,避免长期显示"从左侧选择车组"空状态。
   useEffect(() => {
@@ -340,39 +295,14 @@ function App() {
     setShowPauseMenu(true);
   };
 
-  const loadAutosaveFromMenu = () => {
-    const autosave = getSavedAutosave();
-    if (!autosave?.state) return;
-    const loadNow = () => {
-      dispatch({ type: 'LOAD_AUTOSAVE', state: autosave.state });
-      resetUiSelection();
-      setShowPauseMenu(false);
-      setResumeAfterPauseMenu(false);
-    };
-    const progressed = state.hasStarted || state.totalCompleted > 0 || state.totalEarned > 0 || state.day > 1 || state.hour !== 6;
-    if (progressed) {
-      setShowPauseMenu(false);
-      setResumeAfterPauseMenu(false);
-      requestConfirm({
-        tag: '载入存档',
-        title: '载入最近自动存档？',
-        message: '当前画面中的进度会被最近自动存档替换。这个操作不会删除运营记录。',
-        confirmLabel: '载入存档',
-        onConfirm: loadNow,
-      });
-      return;
-    }
-    loadNow();
-  };
-
   const startNewGameFromMenu = () => {
     setShowPauseMenu(false);
     setResumeAfterPauseMenu(false);
     requestConfirm({
-      tag: '开始新游戏',
-      title: '确认开始新游戏？',
-      message: '当前可继续的自动存档会被清空,运营记录会保留。',
-      confirmLabel: '开始新游戏',
+      tag: '开始游戏',
+      title: '确认开始游戏？',
+      message: '当前这一局会重新开始,运营记录会保留。',
+      confirmLabel: '开始游戏',
       danger: true,
       onConfirm: () => {
         clearAutosave();
@@ -387,6 +317,13 @@ function App() {
         }
       },
     });
+  };
+
+  const openLeaderboardFromMenu = () => {
+    const leaderboardWindow = window.open('leaderboard.html', '_blank', 'noopener,noreferrer');
+    if (!leaderboardWindow) {
+      window.location.href = 'leaderboard.html';
+    }
   };
 
   useEffect(() => {
@@ -409,7 +346,7 @@ function App() {
       const target = event.target;
       if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
       event.preventDefault();
-      if (confirmOpts || state.activeEvent || state.activePolicyDecision || state.activeStory || state.showMonthlyReport || state.newEndingUnlocked || state.debtCrisis || state.gameOver) return;
+      if (confirmOpts || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.activeStory || state.showMonthlyReport || state.newEndingUnlocked || state.debtCrisis || state.gameOver) return;
       if (showPauseMenu) {
         closePauseMenu({ resume: true });
         return;
@@ -430,6 +367,7 @@ function App() {
     state.showTutorial,
     state.activeEvent,
     state.activePolicyDecision,
+    state.activePlayerStory,
     state.activeStory,
     state.showMonthlyReport,
     state.newEndingUnlocked,
@@ -525,6 +463,12 @@ function App() {
         <button className={mobileTab === 'inspector' ? 'active' : ''} onClick={() => setMobileTab('inspector')}>调度</button>
       </div>
 
+      {state.activePlayerStory && (
+        <PlayerStoryModal
+          story={state.activePlayerStory}
+          onButton={() => dispatch({type: 'PLAYER_STORY_SHOWN', skipTutorial: skipOnboarding})}
+        />
+      )}
       {state.showTutorial && <Tutorial onClose={() => dispatch({type: 'CLOSE_TUTORIAL'})} />}
       {state.activeEvent && <EventModal event={state.activeEvent} state={state}
         onResolve={(idx) => dispatch({type: 'RESOLVE_EVENT', optionIdx: idx})}
@@ -583,7 +527,7 @@ function App() {
       )}
       {showShop && <ShopModal state={state} onClose={() => setShowShop(false)} onBuyVehicle={(t) => { dispatch({type: 'BUY_VEHICLE', templateId: t}); setShowShop(false); }} />}
       {showRoadmap && <UnlockRoadmapModal state={state} initialTab={roadmapInitialTab} onClose={() => setShowRoadmap(false)} onOpenShop={() => setShowShop(true)} />}
-      {state.gameOver && <EndingModal ending={state.gameOver} onReset={() => dispatch({type: 'RESET'})} />}
+      {state.gameOver && <EndingModal ending={state.gameOver} state={state} onReset={() => dispatch({type: 'RESET'})} />}
       {confirmOpts && (
         <ConfirmModal
           {...confirmOpts}
@@ -593,17 +537,16 @@ function App() {
       {showPauseMenu && !state.gameOver && (
         <PauseMenu
           state={state}
-          autosave={getSavedAutosave()}
           muted={muted}
           crtOn={crtOn}
           skipOnboarding={skipOnboarding}
           onContinue={() => closePauseMenu({ resume: true })}
-          onLoadAutosave={loadAutosaveFromMenu}
           onNewGame={startNewGameFromMenu}
           onToggleMute={toggleMute}
           onToggleCrt={toggleCrt}
           onToggleSkipOnboarding={toggleSkipOnboarding}
           onShowTutorial={() => { closePauseMenu({ resume: false }); dispatch({type: 'OPEN_TUTORIAL'}); }}
+          onOpenLeaderboard={openLeaderboardFromMenu}
           onExportDiagnostics={() => exportGameDiagnostics(state)}
         />
       )}

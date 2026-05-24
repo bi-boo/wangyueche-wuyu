@@ -9,17 +9,22 @@ PORT="${WYCWY_PORT:-8765}"
 HTML_FILE="网约车物语-V3.html"
 URL="http://localhost:${PORT}/${HTML_FILE}"
 
-# 1. 选 Python 解释器
-if command -v python3 >/dev/null 2>&1; then
-  PY=python3
+# 1. 选服务器运行时:Node 支持 AI 复盘接口;没有 Node 时退回 Python 静态服务
+if command -v node >/dev/null 2>&1; then
+  SERVER_KIND="Node"
+  SERVER_CMD=(node scripts/ai-review-server.mjs)
+elif command -v python3 >/dev/null 2>&1; then
+  SERVER_KIND="Python"
+  SERVER_CMD=(python3 -m http.server "$PORT")
 elif command -v python >/dev/null 2>&1; then
-  PY=python
+  SERVER_KIND="Python"
+  SERVER_CMD=(python -m http.server "$PORT")
 else
-  echo "❌ 找不到 Python 3,无法启动本地服务器。"
+  echo "❌ 找不到 Node 或 Python,无法启动本地服务器。"
   echo ""
   echo "macOS 安装方式:"
-  echo "  方法 A(推荐): brew install python"
-  echo "  方法 B: 从 https://python.org/downloads/ 下载安装包"
+  echo "  Node:   brew install node"
+  echo "  Python: brew install python"
   echo ""
   read -r -p "按回车关闭..."
   exit 1
@@ -42,10 +47,10 @@ echo "==================================="
 echo "  网约车物语 — 本地启动"
 echo "==================================="
 echo ""
-echo "🚀 启动 HTTP 服务器(端口 ${PORT})..."
+echo "🚀 启动 ${SERVER_KIND} HTTP 服务器(端口 ${PORT})..."
 
 # 3. 后台起服务器
-"$PY" -m http.server "$PORT" >/dev/null 2>&1 &
+PORT="$PORT" "${SERVER_CMD[@]}" >/dev/null 2>&1 &
 SERVER_PID=$!
 
 # 4. Ctrl+C / 关窗 / 退出时清理服务器进程

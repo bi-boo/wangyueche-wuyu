@@ -50,8 +50,9 @@ function getMissionActionText(mission) {
 function MissionRoutePanel({ state, orderStatusById, onOpenShop }) {
   // V15.16:乱序完成 — 找第一个未完成且非 hidden 的任务作为"当前任务"
   const completedSet = new Set(state.completedMissionIds || []);
-  const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && !m.hidden);
-  const visibleMissions = MISSIONS.filter((m) => !m.hidden);
+  const missionVisible = (m) => !m.hidden && (!E.isMissionAvailable || E.isMissionAvailable(state, m));
+  const currentMission = MISSIONS.find((m) => !completedSet.has(m.id) && missionVisible(m));
+  const visibleMissions = MISSIONS.filter(missionVisible);
   const visibleDoneCount = visibleMissions.filter((m) => completedSet.has(m.id)).length;
   const rows = getMissionRouteRows(state, orderStatusById);
   const currentOrderId = currentMission ? MISSION_ORDER_TARGETS[currentMission.id] : null;

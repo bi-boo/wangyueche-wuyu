@@ -7,7 +7,7 @@
 ## 项目定位
 
 **网页端模拟经营游戏**,致敬开罗(Kairosoft)系列。
-- 单文件 HTML + 内联 React + Babel(`file://` 双击即玩)
+- 线上是 HTTP 静态网页游戏;源码拆为 `src/`,入口加载 `dist/` 预构建资源
 - 数据/引擎拆为独立 JS,便于调参
 - 作为**作品 + 噱头**,不商用,不发布
 
@@ -17,7 +17,7 @@
 
 ```
 网约车物语/
-├── 网约车物语-V3.html           主入口薄壳(106 行,只引用 src/ 和外部库)
+├── 网约车物语-V3.html           主入口薄壳(只引用 dist/、vendor/、data/engine)
 ├── wycwy-data.js                游戏配置(司机/车辆/订单/任务/结局/事件)
 ├── wycwy-engine.js              游戏引擎(reducer + tick + 死亡/结局检测)
 ├── ark-pixel-16px.woff2         字体存档(已决策不启用,见 PRODUCT.md)
@@ -26,6 +26,8 @@
 ├── GAME_DESIGN.md               游戏机制文档(每次改动同步更新)
 ├── PRODUCT.md / DESIGN.md       品牌定位与设计系统
 ├── CLAUDE.md / AGENTS.md        协作约定文档
+├── dist/                        线上入口构建产物(CSS bundle + React app bundle)
+├── vendor/                      线上本地化 React production UMD
 ├── src/
 │   ├── styles/                  CSS 拆分(11 个文件,文件名 0-99 数字前缀决定加载顺序)
 │   │   ├── 00-tokens.css        (CSS 变量 / 字体)
@@ -50,13 +52,15 @@
 │       ├── 70-endings.jsx       (EndingModal/EndingUnlock/MissionToast/ConfirmModal)
 │       └── 90-app.jsx           (App + ReactDOM.createRoot)
 ├── scripts/
+│   ├── build-entry-assets.mjs    (把 src/styles + src/app 构建成 dist 入口资源)
 │   ├── generate-pixel-assets.mjs (像素资产生成)
+│   ├── smoke-server.mjs          (本地服务/API/榜单写入冒烟验证)
 │   └── sim-strategies.js         (策略模拟)
 ├── assets/                      像素图素材(司机头像 / 车辆图 / 改装件 / NPC 立绘)
 └── archive/                     历史版本(v1 / v2,V14.93 拆分前快照)
 ```
 
-**关键变化**:V14.93 之前 `网约车物语-V3.html` 是 2700+ 行内嵌组件的单文件;V14.93 反向拆分后变成 106 行薄壳,所有 React/CSS 移到 `src/` 下。
+**关键变化**:V14.93 之前 `网约车物语-V3.html` 是 2700+ 行内嵌组件的单文件;V14.93 反向拆分后所有 React/CSS 移到 `src/` 下。V15.41 起线上入口不再加载 Babel,而是加载 `dist/wycwy-styles.bundle.css` + `dist/wycwy-app.bundle.js`;修改 `src/` 后必须运行构建脚本刷新 `dist/`。
 
 ---
 
@@ -103,17 +107,17 @@ https://yuanfengai.cn/didichuxing/baozheng/wycwy/
 
 - **纯数值调整**(单价、阈值、门槛、奖励金额)→ `wycwy-data.js`
 - **逻辑变化**(派单算法、死亡判定、结局判定)→ `wycwy-engine.js`
-- **UI/视觉**(布局、颜色、动画)→ `src/styles/*.css`,再运行 `node scripts/build-html.mjs`
-- **React 组件**(组件逻辑)→ `src/app/*.jsx`,再运行 `node scripts/build-html.mjs`
+- **UI/视觉**(布局、颜色、动画)→ `src/styles/*.css`,再运行 `node scripts/build-entry-assets.mjs`
+- **React 组件**(组件逻辑)→ `src/app/*.jsx`,再运行 `node scripts/build-entry-assets.mjs`
 
-**重要**:`网约车物语-V3.html` 仍是实际运行产物,但 V8 起维护入口改为 `src/styles/*.css` + `src/app/*.jsx`。改完运行:
+**重要**:`网约车物语-V3.html` 仍是实际入口,但维护入口是 `src/styles/*.css` + `src/app/*.jsx`。改完运行:
 
 ```bash
 cd "/Users/baozheng/代码文件/网约车物语"
-node scripts/build-html.mjs
+node scripts/build-entry-assets.mjs
 ```
 
-`src/app.jsx` 和 `wycwy-app.js` 都是构建脚本拼出的组件镜像,不要作为主维护入口。原因仍然是 Babel 在 `file://` 下不能加载本地 JSX,所以最终 HTML 仍需要内嵌 React 代码。
+`dist/` 是构建产物,不要手改。线上 HTML 使用本地 `vendor/react-18.3.1.production.min.js`、`vendor/react-dom-18.3.1.production.min.js` 和 `dist/` bundle,避免多人同时进入时每个浏览器都下载 Babel 并现场编译 JSX。
 
 ### 约定 3:数值后台 admin.html 与 data.js 数据结构同步
 
@@ -128,36 +132,18 @@ node scripts/build-html.mjs
 
 ## 关键陷阱(踩过)
 
-### 陷阱 1:Babel `<script type="text/babel" src="...">` 在 file:// 下不工作
+### 陷阱 1:线上入口不再走 Babel,改 src 后必须重建 dist
 
-**症状**:CORS 错误 `XMLHttpRequest blocked`
-**原因**:Babel 用 fetch 加载 JSX 文件,Chrome 在 file:// 下禁止跨域 fetch
-**对策**:React 组件代码必须**内嵌**在 HTML 的 `<script type="text/babel">` 块里
-**V8 推荐做法**:维护 `src/app/*.jsx`,然后运行 `node scripts/build-html.mjs` 同步到 HTML。
-
-**`wycwy-app.js` 的历史作用**:作为**参考源码**给开发者改,改完后用以下命令同步到 HTML:
+**症状**:改了 `src/app/*.jsx` 或 `src/styles/*.css`,本地源码看起来变了,但线上页面没变化。
+**原因**:V15.41 起 `网约车物语-V3.html` 只加载 `dist/wycwy-app.bundle.js` 和 `dist/wycwy-styles.bundle.css`,不再在浏览器里用 Babel 编译 `src/`。
+**对策**:维护 `src/app/*.jsx` / `src/styles/*.css`,然后运行:
 
 ```bash
-cd ~/代码文件/网约车物语
-awk -v app_file="wycwy-app.js" '
-  BEGIN { in_babel = 0; }
-  /<script type="text\/babel">/ {
-    print
-    while ((getline line < app_file) > 0) print line
-    close(app_file)
-    in_babel = 1
-    next
-  }
-  in_babel == 1 {
-    if (/<\/script>/) { print; in_babel = 0 }
-    next
-  }
-  { print }
-' 网约车物语-V3.html > 网约车物语-V3.tmp.html
-mv 网约车物语-V3.tmp.html 网约车物语-V3.html
+cd "/Users/baozheng/代码文件/网约车物语"
+node scripts/build-entry-assets.mjs
 ```
 
-或者直接改 HTML 内嵌部分,放弃 wycwy-app.js 同步(目前的常用方式)。
+本地测试用 `python3 -m http.server 8765` 打开 `http://localhost:8765/网约车物语-V3.html`;不要再依赖 `file://` 双击。
 
 ### 陷阱 2:像素字体必须按"原生设计尺寸的整数倍"渲染
 

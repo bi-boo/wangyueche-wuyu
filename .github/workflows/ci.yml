@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check wycwy-data.js
+          node --check wycwy-engine.js
+          node --check scripts/ai-review-server.mjs
+          node --check scripts/build-entry-assets.mjs
+          node --check scripts/smoke-server.mjs
+
+      - name: Build entry assets
+        run: node scripts/build-entry-assets.mjs
+
+      - name: Run server smoke test
+        run: node scripts/smoke-server.mjs

@@ -1,0 +1,44 @@
+{
+  "builtAt": "2026-05-18T16:32:34.295Z",
+  "esbuildVersion": "0.28.0",
+  "inputs": {
+    "styles": [
+      "src/styles/00-tokens.css",
+      "src/styles/10-base.css",
+      "src/styles/20-topbar.css",
+      "src/styles/30-modals.css",
+      "src/styles/35-ai-review.css",
+      "src/styles/40-tasks-list.css",
+      "src/styles/50-feedback.css",
+      "src/styles/60-inspector.css",
+      "src/styles/70-pixel-flytext.css",
+      "src/styles/80-map-hud.css",
+      "src/styles/90-toggles-recruit.css",
+      "src/styles/99-overrides.css"
+    ],
+    "app": [
+      "src/app/00-runtime.jsx",
+      "src/app/10-icons.jsx",
+      "src/app/20-topbar.jsx",
+      "src/app/30-fleet.jsx",
+      "src/app/40-inspector.jsx",
+      "src/app/50-modals.jsx",
+      "src/app/55-player-stories.jsx",
+      "src/app/60-roadmap.jsx",
+      "src/app/70-endings.jsx",
+      "src/app/75-ai-review.jsx",
+      "src/app/80-pause-menu.jsx",
+      "src/app/90-app.jsx"
+    ]
+  },
+  "outputs": {
+    "styles": {
+      "file": "dist/wycwy-styles.bundle.css",
+      "bytes": 121219
+    },
+    "app": {
+      "file": "dist/wycwy-app.bundle.js",
+      "bytes": 153243
+    }
+  }
+}

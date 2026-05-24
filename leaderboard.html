@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>网约车物语经营榜</title>
+<link rel="icon" href="data:," />
+<style>
+:root {
+  --paper: #fff8e8;
+  --card: #f7e5b9;
+  --ink: #26211d;
+  --muted: #8c7a68;
+  --line: #aa9b7c;
+  --orange: #ff8a3d;
+  --green: #2f8f68;
+  --blue: #316f9f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--paper); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+body { padding: 24px; }
+.page { max-width: 1180px; margin: 0 auto; }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+h1 { margin: 0; font-size: 30px; line-height: 1.15; letter-spacing: 0; }
+.sub { margin: 8px 0 0; color: var(--muted); font-weight: 700; line-height: 1.5; }
+.back { flex: 0 0 auto; color: var(--ink); text-decoration: none; font-weight: 900; padding: 10px 14px; border: 2px solid var(--ink); background: #fff2cb; box-shadow: 3px 3px 0 var(--ink); }
+.tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 14px; }
+.tab { flex: 0 0 auto; border: 2px solid var(--line); background: #fff2cb; color: var(--ink); font: inherit; font-weight: 900; padding: 9px 12px; cursor: pointer; }
+.tab.active { border-color: var(--ink); background: var(--orange); color: #fff; box-shadow: 3px 3px 0 var(--ink); }
+.board { border: 3px solid var(--line); background: #f8e9bf; padding: 10px; }
+.row { display: grid; grid-template-columns: 54px minmax(210px, 1.3fr) repeat(6, minmax(80px, .7fr)); gap: 8px; align-items: center; padding: 10px; border-bottom: 1px solid rgba(170,155,124,.5); background: rgba(255,248,232,.54); }
+.row.head { position: sticky; top: 0; z-index: 1; background: var(--ink); color: #fff; font-size: 13px; font-weight: 900; border-bottom: 0; }
+.row:not(.head):nth-child(2) { background: #fff1b8; }
+.rank { font-size: 22px; font-weight: 1000; }
+.name strong { display: block; font-size: 15px; line-height: 1.3; }
+.name span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; margin-top: 3px; }
+.cell { font-weight: 900; }
+.money.negative { color: #b23a2f; }
+.money.positive { color: var(--green); }
+.empty, .loading { padding: 36px 12px; text-align: center; color: var(--muted); font-weight: 900; }
+.error { padding: 14px; background: #ffe1d6; border: 2px solid #b23a2f; font-weight: 900; margin-bottom: 12px; display: none; }
+@media (max-width: 980px) {
+  body { padding: 16px; }
+  .top { align-items: flex-start; flex-direction: column; }
+  .board { overflow-x: auto; }
+  .row { min-width: 860px; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <div>
+      <h1>网约车物语经营榜</h1>
+      <p class="sub">结局复盘后自动匿名入榜。榜单只展示经营摘要,不公开完整选择记录。</p>
+    </div>
+    <a class="back" href="./">返回游戏</a>
+  </header>
+
+  <div class="tabs" aria-label="榜单排序">
+    <button class="tab active" data-sort="score">综合榜</button>
+    <button class="tab" data-sort="funds">现金榜</button>
+    <button class="tab" data-sort="days">天数榜</button>
+    <button class="tab" data-sort="recent">新鲜出炉</button>
+  </div>
+
+  <div class="error" id="error"></div>
+
+  <section class="board">
+    <div class="row head">
+      <div>排名</div>
+      <div>经营人格</div>
+      <div>天数</div>
+      <div>资金</div>
+      <div>口碑</div>
+      <div>车组</div>
+      <div>订单</div>
+      <div>结局</div>
+    </div>
+    <div id="rows" class="loading">正在读取榜单...</div>
+  </section>
+</main>
+
+<script>
+const API = 'api/leaderboard';
+let currentSort = 'score';
+
+function formatMoney(value) {
+  const num = Number(value || 0);
+  const sign = num < 0 ? '-' : '';
+  return `${sign}¥${Math.abs(num).toLocaleString()}`;
+}
+
+function createCell(className, text) {
+  const cell = document.createElement('div');
+  cell.className = className;
+  cell.textContent = text;
+  return cell;
+}
+
+function createNameCell(entry) {
+  const cell = document.createElement('div');
+  cell.className = 'name';
+  const name = document.createElement('strong');
+  name.textContent = entry.profile || '';
+  const date = document.createElement('span');
+  date.textContent = formatDate(entry.submittedAt);
+  cell.append(name, date);
+  return cell;
+}
+
+function renderRows(entries) {
+  const host = document.getElementById('rows');
+  host.replaceChildren();
+  if (!entries.length) {
+    host.className = 'empty';
+    host.textContent = '还没有入榜记录。玩到结局并生成 AI 复盘后,会自动匿名加入这里。';
+    return;
+  }
+  host.className = '';
+  const fragment = document.createDocumentFragment();
+  entries.forEach((entry) => {
+    const moneyClass = Number(entry.funds || 0) < 0 ? 'negative' : 'positive';
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.append(
+      createCell('rank', `#${entry.rank}`),
+      createNameCell(entry),
+      createCell('cell', entry.days),
+      createCell(`cell money ${moneyClass}`, formatMoney(entry.funds)),
+      createCell('cell', entry.reputation),
+      createCell('cell', entry.crews),
+      createCell('cell', entry.totalCompleted),
+      createCell('cell', entry.resultLabel || ''),
+    );
+    fragment.append(row);
+  });
+  host.append(fragment);
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+async function loadLeaderboard(sort = currentSort) {
+  currentSort = sort;
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('rows').className = 'loading';
+  document.getElementById('rows').textContent = '正在读取榜单...';
+  try {
+    const res = await fetch(`${API}?sort=${encodeURIComponent(sort)}&limit=100`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || data.error || 'leaderboard_failed');
+    const entries = data.entries || [];
+    renderRows(entries);
+  } catch (e) {
+    const error = document.getElementById('error');
+    error.textContent = `榜单读取失败:${e.message || e}`;
+    error.style.display = 'block';
+    renderRows([]);
+  }
+}
+
+document.querySelectorAll('.tab').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    loadLeaderboard(button.dataset.sort);
+  });
+});
+
+loadLeaderboard();
+</script>
+</body>
+</html>

@@ -7,7 +7,7 @@
 ## 项目定位
 
 **网页端模拟经营游戏**,致敬开罗(Kairosoft)系列。
-- 单文件 HTML + 内联 React + Babel(`file://` 双击即玩)
+- 线上是 HTTP 静态网页游戏;源码拆为 `src/`,入口加载 `dist/` 预构建资源
 - 数据/引擎拆为独立 JS,便于调参
 - 作为**作品 + 噱头**,不商用,不发布
 
@@ -17,7 +17,7 @@
 
 ```
 网约车物语/
-├── 网约车物语-V3.html           主入口薄壳(106 行,只引用 src/ 和外部库)
+├── 网约车物语-V3.html           主入口薄壳(只引用 dist/、vendor/、data/engine)
 ├── wycwy-data.js                游戏配置(司机/车辆/订单/任务/结局/事件)
 ├── wycwy-engine.js              游戏引擎(reducer + tick + 死亡/结局检测)
 ├── ark-pixel-16px.woff2         字体存档(已决策不启用,见 PRODUCT.md)
@@ -26,6 +26,8 @@
 ├── GAME_DESIGN.md               游戏机制文档(每次改动同步更新)
 ├── PRODUCT.md / DESIGN.md       impeccable 设计上下文
 ├── CLAUDE.md                    本文件
+├── dist/                        线上入口构建产物(CSS bundle + React app bundle)
+├── vendor/                      线上本地化 React production UMD
 ├── src/
 │   ├── styles/                  CSS 拆分(11 个文件,文件名 0-99 数字前缀决定加载顺序)
 │   │   ├── 00-tokens.css        (CSS 变量 / 字体)
@@ -50,7 +52,9 @@
 │       ├── 70-endings.jsx       (EndingModal/EndingUnlock/MissionToast/ConfirmModal)
 │       └── 90-app.jsx           (App + ReactDOM.createRoot)
 ├── scripts/
+│   ├── build-entry-assets.mjs    (把 src/styles + src/app 构建成 dist 入口资源)
 │   ├── generate-pixel-assets.mjs (像素资产生成)
+│   ├── smoke-server.mjs          (本地服务/API/榜单写入冒烟验证)
 │   └── sim-strategies.js         (策略模拟)
 ├── assets/                      像素图素材(司机头像 / 车辆图 / 改装件)
 └── archive/                     历史版本(v1 / v2)
@@ -85,7 +89,8 @@
 - **逻辑变化**(派单算法、死亡判定、结局判定)→ `wycwy-engine.js`
 - **UI/视觉**(布局、颜色、动画)→ `src/styles/*.css` 对应章节文件
 - **React 组件**(组件逻辑)→ `src/app/*.jsx` 对应职责文件
-- **HTML 主入口**(网约车物语-V3.html)是 106 行薄壳,只放 `<link>` 和 `<script>` 引用。**绝对不要再往这里塞内嵌 style 或 babel 代码**
+- **HTML 主入口**(网约车物语-V3.html)是薄壳,只放 `<link>` 和 `<script>` 引用。**绝对不要再往这里塞内嵌 style 或 babel 代码**
+- **入口构建产物**(`dist/`)由 `node scripts/build-entry-assets.mjs` 生成,不要手改;修改 `src/app` 或 `src/styles` 后必须重建。
 
 **判断 React 组件归哪个文件**:
 - 顶栏/KPI/速度控制/底部 HUD → `src/app/20-topbar.jsx`
@@ -111,11 +116,17 @@
 
 ## 关键陷阱(踩过)
 
-### 陷阱 1:Babel `<script type="text/babel" src="...">` 在 file:// 下不工作 → V14.93 已不再适用
+### 陷阱 1:线上入口不再走 Babel,改 src 后必须重建 dist
 
 **历史**:Babel 用 fetch 加载 JSX 文件,Chrome 在 file:// 下禁止跨域 fetch,所以 V11-V14.92 期间 React 组件代码全部**内嵌**在 HTML 的单一 `<script type="text/babel">` 块里。
 
-**V14.93 改造**:已经反向拆分到 `src/app/*.jsx` 9 个文件,HTML 只放 `<script type="text/babel" src="...">` 引用。**前提:必须用 http:// 协议访问**,不能直接双击 file:// 打开。
+**V14.93 改造**:反向拆分到 `src/app/*.jsx`,HTML 放 `<script type="text/babel" src="...">` 引用。**前提:必须用 http:// 协议访问**,不能直接双击 file:// 打开。
+
+**V15.41 入口优化**:线上 HTML 不再加载 Babel,而是加载 `vendor/` 里的 React production UMD 和 `dist/` 里的 CSS/JS bundle。修改 `src/app/*.jsx` 或 `src/styles/*.css` 后运行:
+
+```bash
+node scripts/build-entry-assets.mjs
+```
 
 **本地测试方式**(替代双击 file://):
 ```bash
@@ -124,7 +135,7 @@ python3 -m http.server 8765
 # 浏览器打开 http://localhost:8765/网约车物语-V3.html
 ```
 
-**部署方式**:把整个项目目录(含 src/ wycwy-data.js wycwy-engine.js 字体 assets)上传到 Web server,玩家通过 https://yoursite.com/网约车物语-V3.html 访问。
+**部署方式**:先运行 `node scripts/build-entry-assets.mjs`,再把整个项目目录(含 dist/ vendor/ src/ wycwy-data.js wycwy-engine.js 字体 assets)上传到 Web server,玩家通过 https://yoursite.com/网约车物语-V3.html 访问。
 
 **当前线上部署记录**:详见 `DEPLOYMENT.md`。当前 canonical 线上地址是 `https://yuanfengai.cn/didichuxing/baozheng/wycwy/`,服务器 SSH 别名 `nextype`,目录 `/var/www/nextype-website/didichuxing/baozheng/wycwy`。部署前先按 `DEPLOYMENT.md` 的「避免重复部署」命令排查旧目录。
 

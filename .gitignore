@@ -6,9 +6,9 @@
 *.pem
 
 node_modules/
-dist/
 build/
 test-results/
+tmp/
 __pycache__/
 *.pyc
 
