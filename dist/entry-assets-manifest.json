@@ -1,5 +1,6 @@
 {
-  "builtAt": "2026-05-18T16:32:34.295Z",
+  "buildMode": "reproducible",
+  "inputHash": "58f7d3964cbe90fba4a06b73e5e97a0dde6efeb1c57361c9ce9b53a714cc5e3f",
   "esbuildVersion": "0.28.0",
   "inputs": {
     "styles": [
@@ -19,11 +20,16 @@
     "app": [
       "src/app/00-runtime.jsx",
       "src/app/10-icons.jsx",
+      "src/app/18-run-records.jsx",
       "src/app/20-topbar.jsx",
       "src/app/30-fleet.jsx",
+      "src/app/38-driver-diagnostics.jsx",
       "src/app/40-inspector.jsx",
+      "src/app/45-tutorial.jsx",
       "src/app/50-modals.jsx",
+      "src/app/52-recruit-shop-roadmap.jsx",
       "src/app/55-player-stories.jsx",
+      "src/app/56-feedback-monthly-story.jsx",
       "src/app/60-roadmap.jsx",
       "src/app/70-endings.jsx",
       "src/app/75-ai-review.jsx",
