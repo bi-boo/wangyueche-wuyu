@@ -1,0 +1,584 @@
+  /* V14.53: 查看目标弹层 */
+  .roadmap-focus {
+    background: var(--sub);
+    border: 2px solid var(--accent);
+    padding: 14px 16px;
+    margin: 12px 0 16px;
+  }
+  .roadmap-focus.all-unlocked {
+    border-color: var(--green, #2E7D6A);
+    color: var(--green, #2E7D6A);
+    text-align: center;
+    padding: 18px;
+    font-weight: 700;
+  }
+  .roadmap-focus-tag {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .roadmap-focus-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .mission-route-focus {
+    background: var(--sub);
+    border: 2px solid var(--accent);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.16);
+    padding: 14px 16px;
+    margin: 12px 0 16px;
+  }
+  .mission-route-focus-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .mission-route-progress {
+    flex-shrink: 0;
+    padding: 4px 8px;
+    background: var(--card);
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .mission-route-next {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    margin-top: 8px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .mission-route-next span {
+    color: var(--accent-deep);
+    font-size: 14px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .mission-route-next strong {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .mission-route-order-focus {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-soft);
+  }
+  .mission-route-list {
+    display: grid;
+    gap: 8px;
+  }
+  .mission-route-row {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+    background: rgba(240,226,188,0.64);
+    border: 1px solid var(--border-soft);
+    color: var(--ink);
+  }
+  .mission-route-row.current {
+    background: var(--sub);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.16);
+  }
+  .mission-route-row.done {
+    opacity: 0.66;
+  }
+  .mission-route-row.locked {
+    color: var(--ink-2);
+  }
+  .mission-route-index {
+    height: 28px;
+    display: grid;
+    place-items: center;
+    background: var(--ink);
+    color: var(--gold);
+    font-weight: 900;
+    line-height: 1;
+  }
+  .mission-route-body {
+    min-width: 0;
+  }
+  .mission-route-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .mission-route-head strong {
+    min-width: 0;
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.35;
+  }
+  .mission-route-state {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border: 1px solid var(--border-soft);
+    background: rgba(255,248,231,0.72);
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .mission-route-row.current .mission-route-state {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--gold);
+  }
+  .mission-order-link {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    margin-top: 8px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 800;
+  }
+  .mission-order-link.strong {
+    margin: 0 0 6px;
+  }
+  .mission-order-link span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mission-order-link strong {
+    color: var(--accent-deep);
+    white-space: nowrap;
+  }
+  .mission-order-link em {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-style: normal;
+    color: var(--ink-3);
+    font-size: 11px;
+  }
+  .mission-order-conditions {
+    margin-top: 8px;
+    padding-top: 2px;
+  }
+  .roadmap-cond-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    border-top: 1px dashed rgba(0,0,0,0.08);
+    font-size: 14px;
+  }
+  .roadmap-cond-row:first-child { border-top: none; }
+  .roadmap-cond-icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #FFF8E7;
+  }
+  .roadmap-cond-icon.ok { background: var(--green, #2E7D6A); }
+  .roadmap-cond-icon.miss { background: var(--ink-3); }
+  .roadmap-cond-body {
+    flex: 1;
+    line-height: 1.4;
+  }
+  .roadmap-cond-label {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .roadmap-cond-missing {
+    color: var(--ink-3);
+    margin-top: 2px;
+    font-size: 14px;
+  }
+  .roadmap-cond-action {
+    margin-left: 6px;
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    font: inherit;
+    padding: 0;
+  }
+  .roadmap-section-title {
+    font-size: 14px;
+    color: var(--ink-3);
+    font-weight: 700;
+    margin: 16px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .ending-goal-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--sub);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.14);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .ending-goal-summary span {
+    color: var(--ink-2);
+    font-size: 14px;
+    font-weight: 900;
+  }
+  .ending-goal-summary strong {
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: 900;
+  }
+  .roadmap-list {
+    display: grid;
+    gap: 4px;
+  }
+  .roadmap-item {
+    display: grid;
+    grid-template-columns: 18px 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+    font-size: 14px;
+  }
+  .roadmap-item.unlocked {
+    border-color: var(--green, #2E7D6A);
+  }
+  .roadmap-item-name {
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .roadmap-item-fare {
+    color: var(--accent-deep);
+    font-weight: 800;
+    font-size: 14px;
+  }
+  .roadmap-item-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+  .roadmap-item.unlocked .roadmap-item-status {
+    background: rgba(46,125,106,0.1);
+    color: var(--green, #2E7D6A);
+  }
+  .roadmap-item.locked .roadmap-item-status {
+    background: rgba(0,0,0,0.05);
+    color: var(--ink-3);
+  }
+  /* V14.90: 通关成就墙(跨局俯瞰) */
+  .ending-wall {
+    background: var(--sub);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .ending-wall-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .ending-wall-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .ending-wall-count {
+    font-size: 14px;
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .ending-wall-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .ending-wall-cell {
+    border: 2px solid var(--ink);
+    padding: 8px 4px;
+    text-align: center;
+    background: var(--card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-height: 88px;
+    justify-content: space-between;
+  }
+  .ending-wall-tier {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .ending-wall-icon {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .ending-wall-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+  .ending-wall-status {
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .ending-wall-cell.ending-wall-conquered {
+    background: var(--gold);
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .ending-wall-cell.ending-wall-conquered .ending-wall-tier,
+  .ending-wall-cell.ending-wall-conquered .ending-wall-name,
+  .ending-wall-cell.ending-wall-conquered .ending-wall-icon,
+  .ending-wall-cell.ending-wall-conquered .ending-wall-status {
+    color: var(--ink);
+    font-weight: 800;
+  }
+  .ending-wall-cell.ending-wall-reachable {
+    background: var(--accent);
+    box-shadow: 2px 2px 0 var(--accent-deep);
+  }
+  .ending-wall-cell.ending-wall-reachable .ending-wall-tier,
+  .ending-wall-cell.ending-wall-reachable .ending-wall-name,
+  .ending-wall-cell.ending-wall-reachable .ending-wall-icon,
+  .ending-wall-cell.ending-wall-reachable .ending-wall-status {
+    color: #FFF8E7;
+    font-weight: 800;
+  }
+  .ending-wall-cell.ending-wall-progressing {
+    border-style: dashed;
+  }
+  .ending-wall-cell.ending-wall-pending {
+    opacity: 0.62;
+  }
+  .ending-wall-cell.ending-wall-hidden {
+    background: var(--bg-deep);
+    opacity: 0.55;
+  }
+  .ending-wall-cell.ending-wall-hidden .ending-wall-name {
+    color: var(--ink-3);
+  }
+
+  /* V14.90: 运营记录 tab */
+  .run-history-empty {
+    padding: 20px 14px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 14px;
+    background: var(--sub);
+    border: 1px dashed var(--border-soft);
+  }
+  .run-history-list {
+    display: grid;
+    gap: 6px;
+  }
+  .run-history-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.18);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .run-history-card:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .run-history-card.outcome-win {
+    border-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 10%, var(--card) 90%);
+  }
+  .run-history-card.outcome-lose {
+    border-color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 6%, var(--card) 94%);
+  }
+  .run-history-card.outcome-current {
+    border-color: var(--green);
+    background: color-mix(in srgb, var(--green) 8%, var(--card) 92%);
+  }
+  .run-history-tag {
+    font-size: 11px;
+    font-weight: 800;
+    background: var(--ink);
+    color: var(--gold);
+    padding: 2px 8px;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .run-history-card.outcome-win .run-history-tag {
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .run-history-card.outcome-lose .run-history-tag {
+    background: var(--warn);
+    color: #FFF8E7;
+  }
+  .run-history-card.outcome-current .run-history-tag {
+    background: var(--green);
+    color: #FFF8E7;
+  }
+  .run-history-main {
+    min-width: 0;
+  }
+  .run-history-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .run-history-meta {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .run-history-arrow {
+    font-size: 18px;
+    color: var(--ink-3);
+    font-weight: 800;
+  }
+  .run-history-card:hover .run-history-arrow {
+    color: var(--ink);
+  }
+
+  .ending-roadmap-list {
+    display: grid;
+    gap: 6px;
+  }
+  .ending-roadmap-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px 10px;
+    align-items: start;
+    padding: 9px 10px;
+    background: var(--sub);
+    border: 1px solid var(--border-soft);
+    font-size: 14px;
+  }
+  .ending-roadmap-item.done,
+  .ending-roadmap-item.next {
+    border-color: var(--ink);
+  }
+  .ending-roadmap-item.hidden {
+    opacity: 0.72;
+  }
+  .ending-roadmap-tier {
+    min-width: 28px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    background: var(--ink);
+    color: var(--gold);
+    border: 1px solid var(--ink);
+    font-weight: 900;
+    line-height: 1;
+  }
+  .ending-roadmap-main {
+    min-width: 0;
+  }
+  .ending-roadmap-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .ending-roadmap-name {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .ending-roadmap-item.hidden .ending-roadmap-name {
+    letter-spacing: 1px;
+  }
+  .ending-roadmap-detail {
+    margin-top: 3px;
+    color: var(--ink-3);
+    line-height: 1.45;
+  }
+  .ending-roadmap-detail {
+    color: var(--ink-2);
+  }
+  .ending-roadmap-status {
+    justify-self: end;
+    min-height: 24px;
+    padding: 3px 8px;
+    border: 1px solid var(--ink);
+    background: var(--card);
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .ending-roadmap-item.done .ending-roadmap-status {
+    background: var(--green, #2E7D6A);
+    color: #FFF8E7;
+    border-color: var(--green, #2E7D6A);
+  }
+  .ending-roadmap-item.next .ending-roadmap-status {
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .fleet-panel-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 8px;
+    margin-bottom: 8px;
+  }
+  .fleet-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .fleet-actions .btn {
+    min-height: 30px;
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+  .fleet-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .fleet-count-inline {
+    color: var(--ink-3);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }

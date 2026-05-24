@@ -711,7 +711,6 @@
   // V14.9: buildDispatchOffers / refreshDispatchOffers 已删除 — 之前驱动 CityOrderLayer
   // 渲染地图气泡,但 CityOrderLayer 早已 return null 是死组件。真正派单看 buildHourlySupply。
 
-
   // === reducer ===
   function makeInitialState() {
     const now = Date.now();

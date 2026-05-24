@@ -18,11 +18,15 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Build engine
+        run: node scripts/build-engine.mjs
+
       - name: Check JavaScript syntax
         run: |
           node --check wycwy-data.js
           node --check wycwy-engine.js
           node --check scripts/ai-review-server.mjs
+          node --check scripts/build-engine.mjs
           node --check scripts/build-entry-assets.mjs
           node --check scripts/smoke-server.mjs
 
@@ -30,7 +34,7 @@ jobs:
         run: node scripts/build-entry-assets.mjs
 
       - name: Check generated assets are current
-        run: git diff --exit-code -- dist/wycwy-app.bundle.js dist/wycwy-styles.bundle.css dist/entry-assets-manifest.json
+        run: git diff --exit-code -- wycwy-engine.js dist/wycwy-app.bundle.js dist/wycwy-styles.bundle.css dist/entry-assets-manifest.json
 
       - name: Run server smoke test
         run: node scripts/smoke-server.mjs

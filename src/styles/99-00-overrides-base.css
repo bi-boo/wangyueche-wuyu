@@ -1,0 +1,358 @@
+  /* ========= V10.3: 像素硬边回调 + 线条分层 =========
+   * V15.16 sunset 注释:本文件 1134 行 + 大量 !important,与 20-topbar.css /
+   * 30-modals.css / 80-map-hud.css 多文件覆盖同一选择器(如 .topbar-kpis 6 处、
+   * .btn-primary 多处)。DESIGN.md line 249 明确禁止"第二处定义"已被违反。
+   *
+   * 重构方向(分阶段):
+   *   1. 把 V10 / V11 时期的早期 override 段回迁到对应基线 CSS 文件
+   *   2. 移除冗余 !important(只保留真正需要的覆盖)
+   *   3. 让 99-overrides 只承担"最末端微调"职责,体积 < 300 行
+   *
+   * 暂不一次性重构(影响面太大,需要回归测试),按机制迭代时顺手清理。
+   * ============================================================ */
+
+  :root {
+    --border-soft: rgba(42,35,32,0.18);
+    --hairline: rgba(42,35,32,0.09);
+    --line-strong: rgba(42,35,32,0.92);
+    --line-ui: rgba(42,35,32,0.34);
+    --line-soft: rgba(42,35,32,0.15);
+    --line-faint: rgba(42,35,32,0.06);
+    --shadow-sm: 2px 2px 0 rgba(42,35,32,0.16);
+    --shadow-md: 2px 2px 0 rgba(42,35,32,0.18), 0 8px 20px rgba(42,35,32,0.10);
+  }
+
+  body {
+    background-image: radial-gradient(rgba(42,35,32,0.035) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  /* V14.61: 复古滤镜亮度修正 — 保留线条和纹理,避免整体压暗 */
+  body.crt-on::before,
+  body.crt-on::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+  body.crt-on::before {
+    z-index: 9998;
+    background:
+      radial-gradient(ellipse at center, transparent 58%, rgba(42, 35, 32, 0.055) 100%),
+      radial-gradient(rgba(42, 35, 32, 0.055) 0.8px, transparent 1px);
+    background-size: auto, 4px 4px;
+    mix-blend-mode: normal;
+    opacity: 0.42;
+  }
+  body.crt-on::after {
+    z-index: 9999;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(42, 35, 32, 0.052) 0,
+        rgba(42, 35, 32, 0.052) 1px,
+        transparent 1px,
+        transparent 4px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(42, 35, 32, 0.032) 0,
+        rgba(42, 35, 32, 0.032) 1px,
+        transparent 1px,
+        transparent 6px
+      );
+    mix-blend-mode: normal;
+    opacity: 0.65;
+  }
+
+  .topbar {
+    border-bottom: 3px solid var(--line-strong);
+  }
+
+  .bottom-hud {
+    border-top: 3px solid var(--line-strong);
+    box-shadow: 0 -2px 0 rgba(42,35,32,0.10);
+  }
+
+  .panel,
+  .compact-kpi,
+  .event-mini,
+  .inspector-panel {
+    border: 2px solid var(--line-ui) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12) !important;
+  }
+
+  .panel-header {
+    border-bottom: 0 !important;
+  }
+
+  .city-wrap {
+    border-top: 2px solid var(--line-ui) !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    background:
+      linear-gradient(135deg, rgba(255,248,231,0.92), rgba(240,226,188,0.88)),
+      var(--bg) !important;
+  }
+
+  .city-map-svg .district polygon,
+  .city-map-svg .district circle {
+    stroke: rgba(42,35,32,0.60);
+    stroke-width: 0.58;
+  }
+
+  .city-map-svg .district.unlocked polygon {
+    filter: drop-shadow(0.8px 0.8px 0 rgba(42,35,32,0.15));
+  }
+
+  /* V14.7: 战争迷雾 — locked 默认无 stroke,纯靠 SVG filter blur 羽化边缘;
+     hover/selected 时仍会被下方规则覆盖加上选中描边 */
+  .city-map-svg .district.locked polygon {
+    stroke: none;
+  }
+
+  .city-map-svg .district circle {
+    stroke: rgba(255,248,231,0.78);
+    stroke-width: 0.8;
+  }
+
+  /* V14.7: 通用 hover/selected 描边只对 unlocked 区生效,避免破坏 locked 的战争迷雾 */
+  .city-map-svg .district:not(.locked):hover polygon,
+  .city-map-svg .district:not(.locked):focus-visible polygon,
+  .city-map-svg .district:not(.locked).selected polygon {
+    stroke: var(--line-strong);
+    stroke-width: 0.9;
+    filter: drop-shadow(1.2px 1.2px 0 rgba(42,35,32,0.28));
+  }
+
+  .city-map-svg .district:hover circle,
+  .city-map-svg .district:focus-visible circle,
+  .city-map-svg .district.selected circle {
+    stroke: var(--line-strong);
+    stroke-width: 1.05;
+  }
+
+  .city-map-svg .district.selected text:first-of-type {
+    fill: var(--accent-deep);
+  }
+
+  /* V14.7.1: locked hover/selected 反馈 — 加深暖深棕 fill + 略提高雾的厚度,
+     保持雾感不被硬边破坏 */
+  .city-map-svg .district.locked:hover polygon,
+  .city-map-svg .district.locked:focus-visible polygon,
+  .city-map-svg .district.locked.selected polygon {
+    fill: #1A1410;
+    opacity: 0.62;
+  }
+
+  .city-car rect {
+    stroke: rgba(42,35,32,0.72);
+  }
+
+  .fleet-summary-grid > div,
+  .topbar-stat,
+  .fleet-action-row,
+  .fleet-empty,
+  .fleet-focus-card,
+  .crew-card,
+  .crew-vehicle-card,
+  .hud-stat,
+  .inspector-hero,
+  .inspector-card,
+  .inspector-metric,
+  .drawer-current-order,
+  .driver-train-card,
+  .zone-offer-row,
+  .order-ticket-chip,
+  .order-ticket-meta span,
+  .event-effect-preview span {
+    border-width: 1px !important;
+    border-color: var(--line-soft) !important;
+    box-shadow: none !important;
+  }
+
+  .inspector-hero,
+  .fleet-focus-card,
+  .driver-vehicle-control {
+    border-width: 2px !important;
+    border-color: var(--line-ui) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12) !important;
+  }
+
+  .fleet-summary-grid > div,
+  .hud-stat,
+  .inspector-metric {
+    background: rgba(240,226,188,0.70);
+  }
+
+  /* V14.9: .fleet-tabs 系列已全部删除 */
+  .speed-btn.active,
+  .mobile-tabs button.active {
+    border-color: var(--line-strong) !important;
+  }
+
+  .compact-card {
+    border-width: 1px !important;
+    border-color: var(--line-soft) !important;
+    box-shadow: none !important;
+  }
+
+  .compact-card.selected,
+  .compact-card.linked,
+  .compact-card:hover {
+    border-color: var(--line-strong) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.20) !important;
+  }
+  .order-ticket.selected,
+  .order-ticket:hover {
+    border-width: 2px !important;
+  }  .mission-bar,
+  .hud-tag,
+  .mb-tag,
+  .ph-clock,
+  .btn-ghost,
+  .hud-log-btn,
+  .hud-log-btn::after,
+  .toggle-btn,
+  .order-ticket-action {
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.65);
+  }
+
+  .ph-clock {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ph-clock .clock-time {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .ph-clock .clock-label,
+  .ph-clock .clock-period {
+    display: none;
+  }
+
+  .hud-log-btn:hover,
+  .hud-log-btn:focus-visible,
+  .toggle-btn:hover {
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.65);
+  }
+
+  .topbar-stat,
+  .fleet-panel .mission-bar {
+    border-color: var(--line-soft) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12) !important;
+  }
+
+  .topbar-clock .ph-clock {
+    width: 78px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    row-gap: 1px;
+    justify-items: center;
+    padding: 4px 7px;
+  }
+  .topbar-clock .clock-time,
+  .topbar-clock .clock-period {
+    text-align: center;
+  }
+
+  .driver-inspector .inspector-section,
+  .crew-inspector .inspector-section {
+    margin-top: 8px;
+  }
+
+  .driver-inspector .inspector-hero,
+  .driver-inspector .driver-vehicle-control,
+  .driver-inspector .stat-train-row,
+  .crew-vehicle-card {
+    padding: 6px 8px;
+  }
+
+  .driver-inspector .stat-train-list,
+  .driver-inspector .inspector-grid {
+    gap: 5px;
+  }
+
+  .driver-inspector .inspector-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* V14: 清新地图素材底图 + 数据驱动覆盖层 */
+  .city-wrap {
+    background: #D7E7C2 !important;
+  }
+
+  .city-map-bg {
+    pointer-events: none;
+  }
+
+  .city-map-svg .district polygon,
+  .city-map-svg .district circle {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .city-map-svg .district.unlocked polygon {
+    stroke: rgba(255,255,255,0.86);
+    stroke-width: 0.46;
+    stroke-dasharray: none;
+    filter: none;
+  }
+
+  /* V14.7 战争迷雾覆盖:不再用虚线白边,改为无 stroke + SVG inline filter blur 羽化边缘 */
+  .city-map-svg .district.locked polygon {
+    stroke: none;
+    /* filter 保持 SVG inline attribute 设置(url(#zone-fog)),不要覆盖 */
+  }
+
+  /* V14.7: 通用 hover/selected 只对 unlocked 区生效,避免破坏 locked 战争迷雾 */
+  .city-map-svg .district:not(.locked):hover polygon,
+  .city-map-svg .district:not(.locked):focus-visible polygon,
+  .city-map-svg .district:not(.locked).selected polygon {
+    opacity: 0.24;
+    stroke: #FFFFFF;
+    stroke-width: 0.92;
+    filter: drop-shadow(0.8px 0.8px 0 rgba(42,35,32,0.24));
+  }
+
+  /* V14.7.1: locked hover/selected 反馈 — 暖深棕加深,无 stroke 保持雾感 */
+  .city-map-svg .district.locked:hover polygon,
+  .city-map-svg .district.locked:focus-visible polygon,
+  .city-map-svg .district.locked.selected polygon {
+    fill: #1A1410;
+    opacity: 0.62;
+    stroke: none;
+  }
+
+  .city-map-svg .district circle {
+    stroke: rgba(255,255,255,0.92);
+    stroke-width: 0.86;
+    filter: drop-shadow(0.5px 0.5px 0 rgba(42,35,32,0.28));
+  }
+
+  .city-map-svg .district-name,
+  .city-map-svg .district-lock-text {
+    fill: var(--ink);
+    stroke: rgba(255,248,231,0.95);
+    stroke-width: 0.42;
+    paint-order: stroke;
+  }
+
+  .city-map-svg .district-stat {
+    fill: #FFFFFF;
+    stroke: rgba(42,35,32,0.35);
+    stroke-width: 0.28;
+    paint-order: stroke;
+  }
+
+  .city-car {
+    filter: drop-shadow(0.7px 0.7px 0 rgba(42,35,32,0.34));
+  }
+
+  .city-car rect {
+    stroke: rgba(255,255,255,0.86);
+    stroke-width: 0.72;
+  }  /* V14.2: 左侧任务卡改为当前动作优先 */

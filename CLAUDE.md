@@ -13,13 +13,13 @@
 
 ---
 
-## 文件结构（V14.93 反向拆分后）
+## 文件结构（V15.42 engine/styles 结构拆分后）
 
 ```
 网约车物语/
 ├── 网约车物语-V3.html           主入口薄壳(只引用 dist/、vendor/、data/engine)
 ├── wycwy-data.js                游戏配置(司机/车辆/订单/任务/结局/事件)
-├── wycwy-engine.js              游戏引擎(reducer + tick + 死亡/结局检测)
+├── wycwy-engine.js              游戏引擎构建产物(由 src/engine 生成,入口仍直接加载它)
 ├── ark-pixel-16px.woff2         字体存档(已决策不启用,见 PRODUCT.md)
 ├── zcool-qingke-huangyou.ttf    字体存档(同上)
 ├── admin.html                   数值调参后台(独立工具页)
@@ -29,29 +29,56 @@
 ├── dist/                        线上入口构建产物(CSS bundle + React app bundle)
 ├── vendor/                      线上本地化 React production UMD
 ├── src/
-│   ├── styles/                  CSS 拆分(11 个文件,文件名 0-99 数字前缀决定加载顺序)
+│   ├── engine/                  游戏引擎源分片(8 个文件,构建回 wycwy-engine.js)
+│   │   ├── 00-preamble.js       (IIFE 壳 / 数据引用 / 全局计数器 / 常量)
+│   │   ├── 10-core-systems.js   (实时计时 / 债务 / 忠诚 / 片区 / 事件缩放)
+│   │   ├── 20-story-fleet-orders.js (故事持久化 / 司机车辆生成 / 订单供给)
+│   │   ├── 30-state-gates-history.js (初始状态 / 任务 / UI gate / 历史记录)
+│   │   ├── 40-actions-tick-events.js (招募 / tick / 日结 / 事件调度)
+│   │   ├── 50-policy-investor.js (政策事件 / 投资人 early review)
+│   │   ├── 60-monthly-operations.js (月报 / 训练 / 买车换车 / 卖车 / 债务危机)
+│   │   └── 70-reducer-export.js  (gameReducer / WYCWY_ENGINE 导出)
+│   ├── styles/                  CSS 拆分(21 个文件,文件名 0-99 数字前缀决定加载顺序)
 │   │   ├── 00-tokens.css        (CSS 变量 / 字体)
 │   │   ├── 10-base.css          (reset / 占位元素)
 │   │   ├── 20-topbar.css        (顶栏 + KPI)
 │   │   ├── 30-modals.css        (基础弹窗)
+│   │   ├── 32-shop-coach-notifications.css (商店 / 引导 / 通知 / 弹窗响应式)
 │   │   ├── 40-tasks-list.css    (任务条 + 三栏 + 列表)
 │   │   ├── 50-feedback.css      (统一游戏反馈层)
 │   │   ├── 60-inspector.css     (常驻调度台)
+│   │   ├── 62-inspector-zones.css (空车 / 片区 inspector)
+│   │   ├── 64-inspector-crew-training.css (车组详情 / 能力训练)
 │   │   ├── 70-pixel-flytext.css (像素游戏化 + 飘字)
-│   │   ├── 80-map-hud.css       (地图 + HUD,本组最大 1740 行)
+│   │   ├── 80-map-hud.css       (顶栏 HUD / 底部 HUD / 城市地图)
+│   │   ├── 82-roadmap-history.css (目标路线 / 成就墙 / 运营记录)
+│   │   ├── 84-fleet-cards.css   (车队列表 / 车组卡片)
+│   │   ├── 86-monthly-investor.css (月报 / 投资人压力弹窗)
 │   │   ├── 90-toggles-recruit.css (CRT 滤镜 + 招募券)
-│   │   └── 99-overrides.css     (V10.3 像素硬边回调,最后覆盖层 1037 行)
-│   └── app/                     React 组件拆分(9 个文件,Babel 多 script 共享作用域)
+│   │   ├── 99-00-overrides-base.css (基础硬边覆盖)
+│   │   ├── 99-10-compact-layout.css (紧凑布局覆盖)
+│   │   ├── 99-20-interactions-modals.css (按钮 / 弹窗 / 反馈覆盖)
+│   │   └── 99-30-policy-overrides.css (政策弹窗覆盖)
+│   └── app/                     React 组件拆分(17 个文件,最终构建进 dist bundle)
 │       ├── 00-runtime.jsx       (helpers / hooks / 常量)
 │       ├── 10-icons.jsx         (DriverAvatar/VehicleIcon/OrderIcon/StatIcon/CityMap)
-│       ├── 20-topbar.jsx        (TopBar + KPI + MissionBar + SpeedControl + BottomHUD)
+│       ├── 18-run-records.jsx   (run history / autosave / AI 复盘 payload)
+│       ├── 20-topbar.jsx        (TopBar + KPI + SpeedControl + BottomHUD)
 │       ├── 30-fleet.jsx         (CrewCompact + FleetPanel)
-│       ├── 40-inspector.jsx     (CrewInspector + ZoneInspector + DriverAttributeRows)
-│       ├── 50-modals.jsx        (Tutorial/Event/Recruit/Shop/Story/Monthly)
+│       ├── 38-driver-diagnostics.jsx (司机诊断与训练提示)
+│       ├── 40-inspector.jsx     (CrewInspector + ZoneInspector)
+│       ├── 45-tutorial.jsx      (新手引导)
+│       ├── 50-modals.jsx        (事件 / 政策 / 债务 / 通用弹窗)
+│       ├── 52-recruit-shop-roadmap.jsx (招募 / 商店 / 目标路线辅助)
+│       ├── 55-player-stories.jsx (主线玩家故事)
+│       ├── 56-feedback-monthly-story.jsx (反馈卡 / 月报 / 司机故事)
 │       ├── 60-roadmap.jsx       (UnlockRoadmap/EndingAchievement/RunHistory)
 │       ├── 70-endings.jsx       (EndingModal/EndingUnlock/MissionToast/ConfirmModal)
+│       ├── 75-ai-review.jsx     (结局 AI 复盘)
+│       ├── 80-pause-menu.jsx    (暂停菜单)
 │       └── 90-app.jsx           (App + ReactDOM.createRoot)
 ├── scripts/
+│   ├── build-engine.mjs          (把 src/engine 构建成 wycwy-engine.js)
 │   ├── build-entry-assets.mjs    (把 src/styles + src/app 构建成 dist 入口资源)
 │   ├── generate-pixel-assets.mjs (像素资产生成)
 │   ├── smoke-server.mjs          (本地服务/API/榜单写入冒烟验证)
@@ -66,7 +93,7 @@
 
 ### 约定 1:任何 gameplay 改动同步更新 `GAME_DESIGN.md`
 
-每次改 `wycwy-data.js` / `wycwy-engine.js` 涉及机制变化时:
+每次改 `wycwy-data.js` / `src/engine/*.js` 涉及机制变化时:
 1. **先**在 `GAME_DESIGN.md` 对应章节改文字描述
 2. **再**改代码
 3. **同时**在 `GAME_DESIGN.md` 文件头记录版本号 + 日期
@@ -83,14 +110,14 @@
 | 改司机背景 | 「十、司机背景」 |
 | 视觉/字体改 | 「十二、UI/视觉规范」 |
 
-### 约定 2:按层修改对应文件(V14.93 反向拆分后)
+### 约定 2:按层修改对应文件(V15.42 结构拆分后)
 
 - **纯数值调整**(单价、阈值、门槛、奖励金额)→ `wycwy-data.js`
-- **逻辑变化**(派单算法、死亡判定、结局判定)→ `wycwy-engine.js`
+- **逻辑变化**(派单算法、死亡判定、结局判定)→ `src/engine/*.js`,再运行 `node scripts/build-engine.mjs`
 - **UI/视觉**(布局、颜色、动画)→ `src/styles/*.css` 对应章节文件
 - **React 组件**(组件逻辑)→ `src/app/*.jsx` 对应职责文件
 - **HTML 主入口**(网约车物语-V3.html)是薄壳,只放 `<link>` 和 `<script>` 引用。**绝对不要再往这里塞内嵌 style 或 babel 代码**
-- **入口构建产物**(`dist/`)由 `node scripts/build-entry-assets.mjs` 生成,不要手改;修改 `src/app` 或 `src/styles` 后必须重建。
+- **入口构建产物**(`wycwy-engine.js` / `dist/`)由构建脚本生成,不要手改;修改 `src/engine` 后运行 `node scripts/build-engine.mjs`,修改 `src/app` 或 `src/styles` 后运行 `node scripts/build-entry-assets.mjs`。
 
 **判断 React 组件归哪个文件**:
 - 顶栏/KPI/速度控制/底部 HUD → `src/app/20-topbar.jsx`
@@ -101,7 +128,7 @@
 - 结局相关弹窗 / Toast / Confirm → `src/app/70-endings.jsx`
 - App 主组件 → `src/app/90-app.jsx`(只动这里加新 state / 新 modal 渲染)
 
-**判断 CSS 归哪个文件**:看 `<link>` 加载顺序(后定义覆盖前定义),按章节归到 11 个文件之一。新组件优先放 `99-overrides.css`(末尾覆盖层),稳定后再视情况合并到主章节。
+**判断 CSS 归哪个文件**:看构建加载顺序(后定义覆盖前定义),按章节归到 `src/styles` 的数字前缀文件。新组件优先放对应章节文件;只有跨章节末端修正才放 `99-*` 覆盖层。
 
 ### 约定 3:数值后台 admin.html 与 data.js 数据结构同步
 
@@ -122,9 +149,12 @@
 
 **V14.93 改造**:反向拆分到 `src/app/*.jsx`,HTML 放 `<script type="text/babel" src="...">` 引用。**前提:必须用 http:// 协议访问**,不能直接双击 file:// 打开。
 
-**V15.41 入口优化**:线上 HTML 不再加载 Babel,而是加载 `vendor/` 里的 React production UMD 和 `dist/` 里的 CSS/JS bundle。修改 `src/app/*.jsx` 或 `src/styles/*.css` 后运行:
+**V15.41 入口优化**:线上 HTML 不再加载 Babel,而是加载 `vendor/` 里的 React production UMD 和 `dist/` 里的 CSS/JS bundle。
+
+**V15.42 engine 拆分**:`wycwy-engine.js` 也改为构建产物,维护入口是 `src/engine/*.js`。修改 `src/engine/*.js` 后运行 `node scripts/build-engine.mjs`;修改 `src/app/*.jsx` 或 `src/styles/*.css` 后运行:
 
 ```bash
+node scripts/build-engine.mjs
 node scripts/build-entry-assets.mjs
 ```
 
@@ -135,7 +165,7 @@ python3 -m http.server 8765
 # 浏览器打开 http://localhost:8765/网约车物语-V3.html
 ```
 
-**部署方式**:先运行 `node scripts/build-entry-assets.mjs`,再把整个项目目录(含 dist/ vendor/ src/ wycwy-data.js wycwy-engine.js 字体 assets)上传到 Web server,玩家通过 https://yoursite.com/网约车物语-V3.html 访问。
+**部署方式**:先运行 `node scripts/build-engine.mjs && node scripts/build-entry-assets.mjs`,再把整个项目目录(含 dist/ vendor/ src/ wycwy-data.js wycwy-engine.js 字体 assets)上传到 Web server,玩家通过 https://yoursite.com/网约车物语-V3.html 访问。
 
 **当前线上部署记录**:详见 `DEPLOYMENT.md`。当前 canonical 线上地址是 `https://yuanfengai.cn/didichuxing/baozheng/wycwy/`,服务器 SSH 别名 `nextype`,目录 `/var/www/nextype-website/didichuxing/baozheng/wycwy`。部署前先按 `DEPLOYMENT.md` 的「避免重复部署」命令排查旧目录。
 
@@ -261,7 +291,7 @@ for (const vp of [{w:1280,h:720}, {w:1440,h:900}, {w:1920,h:1080}]) {
 3. **读本文件** 了解约定
 4. 改动前判断:
    - 是数值调整?改 `wycwy-data.js`
-   - 是逻辑变化?改 `wycwy-engine.js`
+   - 是逻辑变化?改 `src/engine/*.js`,再运行 `node scripts/build-engine.mjs`
    - 是 UI?改 HTML 的 style + babel 块
    - 是组件结构?改 HTML babel 块(也可同步 wycwy-app.js)
 5. 改完后:

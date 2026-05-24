@@ -1,0 +1,432 @@
+  /* V14.92: 紧凑化 — 减小 padding/gap/margin,让任务卡占据空间与信息密度匹配 */
+  .fleet-panel .mission-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 8px 10px 7px;
+    margin-bottom: 8px;
+    background: color-mix(in srgb, var(--gold) 18%, var(--card) 82%) !important;
+  }
+
+  .fleet-panel .mission-bar.finale {
+    background: color-mix(in srgb, var(--gold) 32%, var(--card) 68%) !important;
+  }
+
+  .mb-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .fleet-panel .mb-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 8px;
+    background: var(--ink);
+    color: var(--gold);
+    border-radius: 2px;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .fleet-panel .mb-content {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .fleet-panel .mb-title {
+    font-size: 18px !important;
+    line-height: 1.15;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .mb-action {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.18;
+    letter-spacing: 0;
+  }
+
+  .fleet-panel .mb-hint {
+    display: block;
+    margin: 0;
+    min-width: 0;
+    color: var(--ink-2) !important;
+    font-size: 14px !important;
+    font-weight: 700;
+    line-height: 1.35 !important;
+    -webkit-line-clamp: 2;
+  }
+
+  .fleet-panel .mb-hint span {
+    flex: 0 0 auto;
+    color: var(--accent-deep);
+    font-weight: 900;
+  }  .mission-stepbar span.done {
+    background: var(--accent);
+  }
+
+  .mb-roadmap-btn {
+    width: auto;
+    min-height: 28px;
+    margin-top: 0;
+    padding: 5px 8px;
+    gap: 7px;
+    background: rgba(255,255,255,0.64);
+    border: 1px solid rgba(42,35,32,0.18);
+    color: var(--accent-deep);
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* V15.17:车队卡片改方案 A 三段式横向布局
+     头像(left) + 名字+车型 meta(center) + 状态/忠诚(right) */
+  .crew-card.crew-card-row {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: auto !important;
+    padding: 10px 12px !important;
+  }
+  .crew-row-avatar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .crew-row-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .crew-row-name {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .crew-row-sub {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .crew-row-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--ink-3);
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .crew-row-meta .ph-vehicle {
+    flex-shrink: 0;
+  }
+  .crew-row-vehicle-name {
+    color: var(--ink-2);
+    font-weight: 800;
+  }
+  .crew-row-meta-divider {
+    color: var(--ink-3);
+    margin: 0 1px;
+    font-weight: 400;
+  }
+  .crew-row-order {
+    color: var(--ink-3);
+    font-weight: 700;
+  }
+  .crew-row-meta.empty .crew-row-no-vehicle {
+    color: var(--ink-3);
+    font-weight: 800;
+  }
+  .crew-row-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  /* inspector hero 中的车组概览也用三段式,跟左侧列表卡同构 */
+  .crew-overview-row {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 4px 2px !important;
+  }
+  .crew-overview-row .crew-row-name {
+    font-size: 16px;
+  }
+
+  /* V14.26: 顶栏四项经营状态改成连续 HUD,减少胶囊碎片感 */
+  /* V15.17:按可见 stat 数自适应宽度(避免渐进解锁时露深色背景) */
+  .topbar-kpis {
+    grid-template-columns: minmax(174px, 1.18fr) minmax(150px, 0.95fr) minmax(108px, 0.72fr) minmax(154px, 1fr) !important;
+    gap: 0 !important;
+    max-width: 790px !important;
+    padding: 3px;
+    background: var(--ink);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.18);
+  }
+  .topbar-kpis[data-stat-count="3"] {
+    grid-template-columns: minmax(174px, 1.18fr) minmax(150px, 0.95fr) minmax(108px, 0.72fr) !important;
+    max-width: 580px !important;
+  }
+  .topbar-kpis[data-stat-count="5"] {
+    grid-template-columns: minmax(174px, 1.18fr) minmax(150px, 0.95fr) minmax(108px, 0.72fr) minmax(154px, 1fr) minmax(140px, 1fr) !important;
+    max-width: 940px !important;
+  }
+
+  .topbar-stat {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: center !important;
+    row-gap: 2px !important;
+    min-height: 48px !important;
+    padding: 7px 10px 6px !important;
+    background: linear-gradient(180deg, #FFFBEF 0%, #F0E2BC 100%) !important;
+    border: 0 !important;
+    border-right: 1px solid rgba(42,35,32,0.22) !important;
+    box-shadow: none !important;
+    overflow: hidden;
+  }
+
+  .topbar-stat:last-child {
+    border-right: 0 !important;
+  }
+
+  /* V14.56: 顶部 HUD 去掉指标底部彩色条,减少多色横线噪音 */
+  .topbar-stat::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .topbar-stat .ts-label {
+    grid-column: 1 !important;
+    display: block;
+    min-width: 0;
+    color: var(--ink-3);
+    font-size: 11px !important;
+    font-weight: 900;
+    line-height: 1 !important;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-stat .ts-value {
+    grid-column: 1 !important;
+    display: block;
+    align-self: end;
+    min-width: 0;
+    color: var(--ink);
+    font-size: 18px !important;
+    font-weight: 950;
+    line-height: 1.05 !important;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .topbar-stat.time-stat .ts-value {
+    font-size: 18px !important;
+  }
+
+  /* V14.92: 核心 KPI 升 display 字号 — 资金/口碑视觉主次明确 */
+  .topbar-stat.funds-stat .ts-value {
+    color: var(--accent-deep) !important;
+    font-size: 24px !important;
+  }
+
+  .topbar-stat.rep-stat .ts-value {
+    color: var(--green) !important;
+    font-size: 24px !important;
+  }
+
+  .topbar-stat.has-help {
+    overflow: visible !important;
+    cursor: help;
+    z-index: 30;
+  }
+  .rep-help-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    width: min(430px, calc(100vw - 32px));
+    padding: 12px 14px;
+    background: var(--card);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.22);
+    color: var(--ink);
+    transform: translateX(-50%) translateY(-4px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
+    z-index: 260;
+  }
+  .rep-help-popover::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    background: var(--card);
+    border-left: 2px solid var(--ink);
+    border-top: 2px solid var(--ink);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .rep-stat:hover .rep-help-popover,
+  .rep-stat:focus .rep-help-popover,
+  .rep-stat:focus-within .rep-help-popover,
+  .topbar-stat.has-help:hover .rep-help-popover,
+  .topbar-stat.has-help:focus .rep-help-popover,
+  .topbar-stat.has-help:focus-within .rep-help-popover {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+  .rep-help-title {
+    margin-bottom: 8px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 950;
+    line-height: 1;
+  }
+  .rep-help-row {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 8px;
+    padding: 7px 0;
+    border-top: 1px dashed rgba(42,35,32,0.22);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.38;
+  }
+  .rep-help-row strong {
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .rep-help-row span {
+    color: var(--ink-2);
+  }
+  .rep-help-row .rep-help-next {
+    color: var(--accent-deep);
+    font-weight: 900;
+  }
+
+  .topbar-stat.supply-stat .ts-value {
+    font-size: 18px !important;
+  }
+
+  .topbar-stat .ts-sub {
+    grid-column: 1 !important;
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    max-width: 54%;
+    padding: 2px 5px;
+    background: rgba(255,255,255,0.66);
+    border: 1px solid rgba(42,35,32,0.12);
+    color: var(--ink-3);
+    font-size: 11px !important;
+    font-weight: 800;
+    line-height: 1 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-stat.time-stat .ts-sub {
+    max-width: 64px;
+  }
+
+  .topbar-stat.supply-stat .ts-sub {
+    top: auto;
+    right: 8px;
+    bottom: 6px;
+    max-width: calc(100% - 16px);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: var(--ink-3);
+  }
+
+  .topbar-stat .ts-rep-sub {
+    top: 6px !important;
+    right: 8px !important;
+    bottom: auto !important;
+    max-width: 86px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ts-supply-axis {
+    grid-column: 1 !important;
+    width: 100%;
+    min-width: 0 !important;
+    margin-top: 4px !important;
+  }
+
+  .ts-axis-bar {
+    height: 5px !important;
+    border-radius: 0 !important;
+    border-color: rgba(42,35,32,0.26) !important;
+  }
+
+  .ts-axis-pointer {
+    top: -3px !important;
+    width: 9px !important;
+    height: 9px !important;
+    border-width: 1px !important;
+  }
+
+  .ts-axis-labels {
+    display: none !important;
+  }
+
+  @media (max-width: 760px) {
+    .bottom-hud,
+    .mobile-tabs {
+      border-width: 2px;
+      box-shadow: 2px 2px 0 rgba(42,35,32,0.14);
+    }
+    .mobile-tabs button {
+      border-width: 1px;
+    }
+    .topbar {
+      border-bottom-width: 2px;
+    }
+    .topbar-clock .ph-clock {
+      width: 64px;
+      min-width: 64px;
+      height: 30px;
+      padding: 3px 5px;
+    }
+  }

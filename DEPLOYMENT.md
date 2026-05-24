@@ -47,13 +47,14 @@ https://yuanfengai.cn/didichuxing/baozheng/wycwy/网约车物语-V3.html
 
 本项目主体仍是静态游戏,但 V15.36 起新增 AI 运营复盘,线上需要一个只暴露 `/api/run-analysis` 的 Node 代理服务。静态资源仍同步到 nginx 目录,模型密钥只放服务器环境变量。
 
-V15.41 起主入口已做并发进场优化:`网约车物语-V3.html` 加载 `dist/` 里的预构建 CSS/JS 和 `vendor/` 里的 React production UMD,不再让每个玩家浏览器下载 Babel 并现场编译 `src/app/*.jsx`。部署前必须先构建入口资源。
+V15.41 起主入口已做并发进场优化:`网约车物语-V3.html` 加载 `dist/` 里的预构建 CSS/JS 和 `vendor/` 里的 React production UMD,不再让每个玩家浏览器下载 Babel 并现场编译 `src/app/*.jsx`。V15.42 起 `wycwy-engine.js` 也由 `src/engine/*.js` 构建生成。部署前必须先构建 engine 和入口资源。
 
 从本地项目根目录执行:
 
 ```bash
 cd "/Users/baozheng/代码文件/网约车物语"
 
+node scripts/build-engine.mjs
 node scripts/build-entry-assets.mjs
 node scripts/smoke-server.mjs
 

@@ -1,0 +1,158 @@
+  /* V14.2: 空车虚拟卡片(列表底部) */
+  .empty-vehicle-card {
+    background: #F5F0E8 !important;
+    border-style: dashed !important;
+    opacity: 0.85;
+  }
+  .empty-vehicle-card:hover { opacity: 1; }
+  .empty-vehicle-card.selected { opacity: 1; border-style: solid !important; }
+  .crew-empty-avatar {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ink-3); color: #FFF8E7;
+    border: 2px solid var(--ink-1);
+    font-size: 11px; font-weight: 700;
+  }
+  .crew-vehicle-card.empty {
+    border-style: dashed !important;
+    background: #F5F0E8;
+  }
+  .inspector-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--ink-3);
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .inspector-card {
+    background: var(--sub);
+    border: 2px solid var(--border-soft);
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.08);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }  .link-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .link-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    background: var(--sub);
+    border: 2px solid var(--border-soft);
+    padding: 8px;
+  }
+  .link-row.current {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .link-row.disabled {
+    opacity: 0.56;
+  }
+  .link-row-info {
+    min-width: 0;
+  }
+  .link-row .btn {
+    white-space: nowrap;
+  }
+  .link-row-name {
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .link-row-sub {
+    font-size: 12px;
+    color: var(--ink-3);
+    font-weight: 700;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .inspector-empty {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+  }  .order-inspector {
+    background:
+      linear-gradient(180deg, rgba(255,140,66,0.13), transparent 130px),
+      var(--card);
+  }  .zone-summary {
+    padding: 2px 0 10px;
+    border-bottom: 1px solid rgba(42,35,32,0.14);
+  }
+  .zone-summary .inspector-title {
+    margin-bottom: 4px;
+  }
+  .zone-summary .inspector-sub {
+    line-height: 1.45;
+  }
+  .order-req-line {
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .zone-state-card {
+    background: rgba(255,248,231,0.72);
+    border-style: dashed;
+  }
+  .zone-offer-list {
+    display: grid;
+    gap: 6px;
+  }
+  .zone-offer-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    background: var(--sub);
+    border: 2px solid var(--border-soft);
+    padding: 7px 9px;
+  }
+  .zone-offer-title {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .zone-offer-sub {
+    margin-top: 2px;
+    color: var(--ink-3);
+    font-size: 14px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .zone-offer-price {
+    color: var(--accent-deep);
+    font-size: 14px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .zone-offer-weight {
+    display: inline-flex;
+    align-items: center;
+    min-width: 42px;
+    justify-content: center;
+    padding: 3px 5px;
+    background: rgba(255,255,255,0.58);
+    border: 1px solid rgba(42,35,32,0.16);
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+  }

@@ -1,0 +1,349 @@
+  /* V14.35: 统一基础设计语言 — 硬边框、低圆角、像素经营游戏式下压反馈 */
+  .btn,
+  .speed-btn,
+  .mb-roadmap-btn,
+  .event-mini-btn,
+  .coach-next,
+  .coach-skip,
+  .target-tabs,
+  .target-tab,
+  .modal-option,
+  .ticket-card,
+  .gacha-card,
+  .shop-item,
+  .inspector-tabs,
+  .inspector-tabs button,
+  .inspector-hero,
+  .inspector-card,
+  .inspector-metric,
+  .compact-card,
+  .fleet-action-row,
+  .fleet-summary-grid > div,
+  .roadmap-focus,
+  .roadmap-item,
+  .roadmap-tip,
+  .ending-roadmap-item,
+  .game-feedback-card,
+  .modal,
+  .story-modal,
+  .notification {
+    border-radius: var(--ui-radius) !important;
+  }
+
+  .btn {
+    min-height: 34px;
+    border: 2px solid var(--ink) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.28) !important;
+    font-weight: 800 !important;
+    transition: transform 0.1s, box-shadow 0.1s, background 0.1s, color 0.1s !important;
+  }
+  .btn:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 var(--ink) !important;
+  }
+  .btn:active:not(:disabled) {
+    transform: translate(1px, 1px);
+    box-shadow: 0 0 0 var(--ink) !important;
+  }
+  .btn-primary {
+    background: var(--accent) !important;
+    color: #FFF8E7 !important;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-deep) !important;
+  }
+  .btn-ghost {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+  }
+  /* V14.89: ConfirmModal 危险确认按钮 — 红底白字,覆盖 .btn-primary 的橙色 !important */
+  .btn.ds-confirm-danger {
+    background: var(--warn) !important;
+    color: #FFF8E7 !important;
+    border-color: var(--warn) !important;
+  }
+  .btn.ds-confirm-danger:hover:not(:disabled) {
+    background: #c62828 !important;
+  }
+  .btn-xs {
+    min-height: 28px;
+    padding: 4px 8px;
+  }
+
+  button:focus-visible,
+  .btn:focus-visible,
+  .compact-card:focus-visible,
+  .ticket-card:focus-within,
+  .gacha-card:focus-within,
+  .order-ticket:focus-visible,
+  .vehicle-swap-card:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  .modal-overlay {
+    backdrop-filter: none !important;
+    background: rgba(40,25,15,0.50) !important;
+  }
+  .player-story-overlay {
+    backdrop-filter: blur(9px) saturate(0.72) !important;
+    -webkit-backdrop-filter: blur(9px) saturate(0.72) !important;
+    background: rgba(28,20,14,0.76) !important;
+  }
+  .modal,
+  .story-modal,
+  .game-feedback-card {
+    background: var(--card) !important;
+    border: 3px solid var(--ink) !important;
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.42) !important;
+  }
+  .modal-option,
+  .ticket-card,
+  .gacha-card,
+  .shop-item,
+  .target-tabs,
+  .target-tab.active,
+  .inspector-card,
+  .inspector-hero,
+  .fleet-action-row,
+  .roadmap-focus,
+  .roadmap-item,
+  .ending-roadmap-item {
+    border: 2px solid var(--line-ui) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.12) !important;
+  }
+  .modal-option:hover,
+  .ticket-card:hover,
+  .gacha-card:hover,
+  .shop-item:hover,
+  .target-tab:hover,
+  .fleet-action-row:hover,
+  .roadmap-item:hover,
+  .ending-roadmap-item.next:hover {
+    border-color: var(--ink) !important;
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.28) !important;
+  }
+
+  /* V15.40c: 开局故事底部是开始游戏主 CTA,不能沿用普通事件选项的弱样式。 */
+  .player-story-opening_layoff .player-story-primary-action {
+    border: 3px solid var(--accent-deep) !important;
+    background: var(--accent) !important;
+    color: #FFF8E7 !important;
+    box-shadow: 4px 4px 0 rgba(42,35,32,0.38) !important;
+  }
+  .player-story-opening_layoff .player-story-primary-action:hover,
+  .player-story-opening_layoff .player-story-primary-action:focus-visible {
+    border-color: var(--ink) !important;
+    background: var(--accent-deep) !important;
+    box-shadow: 5px 5px 0 rgba(42,35,32,0.48) !important;
+  }
+
+  .modal-tag,
+  .story-tag,
+  .game-feedback-tag,
+  .coach-step-num,
+  .fleet-focus-tag,
+  .dispatch-state-badge,
+  .gacha-rarity,
+  .roadmap-focus-tag,
+  .roadmap-item-status,
+  .ending-roadmap-status,
+  .ending-roadmap-tier,
+  .order-ticket-kind,
+  .order-ticket-zone,
+  .cc-badge,
+  .ts-sub,
+  .topbar-stat .ts-rep-sub {
+    border-radius: 0 !important;
+    border: 1px solid var(--ink) !important;
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.18) !important;
+    font-weight: 900 !important;
+  }
+  .modal-tag,
+  .story-tag,
+  .game-feedback-tag,
+  .coach-step-num,
+  .roadmap-focus-tag {
+    background: var(--ink) !important;
+    color: var(--gold) !important;
+  }
+
+  /* V14.68: 普通任务完成反馈收据化,覆盖通用黑底标签规则 */
+  .mission-feedback {
+    border: 2px solid var(--ink) !important;
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.30) !important;
+  }
+  .mission-feedback .game-feedback-tag {
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: var(--accent-deep) !important;
+    padding: 0 !important;
+  }
+  .mission-feedback .game-feedback-reward {
+    border: 1px solid var(--line-ui) !important;
+    box-shadow: none !important;
+  }
+
+  .story-text,
+  .story-rewards,
+  .roadmap-tip {
+    border: 2px solid var(--line-ui) !important;
+    border-left-width: 2px !important;
+    background: var(--sub) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.10) !important;
+  }
+
+  .ticket-card.normal,
+  .ticket-card.vip,
+  .ticket-card.headhunter {
+    border-left-width: 2px !important;
+    background: var(--sub) !important;
+  }
+  .ticket-card.vip {
+    border-color: var(--purple) !important;
+  }
+  .ticket-card.headhunter {
+    border-color: var(--accent) !important;
+  }
+  .gacha-card.rarity-SSR {
+    box-shadow: 0 0 0 2px var(--gold), 3px 3px 0 var(--accent-deep) !important;
+  }
+
+  .topbar-stat,
+  .mission-bar,
+  .fleet-focus-card.driver,
+  .fleet-focus-card.vehicle {
+    background: var(--card) !important;
+  }
+
+  .inspector-tabs {
+    border-color: var(--line-ui) !important;
+    background: var(--sub) !important;
+  }
+  .inspector-tabs button.active {
+    border-color: var(--ink) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.24) !important;
+  }
+
+  /* V14.38: 标签体系极简化 — 颜色只表达主提示和异常风险 */
+  .topbar-settings .toggle-btn {
+    width: auto !important;
+    min-width: 48px !important;
+    height: 34px !important;
+    padding: 0 9px !important;
+    border: 2px solid var(--ink) !important;
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    box-shadow: 2px 2px 0 rgba(42,35,32,0.28) !important;
+    white-space: nowrap;
+  }
+  .topbar-settings .toggle-btn.on {
+    background: var(--gold) !important;
+  }
+  .topbar-settings .topbar-menu-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    height: 36px !important;
+    padding: 0 12px !important;
+    border: 3px solid var(--ink) !important;
+    background: var(--gold) !important;
+    color: var(--ink) !important;
+    box-shadow: 3px 3px 0 rgba(42,35,32,0.38) !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    cursor: pointer !important;
+  }
+  .topbar-settings .topbar-menu-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--ink) !important;
+  }
+  .topbar-settings .topbar-menu-btn em {
+    font-style: normal;
+    font-size: 11px;
+    color: var(--ink-2);
+    padding-left: 7px;
+    border-left: 2px solid rgba(42,35,32,0.28);
+  }
+
+  .ts-sub,
+  .order-ticket-zone {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--ink-3) !important;
+  }
+
+  .cc-badge,
+  .dispatch-state-badge,
+  .order-ticket-kind,
+  .roadmap-item-status,
+  .ending-roadmap-status,
+  .gacha-rarity {
+    min-height: 24px !important;
+    padding: 3px 8px !important;
+    border: 1px solid var(--ink) !important;
+    border-radius: 0 !important;
+    box-shadow: 1px 1px 0 rgba(42,35,32,0.16) !important;
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap;
+  }
+
+  .order-list-chip,
+  .shop-order-chip {
+    min-height: 22px !important;
+    padding: 2px 4px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: var(--ink) !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap;
+  }
+
+  .modal-tag,
+  .story-tag,
+  .game-feedback-tag,
+  .coach-step-num,
+  .mb-tag,
+  .fleet-focus-tag,
+  .roadmap-focus-tag {
+    background: var(--ink) !important;
+    color: var(--gold) !important;
+  }
+
+  .topbar-stat .ts-rep-sub {
+    background: #FFE7E5 !important;
+    color: var(--warn) !important;
+    border-color: var(--warn) !important;
+  }
+
+  .dispatch-state-badge.running,
+  .roadmap-item.locked .roadmap-item-status,
+  .roadmap-item.unlocked .roadmap-item-status,
+  .ending-roadmap-item.locked .ending-roadmap-status,
+  .ending-roadmap-item.final .ending-roadmap-status {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    border-color: var(--ink) !important;
+  }
+  .ending-roadmap-item.done,
+  .ending-roadmap-item.next {
+    border-color: var(--ink) !important;
+  }
+  .ending-roadmap-item.done .ending-roadmap-status {
+    background: var(--green, #2E7D6A) !important;
+    color: #FFF8E7 !important;
+    border-color: var(--green, #2E7D6A) !important;
+  }
+  .ending-roadmap-item.next .ending-roadmap-status {
+    background: var(--gold) !important;
+    color: var(--ink) !important;
+    border-color: var(--ink) !important;
+  }
