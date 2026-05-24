@@ -121,11 +121,10 @@ const avatars = [
 ];
 
 const vehicles = [
-  vehicleAsset({ id: 'santana', bodyColor: '#8B8F7A', roofColor: '#B8BCA3', accent: '#FFFFFF' }),
+  vehicleAsset({ id: 'taxi', bodyColor: '#F2C94C', roofColor: '#FFF3A6', accent: '#2A2320' }),
+  vehicleAsset({ id: 'didi_d1', bodyColor: '#1FA971', roofColor: '#6EE7B7', accent: '#FFF8E7', ev: true }),
   vehicleAsset({ id: 'camry', bodyColor: '#2E7D6A', roofColor: '#5FA891', accent: '#FFD93D' }),
   vehicleAsset({ id: 'benz_e', bodyColor: '#20242C', roofColor: '#3A4250', accent: '#F6D365', premium: true }),
-  vehicleAsset({ id: 'han_ev', bodyColor: '#315CFF', roofColor: '#6F8FFF', accent: '#70E1C8', ev: true }),
-  vehicleAsset({ id: 'odyssey', bodyColor: '#7C3AED', roofColor: '#A78BFA', accent: '#FFD93D', van: true }),
 ];
 
 await mkdir(avatarDir, { recursive: true });

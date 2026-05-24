@@ -2,6 +2,7 @@
 
 > 范围:本文件覆盖项目「必须级别」(★★★)的全部 32 张图片素材。
 > 用法:每张素材都附一段可直接复制粘贴的英文提示词,推荐用 Midjourney / Recraft / Nano Banana / DALL·E / Stable Diffusion(配 Pixel Art LoRA)生成。生成完导出 PNG,按本文件命名规则放入项目根目录即可。
+> 状态:这是早期 V1 素材草案,保留作生图参考;当前实际游戏机制和运行资产以 `GAME_DESIGN.md`、`wycwy-data.js` 和 `assets/pixel/` 为准。V15.25 后车辆实际为出租车 / DD D1 / 凯美瑞 / 奔驰 E 四档,不再使用桑塔纳 / 汉 EV / 奥德赛作为运行车型。
 
 ---
 
