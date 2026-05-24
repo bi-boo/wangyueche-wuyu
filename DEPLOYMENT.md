@@ -55,6 +55,7 @@ V15.41 起主入口已做并发进场优化:`网约车物语-V3.html` 加载 `di
 cd "/Users/baozheng/代码文件/网约车物语"
 
 node scripts/build-entry-assets.mjs
+node scripts/smoke-server.mjs
 
 ssh nextype 'sudo mkdir -p /var/www/nextype-website/didichuxing/baozheng/wycwy && sudo chown -R ubuntu:ubuntu /var/www/nextype-website/didichuxing/baozheng/wycwy'
 
@@ -73,6 +74,7 @@ ssh nextype 'cp /var/www/nextype-website/didichuxing/baozheng/wycwy/网约车物
 
 - `--delete` 会让线上目录严格等于本地目录。执行前确认目标目录就是本项目目录,不要指到站点根目录。
 - `dist/` 和 `vendor/` 必须上传,它们是主入口实际加载的资源。
+- `node scripts/smoke-server.mjs` 会用临时榜单文件启动本地服务,检查主入口、API 精确路由、路径逃逸、AI 超时兜底、榜单并发写入、重复提交和异常局跳榜。
 - `tmp/`、`archive/`、`.git/` 不上传,避免把本地临时文件和历史快照带到线上。
 - `admin.html` 会同步到线上,用于数值调参预览。若后续不想公开,部署命令里加 `--exclude='admin.html'`。
 

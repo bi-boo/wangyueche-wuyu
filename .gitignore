@@ -8,6 +8,7 @@
 node_modules/
 build/
 test-results/
+tmp/
 __pycache__/
 *.pyc
 

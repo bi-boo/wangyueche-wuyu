@@ -15,6 +15,7 @@ const LEADERBOARD_FILE = process.env.WYCWY_LEADERBOARD_FILE
   || path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'wycwy', 'leaderboard.jsonl');
 const MAX_LEADERBOARD_ROWS = Number(process.env.WYCWY_LEADERBOARD_MAX_ROWS || 5000);
 const DEFAULT_LEADERBOARD_LIMIT = 100;
+let leaderboardWriteQueue = Promise.resolve();
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -115,6 +116,14 @@ function sendJson(res, statusCode, body) {
     'Content-Length': Buffer.byteLength(text),
   });
   res.end(text);
+}
+
+function getRequestPathname(req) {
+  try {
+    return new URL(req.url || '/', `http://localhost:${PORT}`).pathname;
+  } catch (e) {
+    return '';
+  }
 }
 
 function clampText(value, maxLength = 80) {
@@ -371,7 +380,15 @@ async function writeLeaderboardEntries(entries) {
   const normalized = entries.slice(-MAX_LEADERBOARD_ROWS);
   await fs.mkdir(path.dirname(LEADERBOARD_FILE), { recursive: true });
   const text = normalized.map((entry) => JSON.stringify(entry)).join('\n');
-  await fs.writeFile(LEADERBOARD_FILE, text ? `${text}\n` : '', 'utf8');
+  const tmpFile = `${LEADERBOARD_FILE}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(tmpFile, text ? `${text}\n` : '', 'utf8');
+  await fs.rename(tmpFile, LEADERBOARD_FILE);
+}
+
+function withLeaderboardWriteLock(task) {
+  const run = leaderboardWriteQueue.then(task, task);
+  leaderboardWriteQueue = run.catch(() => {});
+  return run;
 }
 
 function readBody(req) {
@@ -566,6 +583,7 @@ async function handleRunAnalysis(req, res) {
   const provider = getAiProvider(baseUrl);
   const apiKey = process.env.WYCWY_AI_API_KEY || process.env.ARK_API_KEY || process.env.OPENAI_API_KEY || '';
   const model = process.env.WYCWY_AI_MODEL || process.env.ARK_MODEL || process.env.OPENAI_MODEL || DEFAULT_ARK_MODEL;
+  const requestTimeoutMs = Math.max(1000, Number(process.env.WYCWY_AI_REQUEST_TIMEOUT_MS || 45000));
 
   let body;
   try {
@@ -599,7 +617,10 @@ async function handleRunAnalysis(req, res) {
     return;
   }
 
+  let timer = null;
   try {
+    const controller = new AbortController();
+    timer = setTimeout(() => controller.abort(), requestTimeoutMs);
     const upstream = await fetch(baseUrl, {
       method: 'POST',
       headers: {
@@ -607,7 +628,10 @@ async function handleRunAnalysis(req, res) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify(buildModelRequest({ provider, model, payload })),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
+    timer = null;
     const data = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
       sendJson(res, 200, {
@@ -630,10 +654,11 @@ async function handleRunAnalysis(req, res) {
     }
     sendJson(res, 200, { source: 'ai', review: parsed });
   } catch (e) {
+    if (timer) clearTimeout(timer);
     sendJson(res, 200, {
       source: 'local',
       error: 'llm_request_error',
-      message: e.message || 'request_failed',
+      message: e.name === 'AbortError' ? 'upstream_timeout' : (e.message || 'request_failed'),
     });
   }
 }
@@ -663,22 +688,30 @@ async function handleLeaderboardSubmit(req, res) {
   }
 
   try {
-    const entries = await readLeaderboardEntries();
-    const existing = entries.find((item) => item.clientRunId === entry.clientRunId);
-    let saved = existing;
-    if (!saved) {
-      entries.push(entry);
-      await writeLeaderboardEntries(entries);
-      saved = entry;
-    }
-    const ranked = attachRanks(entries, 'score');
-    const rankedEntry = ranked.find((item) => item.clientRunId === saved.clientRunId) || saved;
+    const result = await withLeaderboardWriteLock(async () => {
+      const entries = await readLeaderboardEntries();
+      const existing = entries.find((item) => item.clientRunId === entry.clientRunId);
+      let saved = existing;
+      if (!saved) {
+        entries.push(entry);
+        await writeLeaderboardEntries(entries);
+        saved = entry;
+      }
+      const ranked = attachRanks(entries, 'score');
+      const rankedEntry = ranked.find((item) => item.clientRunId === saved.clientRunId) || saved;
+      return {
+        existing,
+        entries,
+        rankedEntry,
+      };
+    });
+
     sendJson(res, 200, {
       ok: true,
-      duplicate: !!existing,
-      entry: rankedEntry,
-      rank: rankedEntry.rank || null,
-      total: entries.length,
+      duplicate: !!result.existing,
+      entry: result.rankedEntry,
+      rank: result.rankedEntry.rank || null,
+      total: result.entries.length,
     });
   } catch (e) {
     sendJson(res, 200, {
@@ -717,11 +750,20 @@ async function handleLeaderboardList(req, res) {
 }
 
 function resolveStaticPath(requestUrl) {
-  const url = new URL(requestUrl, `http://localhost:${PORT}`);
-  let pathname = decodeURIComponent(url.pathname);
+  let pathname;
+  try {
+    const rawPathname = String(requestUrl || '').split(/[?#]/, 1)[0];
+    const decodedRawPathname = decodeURIComponent(rawPathname);
+    if (decodedRawPathname.split(/[\\/]+/).includes('..')) return null;
+    const url = new URL(requestUrl, `http://localhost:${PORT}`);
+    pathname = decodeURIComponent(url.pathname);
+  } catch (e) {
+    return null;
+  }
   if (pathname === '/') pathname = `/${DEFAULT_HTML}`;
   const target = path.normalize(path.join(PROJECT_ROOT, pathname));
-  if (!target.startsWith(PROJECT_ROOT)) return null;
+  const rel = path.relative(PROJECT_ROOT, target);
+  if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return null;
   return target;
 }
 
@@ -740,6 +782,10 @@ async function handleStatic(req, res) {
       'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
       'Content-Length': stat.size,
     });
+    if (req.method === 'HEAD') {
+      res.end();
+      return;
+    }
     createReadStream(target).pipe(res);
   } catch (e) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -748,15 +794,16 @@ async function handleStatic(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'POST' && req.url?.startsWith('/api/run-analysis')) {
+  const pathname = getRequestPathname(req);
+  if (req.method === 'POST' && pathname === '/api/run-analysis') {
     handleRunAnalysis(req, res);
     return;
   }
-  if (req.method === 'POST' && req.url?.startsWith('/api/leaderboard/submit')) {
+  if (req.method === 'POST' && pathname === '/api/leaderboard/submit') {
     handleLeaderboardSubmit(req, res);
     return;
   }
-  if (req.method === 'GET' && req.url?.startsWith('/api/leaderboard')) {
+  if (req.method === 'GET' && pathname === '/api/leaderboard') {
     handleLeaderboardList(req, res);
     return;
   }

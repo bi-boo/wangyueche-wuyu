@@ -91,34 +91,51 @@ function formatMoney(value) {
   return `${sign}¥${Math.abs(num).toLocaleString()}`;
 }
 
-function setText(id, value) {
-  const node = document.getElementById(id);
-  if (node) node.textContent = value;
+function createCell(className, text) {
+  const cell = document.createElement('div');
+  cell.className = className;
+  cell.textContent = text;
+  return cell;
+}
+
+function createNameCell(entry) {
+  const cell = document.createElement('div');
+  cell.className = 'name';
+  const name = document.createElement('strong');
+  name.textContent = entry.profile || '';
+  const date = document.createElement('span');
+  date.textContent = formatDate(entry.submittedAt);
+  cell.append(name, date);
+  return cell;
 }
 
 function renderRows(entries) {
   const host = document.getElementById('rows');
+  host.replaceChildren();
   if (!entries.length) {
     host.className = 'empty';
     host.textContent = '还没有入榜记录。玩到结局并生成 AI 复盘后,会自动匿名加入这里。';
     return;
   }
   host.className = '';
-  host.innerHTML = entries.map((entry) => {
+  const fragment = document.createDocumentFragment();
+  entries.forEach((entry) => {
     const moneyClass = Number(entry.funds || 0) < 0 ? 'negative' : 'positive';
-    return `
-      <div class="row">
-        <div class="rank">#${entry.rank}</div>
-        <div class="name"><strong>${escapeHtml(entry.profile)}</strong><span>${formatDate(entry.submittedAt)}</span></div>
-        <div class="cell">${entry.days}</div>
-        <div class="cell money ${moneyClass}">${formatMoney(entry.funds)}</div>
-        <div class="cell">${entry.reputation}</div>
-        <div class="cell">${entry.crews}</div>
-        <div class="cell">${entry.totalCompleted}</div>
-        <div class="cell">${escapeHtml(entry.resultLabel || '')}</div>
-      </div>
-    `;
-  }).join('');
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.append(
+      createCell('rank', `#${entry.rank}`),
+      createNameCell(entry),
+      createCell('cell', entry.days),
+      createCell(`cell money ${moneyClass}`, formatMoney(entry.funds)),
+      createCell('cell', entry.reputation),
+      createCell('cell', entry.crews),
+      createCell('cell', entry.totalCompleted),
+      createCell('cell', entry.resultLabel || ''),
+    );
+    fragment.append(row);
+  });
+  host.append(fragment);
 }
 
 function formatDate(value) {
@@ -126,12 +143,6 @@ function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
-function escapeHtml(value) {
-  return String(value || '').replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[char]));
 }
 
 async function loadLeaderboard(sort = currentSort) {

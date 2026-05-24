@@ -54,6 +54,7 @@
 ├── scripts/
 │   ├── build-entry-assets.mjs    (把 src/styles + src/app 构建成 dist 入口资源)
 │   ├── generate-pixel-assets.mjs (像素资产生成)
+│   ├── smoke-server.mjs          (本地服务/API/榜单写入冒烟验证)
 │   └── sim-strategies.js         (策略模拟)
 ├── assets/                      像素图素材(司机头像 / 车辆图 / 改装件)
 └── archive/                     历史版本(v1 / v2)
