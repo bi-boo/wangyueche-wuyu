@@ -1,4 +1,4 @@
-const APP_VERSION = 'V15.41';
+const APP_VERSION = 'V15.42d';
 const RUN_HISTORY_KEY = 'wycwy-run-history-v1';
 const CURRENT_RUN_KEY = 'wycwy-current-run-v1';
 const AUTOSAVE_KEY = 'wycwy-autosave-v1';

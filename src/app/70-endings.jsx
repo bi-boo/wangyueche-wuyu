@@ -115,13 +115,13 @@ function MissionToast({ mission, onClose }) {
 
 /* ============== ConfirmModal:替代 native confirm(),保持开罗工坊视觉一致 ============== */
 
-// V15.17:渐进解锁 — 新入口开放半屏弹窗
+// V15.41q:渐进解锁 — 用“现在该做什么”引导,避免只告诉玩家有新入口。
 function UnlockSplashModal({ gate, onClose }) {
   if (!gate) return null;
   return (
     <div className="modal-overlay unlock-splash-overlay" onClick={onClose}>
       <div className="modal unlock-splash-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="unlock-splash-tag">{gate.kicker || '新入口开放'}</div>
+        <div className="unlock-splash-tag">{gate.kicker || '现在要做'}</div>
         <div className="unlock-splash-icon" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36"
                fill="none" stroke="currentColor" strokeWidth="2"
@@ -132,7 +132,7 @@ function UnlockSplashModal({ gate, onClose }) {
         <h2 className="unlock-splash-title">{gate.title}</h2>
         <p className="unlock-splash-desc">{gate.desc}</p>
         <div className="unlock-splash-hint">
-          <span className="unlock-splash-hint-label">新增入口</span>
+          <span className="unlock-splash-hint-label">操作位置</span>
           <span className="unlock-splash-hint-value">{gate.hint}</span>
         </div>
         <button className="btn btn-primary unlock-splash-confirm" onClick={onClose}>

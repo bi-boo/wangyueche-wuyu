@@ -156,6 +156,83 @@
   .event-resource-snapshot strong.danger {
     color: var(--warn);
   }
+  .event-loyalty-snapshot {
+    margin: -4px 0 14px;
+    padding: 9px 10px 10px;
+    background: rgba(255,248,231,0.74);
+    border: 1px solid rgba(42,35,32,0.22);
+  }
+  .event-loyalty-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 7px;
+  }
+  .event-loyalty-title {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .event-loyalty-summary {
+    min-width: 0;
+    color: var(--ink-3);
+    font-size: 14px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .event-loyalty-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .event-loyalty-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 25px;
+    padding: 3px 7px;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid var(--line-soft);
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1;
+  }
+  .event-loyalty-chip strong {
+    color: var(--ink);
+    font-size: 14px;
+  }
+  .event-loyalty-chip em {
+    color: var(--ink-3);
+    font-style: normal;
+    font-size: 14px;
+  }
+  .event-loyalty-chip.good strong {
+    color: var(--green);
+  }
+  .event-loyalty-chip.warn strong,
+  .event-loyalty-chip.warn em {
+    color: var(--accent-deep);
+  }
+  .event-loyalty-chip.danger {
+    border-color: rgba(232,69,69,0.42);
+    background: rgba(255,235,224,0.8);
+  }
+  .event-loyalty-chip.danger strong,
+  .event-loyalty-chip.danger em {
+    color: var(--warn);
+  }
+  .event-loyalty-risk {
+    margin-top: 7px;
+    color: var(--ink-3);
+    font-size: 14px;
+    line-height: 1.35;
+  }
+  .event-loyalty-risk.danger {
+    color: var(--warn);
+    font-weight: 700;
+  }
   .event-modal .modal-options,
   .debt-crisis-modal .modal-options {
     gap: 10px;

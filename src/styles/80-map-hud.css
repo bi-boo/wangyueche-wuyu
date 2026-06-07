@@ -73,26 +73,8 @@
     border-color: rgba(193,74,29,0.38);
     background: rgba(255,244,218,0.92);
   }
-  /* V12: 口碑胶囊里挂"流失 → 口碑变化"副标,绝对定位作为右下角标,不挤主内容 */
   .topbar-stat {
     position: relative;
-  }
-  .topbar-stat .ts-rep-sub {
-    position: absolute;
-    right: 4px;
-    bottom: -10px;
-    padding: 2px 6px;
-    border-radius: 2px;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1.1;
-    white-space: nowrap;
-    z-index: 5;
-  }
-  .ts-rep-sub.rep-sub-warn {
-    background: rgba(228,62,53,0.95);
-    color: #FFF8E7;
-    border: 1px solid rgba(228,62,53,0.4);
   }
   /* V14.81: 供需风险轴 — 绿色安全 → 黄色临界 → 红色不足,不再使用三段色块。 */
   .ts-supply-axis {

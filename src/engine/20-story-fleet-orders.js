@@ -172,14 +172,12 @@
   }
 
   function rollGoodReview(driver, vehicle) {
-    // V12: 服务系数 0.005 → 0.008,让"练服务"对好评率有更明显感知
-    const base = 0.5 + driver.stats.service * 0.008;
-    return Math.random() < base;
+    return Math.random() < getDriverGoodReviewRate(driver);
   }
 
-  // V12: 计算司机服务对应的好评率(用于 UI 展示和外部调用)
+  // 服务值直接对应好评率,稀有度服务上限会真实限制好评上限。
   function getDriverGoodReviewRate(driver) {
-    return Math.min(1, 0.5 + (driver.stats.service || 0) * 0.008);
+    return cap((driver?.stats?.service || 0) / 100, 0, 1);
   }
 
   function getDriverLoyaltyMultiplier(driver) {

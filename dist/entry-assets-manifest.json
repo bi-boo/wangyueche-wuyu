@@ -1,6 +1,6 @@
 {
   "buildMode": "reproducible",
-  "inputHash": "524ccb9cb42015980b7e42488d2fb7754372ff869028cc3b663dbf8ef27a03b5",
+  "inputHash": "426e020f42585d9bf877135a8f23c0d90e07783e8a3cefbb234e5773b864f8b6",
   "esbuildVersion": "0.28.0",
   "inputs": {
     "styles": [
@@ -50,11 +50,11 @@
   "outputs": {
     "styles": {
       "file": "dist/wycwy-styles.bundle.css",
-      "bytes": 121219
+      "bytes": 122247
     },
     "app": {
       "file": "dist/wycwy-app.bundle.js",
-      "bytes": 161434
+      "bytes": 159097
     }
   }
 }

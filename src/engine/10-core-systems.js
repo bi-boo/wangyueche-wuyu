@@ -15,7 +15,6 @@
       && !state.activePolicyDecision
       && !state.activePlayerStory
       && !state.activeStory
-      && !state.showTutorial
       && !state.showMonthlyReport
       && !state.debtCrisis
       && !state.gameOver;
@@ -30,7 +29,10 @@
     const now = Date.now();
     const prev = state.realTime || {};
     const alreadyStarted = !!prev.startedAt;
-    const shouldStart = alreadyStarted || state.hasStarted || actionType === 'SET_SPEED';
+    const shouldStart = alreadyStarted
+      || state.hasStarted
+      || actionType === 'SET_SPEED'
+      || actionType === 'PLAYER_STORY_SHOWN';
     const startedAt = shouldStart ? (prev.startedAt || now) : null;
     const lastUpdatedAt = prev.lastUpdatedAt || now;
     const delta = alreadyStarted ? Math.max(0, now - lastUpdatedAt) : 0;

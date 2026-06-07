@@ -1,4 +1,4 @@
-/* 网约车物语 V15.40h - 配置数据(虚构都市分区地图,V15.17 谐音化) */
+/* 网约车物语 V15.42d - 配置数据(北京区片模拟) */
 (function () {
   const GAME = {
     STARTING_FUNDS: 10000,
@@ -547,38 +547,38 @@
     // V14.29: 每个片区都包含 4 种订单,orderMix 控制出现权重。
     // 初级片区基础订单占比高,高级片区高价订单占比高,让“解锁新片区 = 更高收入结构”更直观。
     // V14.7.2: shape 坐标按底图(city-map-clean-v1.png)重新对齐 — 5 个岛屿轮廓:
-    //   熙城(中心岛,被河流环绕,菱形)/ 海甸(左上椭圆岛)/ 昭阳(右上岛,上有港口凹角)
-    //   大馨(左下岛,含机场跑道,长形)/ 风台(右下岛,交通枢纽)
+    //   西城(中心岛,被河流环绕,菱形)/ 海淀(左上椭圆岛)/ 朝阳(右上岛,上有港口凹角)
+    //   大兴(左下岛,含机场跑道,长形)/ 丰台(右下岛,交通枢纽)
     {
-      id: 'downtown', name: '熙城区', x: 50, y: 49,
+      id: 'downtown', name: '西城区', x: 50, y: 49,
       orderMix: { short: 78, business: 16, airport: 5, luxury: 1 },
       color: '#FF8C42', desc: '核心城区,以出租车订单为主,口碑起来后扩张到这里。',
       unlock: { reputation: 90 }, density: 0.8,
       shape: [[42,38], [58,36], [65,46], [62,58], [50,62], [40,58], [36,48]],
     },
     {
-      id: 'residential', name: '海甸区', x: 18, y: 21,
+      id: 'residential', name: '海淀区', x: 18, y: 21,
       orderMix: { short: 72, business: 20, airport: 6, luxury: 2 },
       color: '#5FAD41', desc: '高校和科技园密集,出租车订单稳定,适合开局运营。',
       unlock: { reputation: 0 }, density: 0.8,
       shape: [[7,12], [22,6], [32,12], [33,28], [25,36], [10,33], [4,22]],
     },
     {
-      id: 'station', name: '风台区', x: 75, y: 74,
+      id: 'station', name: '丰台区', x: 75, y: 74,
       orderMix: { short: 35, business: 25, airport: 34, luxury: 6 },
       color: '#F59E0B', desc: '交通枢纽,专车订单为主,出租车和快车兜底。',
       unlock: { reputation: 180 }, density: 1.0,
       shape: [[55,58], [80,55], [97,62], [97,82], [85,93], [62,93], [52,82], [50,68]],
     },
     {
-      id: 'cbd', name: '昭阳区', x: 75, y: 22,
+      id: 'cbd', name: '朝阳区', x: 75, y: 22,
       orderMix: { short: 18, business: 44, airport: 12, luxury: 26 },
       color: '#0EA5E9', desc: 'CBD 商务区,快车订单和豪华车订单主推,出租车订单兜底。',
       unlock: { reputation: 520 }, density: 1.4,
       shape: [[55,10], [78,5], [95,15], [97,32], [88,40], [68,40], [55,32], [54,20]],
     },
     {
-      id: 'airport', name: '大馨区', x: 24, y: 75,
+      id: 'airport', name: '大兴区', x: 24, y: 75,
       orderMix: { short: 24, business: 30, airport: 38, luxury: 8 },
       color: '#22C55E', desc: '机场片区,专车订单需求集中,出租车和快车订单兜底。',
       unlock: { reputation: 340 }, density: 1.4,
@@ -612,7 +612,7 @@
 
   // 随机事件 V15.x — V15.24 起拆成随机经营池 + 链式剧情调度。
   // scripted:true 的事件不进入随机抽签池,只由引擎在特定状态下手动触发。
-  // 详见根目录「事件设计大表.html」
+  // 详见「tools/previews/事件设计大表.html」
   // 字段:
   //   - eventType:random / chain / scripted,决定由哪个调度器处理
   //   - phase:early / mid / late,随机事件进入对应经营阶段池
@@ -759,13 +759,13 @@
       ],
     },
     {
-      id: 'airport_queue_side_deal', title: '机场排队有人递话', tag: '行业', emoji: 'biz', cooldown: 35,
+      id: 'airport_queue_side_deal', title: '机场有人拉你进保底单群', tag: '行业', emoji: 'biz', cooldown: 35,
       eventType: 'random', phase: 'mid', minDay: 25, minCrews: 3, weight: 0.9,
       unlockMission: 4,
-      desc: '机场排队区有人拉你进"保底单群":交一笔茶水费,夜里大单优先推给你家车。规则灰得发亮。',
+      desc: '机场排队区有人私下找你:交一笔茶水费进群,夜里大单会优先推给你家车。钱来得快,但这是灰色插队,被投诉会伤口碑。',
       options: [
-        { label: '先试一个月', detail: '+¥3,000,口碑 −10,所有司机忠诚 −10', apply: () => ({ funds: 3000, reputation: -10, allLoyalty: -10 }) },
-        { label: '不碰灰色单群', detail: '全员忠诚 +10', apply: () => ({ trustLoyalty: 10 }) },
+        { label: '交钱进群试一个月', detail: '+¥3,000,口碑 −10,所有司机忠诚 −10', apply: () => ({ funds: 3000, reputation: -10, allLoyalty: -10 }) },
+        { label: '拒绝灰色保底单', detail: '全员忠诚 +10', apply: () => ({ trustLoyalty: 10 }) },
       ],
     },
     {
@@ -1080,7 +1080,7 @@
       id: 'm2_first_day',
       title: '运营满一周',
       desc: '让车队正常运营 7 天,进入第 8 天',
-      hint: '点击开始运营后先让车队完整跑一周,观察地图小车、资金和口碑变化;第 10 天再开始扩张车组',
+      hint: '点击开始游戏后先让车队完整跑一周,观察地图小车、资金和口碑变化;第 10 天再开始扩张车组',
       check: (s) => s.day >= 8,
       reward: { funds: 500, message: '车队跑过完整一周,第 10 天可以开始扩张。' },
     },
@@ -1104,11 +1104,11 @@
     {
       id: 'm7_reputation_90',
       title: '把口碑提升到 90',
-      desc: '城市口碑达到 90,解锁熙城区',
+      desc: '城市口碑达到 90,解锁西城区',
       hint: '提高服务、稳定完单、减少投诉和流失,口碑会逐步上涨',
       hidden: true,  // V15.16:被动等型,改为静默 toast 不占任务卡槽
       check: (s) => s.reputation >= 90,
-      reward: { funds: 900, message: '熙城区解锁,订单池开始变厚。' },
+      reward: { funds: 900, message: '西城区解锁,订单池开始变厚。' },
     },
     {
       id: 'm8_driving_35',
@@ -1129,11 +1129,11 @@
     {
       id: 'm10_reputation_180',
       title: '把口碑提升到 180',
-      desc: '城市口碑达到 180,解锁风台区',
-      hint: '风台区专车订单更多;提升服务质量和稳定完单会让口碑涨得更快',
+      desc: '城市口碑达到 180,解锁丰台区',
+      hint: '丰台区专车订单更多;提升服务质量和稳定完单会让口碑涨得更快',
       hidden: true,  // V15.16:被动等型
       check: (s) => s.reputation >= 180,
-      reward: { funds: 1800, message: '风台区解锁,专车订单开始出现。' },
+      reward: { funds: 1800, message: '丰台区解锁,专车订单开始出现。' },
     },
     {
       id: 'm11_first_airport',
@@ -1171,17 +1171,17 @@
     {
       id: 'm15_reputation_520',
       title: '把口碑提升到 520',
-      desc: '城市口碑达到 520,解锁昭阳区',
-      hint: '昭阳区豪华车订单占比最高;继续提升服务质量,用高质量完单积累口碑',
+      desc: '城市口碑达到 520,解锁朝阳区',
+      hint: '朝阳区豪华车订单占比最高;继续提升服务质量,用高质量完单积累口碑',
       hidden: true,  // V15.16:被动等型
       check: (s) => s.reputation >= 520,
-      reward: { funds: 4500, message: '昭阳区解锁,豪华车订单会更稳定出现。' },
+      reward: { funds: 4500, message: '朝阳区解锁,豪华车订单会更稳定出现。' },
     },
     {
       id: 'm16_first_luxury',
       title: '跑出第一单豪华车订单',
       desc: '奔驰 E + 车技 ≥70,完成 1 单豪华车订单',
-      hint: '豪华车订单主推昭阳区(口碑 520 解锁),需要高口碑、高车技和奔驰 E',
+      hint: '豪华车订单主推朝阳区(口碑 520 解锁),需要高口碑、高车技和奔驰 E',
       hidden: true,  // V15.16:复合型自动达成,改为静默 toast(isFinale 仪式感保留)
       check: (s) => (s.orderCounts && s.orderCounts.luxury >= 1) || false,
       reward: { funds: 5000, message: '豪华车订单跑通,本局主线目标完成。', isFinale: true },
@@ -1204,7 +1204,7 @@
   // V15: 政策事件框架(按游戏绝对时间触发的链式事件)
   // 与现有 EVENTS(按 7 天周期 + 抽签触发)完全独立。
   // 设计为可扩展结构,V1 只填监管整改一个事件,后续疫情/油价/限号等可复用。
-  // 详见「监管整改机制设计-V1.md」。
+  // 详见「docs/监管整改机制设计-V1.md」。
   const POLICY_GOV_BAN = {
     id: 'gov_ban',
     title: '监管整改',
@@ -1381,10 +1381,12 @@
   // 每个 gate 控制一个 UI 入口(按钮/区块)的可见性,触发条件分:
   //   - mission:某主线任务完成时解锁
   //   - day:游戏天数 >= 阈值时解锁
-  // gate 触发时按需弹 UnlockSplash 教学卡片,辅助信息可 splash:false 静默开放
+  // gate 触发时按需弹 UnlockSplash 教学卡片;辅助信息可 splash:false 静默开放,
+  // 位置明确的新入口可用 splash:false + spotlight:true 在真实 UI 区域提示。
   const UI_GATES = [
     {
       id: 'shop_btn',
+      kicker: '可以买车了',
       title: '购买新车',
       desc: '第 10 天可以开始扩张运力。先买一辆便宜车补空位,再招司机把第三个车组跑起来。',
       hint: '车队面板的「+ 买车」',
@@ -1416,21 +1418,23 @@
     },
     {
       id: 'service_training_guide',
+      kicker: '该补服务了',
       title: '口碑下滑,提升服务',
-      desc: '最近口碑连续下跌超过 10 点。现在应该补服务质量,让好评率把口碑拉回来。',
-      hint: '右侧调度台 · 服务质量提升',
+      desc: '最近口碑连续下跌超过 10 点。请在右侧调度台逐个选司机,点击「服务」旁的 + 做服务质量提升,先给每名司机补一次。',
+      hint: '右侧调度台 · 司机档案 · 服务 +',
       trigger: { type: 'reputation_drop', value: 10 },
     },
     {
       id: 'tryrate_card',
       title: '接单诊断',
-      desc: '司机档案里会多出三项状态:订单机会、接单意愿、可接订单。单子少时,先看是哪一项拖住了车队。',
+      desc: '司机档案里会多出三项状态:订单量、积极性、可接订单。单子少时,先看是哪一项拖住了车队。',
       hint: '右侧调度台 · 司机档案',
       trigger: { type: 'mission', value: 'm5_third_crew' },
       splash: false,
     },
     {
       id: 'salary_raise',
+      kicker: '该留住司机了',
       title: '调薪 — 挽留低忠诚司机',
       desc: '有司机忠诚跌破离队风险线了。忠诚行旁多了「+」按钮,可主动给司机加薪挽留。',
       hint: '右侧调度台 · 忠诚行',
@@ -1442,6 +1446,8 @@
       desc: '第三个车组组好后,你已经会买车和招人了。现在可以在司机档案底部解雇司机或卖车止损,这些操作仍需二次确认。',
       hint: '右侧调度台 · 司机档案底部',
       trigger: { type: 'mission', value: 'm5_third_crew' },
+      splash: false,
+      spotlight: true,
     },
   ];
 

@@ -84,7 +84,7 @@ function InspectorEmpty({ state }) {
   );
 }
 
-function LogInspector({ state }) {
+function LogInspector({ state, embedded = false }) {
   const scrollRef = useRef(null);
   const followLatestRef = useRef(true);
   const logs = state.log || [];
@@ -137,12 +137,14 @@ function LogInspector({ state }) {
   };
 
   return (
-    <div className="panel panel-tight inspector-panel log-inspector">
-      <div className="panel-header">
-        <span className="panel-title">事件日志</span>
-        <span className="panel-sub">时间正序 · 最新在底部</span>
-      </div>
-      <div className="inspector-scroll log-inspector-scroll" ref={scrollRef} onScroll={handleLogScroll}>
+    <div className={embedded ? 'city-log-view log-inspector' : 'panel panel-tight inspector-panel log-inspector'}>
+      {!embedded && (
+        <div className="panel-header">
+          <span className="panel-title">事件日志</span>
+          <span className="panel-sub">时间正序 · 最新在底部</span>
+        </div>
+      )}
+      <div className={`${embedded ? 'city-log-scroll' : 'inspector-scroll'} log-inspector-scroll`} ref={scrollRef} onScroll={handleLogScroll}>
         {logs.length === 0 ? (
           <div className="inspector-card log-empty-card">
             <div className="inspector-section-title">暂无记录</div>
@@ -162,29 +164,6 @@ function LogInspector({ state }) {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function InspectorTabs({ active, onChange }) {
-  return (
-    <div className="inspector-tabs" role="tablist" aria-label="调度台视图">
-      <button
-        className={active === 'details' ? 'active' : ''}
-        onClick={() => onChange('details')}
-        role="tab"
-        aria-selected={active === 'details'}
-      >
-        调整
-      </button>
-      <button
-        className={active === 'log' ? 'active' : ''}
-        onClick={() => onChange('log')}
-        role="tab"
-        aria-selected={active === 'log'}
-      >
-        日志
-      </button>
     </div>
   );
 }
@@ -323,6 +302,8 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
   const canTrain = E.isUIGateUnlocked(state, 'training_actions');
   const canRaiseSalary = E.isUIGateUnlocked(state, 'salary_raise');
   const showTryRateCard = E.isUIGateUnlocked(state, 'tryrate_card');
+  const riskActionsUnlocked = E.isUIGateUnlocked(state, 'risk_actions');
+  const riskActionsSpotlight = state.spotlight?.gateId === 'risk_actions';
   const [showVehicleSwap, setShowVehicleSwap] = useState(false);
   if (!driver && !inspectedVehicle) return null;
   const vehicle = driver ? vehicles.find((v) => v.id === driver.vehicleId) : inspectedVehicle;
@@ -344,11 +325,11 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
     <div className="panel panel-tight inspector-panel driver-inspector crew-inspector">
       <div className="panel-header">
         <span className="panel-title">车组详情</span>
-        <span className="panel-sub">{driver ? '概览 / 档案 / 训练' : '分配司机 / 车辆订单'}</span>
+        {!driver && <span className="panel-sub">分配司机 / 车辆订单</span>}
       </div>
       <div className="inspector-scroll driver-inspector-grid">
         {/* V15.17:hero 跟左侧车队卡完全一致 — 头像 + 名字+车型 meta + 忠诚 chip
-            身份/月薪/接单诊断移到下方独立「司机档案」卡 */}
+            月薪/接单诊断移到下方独立「司机档案」卡 */}
         <div className="inspector-hero crew-hero">
           <div className="crew-overview-row crew-card-row">
             {driver ? (
@@ -407,15 +388,11 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
           </div>
         </div>
 
-        {/* V15.17:司机档案卡 — 整合身份 + 月薪 + 接单诊断(原 tryrate-card 合并进来) */}
+        {/* V15.17:司机档案卡 — 整合月薪 + 接单诊断(原 tryrate-card 合并进来) */}
         {driver && (
           <div className="inspector-section">
             <div className="inspector-section-title">司机档案</div>
             <div className="driver-detail-card">
-              <div className="driver-detail-row">
-                <span className="driver-detail-label">身份</span>
-                <span className="driver-detail-value">{getDriverMetaLine(driver)}</span>
-              </div>
               <div className="driver-detail-row">
                 <span className="driver-detail-label">月薪</span>
                 <span className="driver-detail-value">¥{driver.salary.toLocaleString()}</span>
@@ -433,7 +410,6 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                         </div>
                       ))}
                     </div>
-                    <div className="tryrate-hint">单子少时,先看订单机会、接单意愿和可接订单。</div>
                   </>
                 );
               })()}
@@ -524,8 +500,14 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
         {/* V15.22: 换车/分配、解雇、卖车统一收到底部,避免训练区被低频操作打断。
             V15.40b:组建第三车组后解锁解雇/卖车,并保留二次确认。 */}
         {driver && (
-          <details className="inspector-section inspector-other-actions" open>
-            <summary className="inspector-section-title">其他操作</summary>
+          <div
+            className={`inspector-section inspector-other-actions ${riskActionsSpotlight ? 'ui-spotlight' : ''}`}
+            onClick={riskActionsSpotlight ? () => dispatch({ type: 'ACK_SPOTLIGHT', gateId: 'risk_actions' }) : undefined}
+          >
+            <div className="inspector-section-title">其他操作</div>
+            {riskActionsSpotlight && (
+              <div className="inspector-inline-unlock">新入口: 解雇和卖车已开放</div>
+            )}
             <div className="inspector-other-action-list">
               <div className="vehicle-manage-card">
                 <div>
@@ -536,7 +518,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                   {vd ? '换车' : '分配'}
                 </button>
               </div>
-              {E.isUIGateUnlocked(state, 'risk_actions') && canFireDriver && (
+              {riskActionsUnlocked && canFireDriver && (
                 <button className="btn btn-ghost btn-danger"
                   onClick={() => {
                     const severance = driver.salary * 2;
@@ -552,7 +534,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                   解雇 {driver.name}(补偿 ¥{(driver.salary * 2).toLocaleString()})
                 </button>
               )}
-              {E.isUIGateUnlocked(state, 'risk_actions') && canSellVehicle && (() => {
+              {riskActionsUnlocked && canSellVehicle && (() => {
                 const refund = Math.round(vd.price * 0.6);
                 return (
                   <button className="btn btn-ghost btn-danger"
@@ -571,7 +553,7 @@ function CrewInspector({ driver, vehicle: inspectedVehicle, vehicles, drivers, d
                 );
               })()}
             </div>
-          </details>
+          </div>
         )}
       </div>
     </div>

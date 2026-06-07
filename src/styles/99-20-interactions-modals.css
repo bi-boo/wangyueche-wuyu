@@ -152,8 +152,7 @@
   .order-ticket-kind,
   .order-ticket-zone,
   .cc-badge,
-  .ts-sub,
-  .topbar-stat .ts-rep-sub {
+  .ts-sub {
     border-radius: 0 !important;
     border: 1px solid var(--ink) !important;
     box-shadow: 1px 1px 0 rgba(42,35,32,0.18) !important;
@@ -316,12 +315,6 @@
   .roadmap-focus-tag {
     background: var(--ink) !important;
     color: var(--gold) !important;
-  }
-
-  .topbar-stat .ts-rep-sub {
-    background: #FFE7E5 !important;
-    color: var(--warn) !important;
-    border-color: var(--warn) !important;
   }
 
   .dispatch-state-badge.running,

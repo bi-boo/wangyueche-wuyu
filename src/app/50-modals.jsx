@@ -107,6 +107,83 @@ function EventResourceSnapshot({ state, thirdLabel, thirdValue, thirdTone = '' }
   );
 }
 
+function getEventLoyaltyDeltaBounds(event, state) {
+  if (!event?.options || !state) return null;
+  const deltas = [];
+  event.options.forEach((option) => {
+    const eff = previewEventEffect(event, option, state);
+    [eff.allLoyalty, eff.trustLoyalty, eff.accidentRisk?.allLoyalty, eff.accidentRisk?.trustLoyalty]
+      .forEach((delta) => {
+        if (typeof delta === 'number' && delta !== 0) deltas.push(delta);
+      });
+  });
+  if (deltas.length === 0) return null;
+  return {
+    minDelta: Math.min(...deltas),
+    maxDelta: Math.max(...deltas),
+  };
+}
+
+function EventLoyaltySnapshot({ event, state }) {
+  const deltaBounds = getEventLoyaltyDeltaBounds(event, state);
+  const drivers = Array.isArray(state?.drivers) ? state.drivers : [];
+  if (!deltaBounds || drivers.length === 0) return null;
+  const { minDelta, maxDelta } = deltaBounds;
+  const sortedDrivers = [...drivers].sort((a, b) => (a.loyalty ?? 50) - (b.loyalty ?? 50));
+  const loyaltyValues = sortedDrivers.map((driver) => driver.loyalty ?? 50);
+  const minLoyalty = Math.min(...loyaltyValues);
+  const avgLoyalty = Math.round(loyaltyValues.reduce((sum, loyalty) => sum + loyalty, 0) / loyaltyValues.length);
+  const hasNegativeOption = minDelta < 0;
+  const lowestAfter = hasNegativeOption
+    ? Math.min(...sortedDrivers.map((driver) => Math.max(0, Math.min(100, (driver.loyalty ?? 50) + minDelta))))
+    : null;
+  const riskAfter = hasNegativeOption
+    ? sortedDrivers.filter((driver) => {
+        const nextLoyalty = Math.max(0, Math.min(100, (driver.loyalty ?? 50) + minDelta));
+        const quitLine = E.getDriverQuitLine ? E.getDriverQuitLine(driver) : 30;
+        return nextLoyalty < quitLine;
+      }).length
+    : 0;
+  const positiveText = maxDelta > 0 ? `最高可加 ${maxDelta}` : '';
+  const negativeText = hasNegativeOption ? `扣减后最低 ${lowestAfter}` : '';
+  const summary = [
+    `最低 ${minLoyalty}`,
+    `平均 ${avgLoyalty}`,
+    `${drivers.length} 人`,
+    negativeText || positiveText,
+  ].filter(Boolean).join(' · ');
+  return (
+    <div className="event-loyalty-snapshot" aria-label="当前司机忠诚">
+      <div className="event-loyalty-head">
+        <span className="event-loyalty-title">当前司机忠诚</span>
+        <span className="event-loyalty-summary">{summary}</span>
+      </div>
+      <div className="event-loyalty-list">
+        {sortedDrivers.map((driver) => {
+          const loyalty = driver.loyalty ?? 50;
+          const meta = getLoyaltyMeta(driver);
+          const nextLoyalty = hasNegativeOption ? Math.max(0, Math.min(100, loyalty + minDelta)) : null;
+          const nextMeta = hasNegativeOption ? getLoyaltyMeta({ ...driver, loyalty: nextLoyalty }) : null;
+          return (
+            <span key={driver.id} className={`event-loyalty-chip ${hasNegativeOption ? nextMeta.cls : meta.cls}`} title={`${driver.name} · ${meta.label}`}>
+              <span>{driver.name}</span>
+              <strong>{loyalty}</strong>
+              {hasNegativeOption && <em>→ {nextLoyalty}</em>}
+            </span>
+          );
+        })}
+      </div>
+      {hasNegativeOption && (
+        <div className={`event-loyalty-risk ${riskAfter > 0 ? 'danger' : ''}`}>
+          {riskAfter > 0
+            ? `若选择扣忠诚方案,${riskAfter} 名司机会低于离队线`
+            : '扣忠诚会影响接单积极性,优先看最低忠诚司机'}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // V15.16:调薪弹窗 — 玩家手动给单个司机调薪,月薪永久上调,按 pct 计算忠诚变化
 // 1-3% 侮辱性涨薪(忠诚减) / 4% 中性 / 5-49% 线性加 / 50% 拉满
 function SalaryRaiseModal({ driver, onClose, onConfirm }) {
@@ -399,6 +476,7 @@ function EventModal({ event, state, onResolve, onResolveInvestor }) {
           )}
         </div>
         <EventResourceSnapshot state={state} />
+        <EventLoyaltySnapshot event={event} state={state} />
         <div className="modal-options">
           {event.options.map((o, i) => {
             const eff = previewEventEffect(event, o, state);

@@ -277,8 +277,8 @@
     position: absolute;
     top: calc(100% + 10px);
     left: 50%;
-    width: min(430px, calc(100vw - 32px));
-    padding: 12px 14px;
+    width: min(360px, calc(100vw - 32px));
+    padding: 10px 12px;
     background: var(--card);
     border: 2px solid var(--ink);
     box-shadow: 3px 3px 0 rgba(42,35,32,0.22);
@@ -313,21 +313,21 @@
     transform: translateX(-50%) translateY(0);
   }
   .rep-help-title {
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     color: var(--ink);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 950;
     line-height: 1;
   }
   .rep-help-row {
     display: grid;
-    grid-template-columns: 58px minmax(0, 1fr);
-    gap: 8px;
-    padding: 7px 0;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 7px;
+    padding: 5px 0;
     border-top: 1px dashed rgba(42,35,32,0.22);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
-    line-height: 1.38;
+    line-height: 1.32;
   }
   .rep-help-row strong {
     color: var(--ink);
@@ -376,15 +376,6 @@
     border: 0;
     padding: 0;
     color: var(--ink-3);
-  }
-
-  .topbar-stat .ts-rep-sub {
-    top: 6px !important;
-    right: 8px !important;
-    bottom: auto !important;
-    max-width: 86px;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .ts-supply-axis {

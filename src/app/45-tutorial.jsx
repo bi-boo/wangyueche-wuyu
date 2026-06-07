@@ -3,16 +3,10 @@ function Tutorial({ onClose }) {
   const [measuredSpot, setMeasuredSpot] = React.useState(null);
   const STEPS = [
     {
-      tag: '开局',
-      title: '把两辆出租车先跑起来',
-      text: <>你现在有 <strong>¥10,000</strong>、<strong>2 名司机</strong> 和 <strong>2 辆出租车</strong>。第一局先别想复杂经营,目标就是让车队开始接单、赚钱、涨口碑。</>,
-      bubble: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
-    },
-    {
       spotSelector: '.topbar-kpis',
       tag: '状态',
-      title: '先看钱和口碑',
-      text: <>开局先看三件事:<strong>时间</strong>决定结算节奏,<strong>资金</strong>不能变负,<strong>口碑</strong>越高越容易解锁新片区。</>,
+      title: '车队已经开始接单啦！',
+      text: <>时间往前走,司机会自动接单赚钱;完单拿到好评会涨<strong>口碑</strong>,口碑高了才能解锁新区和更好的订单。</>,
       bubble: { top: 96, left: '50%', transform: 'translateX(-50%)' },
     },
     {
@@ -31,9 +25,9 @@ function Tutorial({ onClose }) {
     },
     {
       spot: { bottom: 20, left: 'calc(50% - 124px)', width: 248, height: 62 },
-      tag: '开始',
-      title: '现在点开始运营',
-      text: <>司机会自动从已解锁片区接单。第一次只需要点<strong>开始运营</strong>;跑起来后再用 2×/4×/8× 压缩等待时间。</>,
+      tag: '速度',
+      title: '这里控制节奏',
+      text: <>司机会自动从已解锁片区接单。你可以随时<strong>暂停</strong>,也可以用 <strong>2×/4×/8×</strong> 压缩等待时间。</>,
       bubble: { bottom: 100, left: '50%', transform: 'translateX(-50%)' },
       isLast: true,
     },

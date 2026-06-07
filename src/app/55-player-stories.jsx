@@ -6,7 +6,7 @@ function PlayerStoryModal({ story, onButton, children, className = '' }) {
   return (
     <div className="modal-overlay player-story-overlay">
       <div className={`modal event-modal player-story-modal ${storyIdClass} ${className}`} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-tag">{story.tag}</div>
+        {!isOpeningStory && <div className="modal-tag">{story.tag}</div>}
         <div className="modal-title">{story.title}</div>
         {story.image && (
           <div className="player-story-image">

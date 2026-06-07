@@ -127,7 +127,7 @@
   }
 
   function tick(state) {
-    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.showTutorial || state.activeStory || state.debtCrisis) return state;
+    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.activeStory || state.debtCrisis) return state;
     let s = { ...state };
     s = openDueMonthlyReport(s);
     if (s.showMonthlyReport) return s;

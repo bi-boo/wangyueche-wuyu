@@ -5,7 +5,8 @@ const { useState, useReducer, useEffect, useRef, useMemo } = React;
 /* ============== 8-bit 音效引擎 ============== */
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let __audioCtx = null;
-let __muted = localStorage.getItem('wycwy-muted') === '1';
+// V15.41v:音效成为默认体验,不再提供暂停菜单静音开关。浏览器仍需要首次点击后解锁音频。
+let __muted = false;
 let __audioUnlocked = false;
 const SFX_FILES = { coin: 'assets/audio/coin-pickup.wav' };
 const __sfxAudio = {};
@@ -103,13 +104,6 @@ const SFX = {
   },
   warn: () => beep({ freq: 220, duration: 0.15, type: 'sawtooth', volume: 0.05 }),
 };
-function setMuted(v) {
-  __muted = v;
-  localStorage.setItem('wycwy-muted', v ? '1' : '0');
-  if (!v) unlockAudio();
-}
-function isMuted() { return __muted; }
-
 function getDriverRoleLabel(driver) {
   return driver?.bgName || '';
 }

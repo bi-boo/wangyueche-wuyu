@@ -367,18 +367,13 @@
     color: var(--ink);
   }
   .pause-menu-titlebar {
-    display: grid;
-    grid-template-columns: minmax(72px, auto) 1fr minmax(72px, auto);
+    display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 12px;
     background: var(--sub);
     color: var(--ink);
     padding: 10px 14px;
     border-bottom: 2px solid var(--line-ui);
-  }
-  .pause-menu-titlebar::after {
-    content: "";
-    min-width: 72px;
   }
   .pause-menu-titlebar strong {
     font-size: 22px;
@@ -386,22 +381,17 @@
     text-align: center;
     letter-spacing: 0;
   }
-  .pause-menu-state {
+  .pause-command-status {
     display: inline-flex;
     align-items: center;
-    justify-content: flex-start;
     gap: 6px;
-    justify-self: start;
+    margin-bottom: 3px;
     color: var(--ink-2);
-    background: transparent;
-    border: 0;
-    padding: 0;
     font-weight: 900;
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1;
-    cursor: default;
   }
-  .pause-menu-state::before {
+  .pause-command-status::before {
     content: "";
     width: 7px;
     height: 7px;

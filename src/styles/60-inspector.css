@@ -137,7 +137,7 @@
     border-radius: 2px;
     box-shadow: 2px 2px 0 rgba(42,35,32,0.12);
   }
-  /* V15.17:司机详情卡 — hero 之外独立 section,整合背景/月薪/接单诊断 */
+  /* V15.17:司机详情卡 — hero 之外独立 section,整合月薪/接单诊断 */
   .driver-detail-card {
     padding: 10px 12px;
     display: grid;
@@ -285,33 +285,26 @@
     color: var(--ink-3);
     line-height: 1.4;
   }
-  /* V15.22: 底部其他操作区。换车保持常规动作样式,解雇/卖车保留红色按钮。 */
-  details.inspector-other-actions {
+  /* V15.41h: 底部其他操作区不再折叠。换车保持常规动作样式,解雇/卖车保留红色按钮。 */
+  .inspector-other-actions {
     padding-top: 0;
     border-top: 1px dashed var(--ink-1);
   }
-  details.inspector-other-actions[open] {
+  .inspector-other-actions {
     padding-top: 12px;
   }
-  details.inspector-other-actions summary {
-    cursor: pointer;
-    list-style: none;
+  .inspector-other-actions .inspector-section-title {
     padding: 8px 0 6px;
-    user-select: none;
   }
-  details.inspector-other-actions summary::-webkit-details-marker {
-    display: none;
-  }
-  details.inspector-other-actions summary::after {
-    content: '▾';
-    margin-left: 8px;
-    font-size: 11px;
-    color: var(--ink-3);
-    display: inline-block;
-    transition: transform 0.15s ease;
-  }
-  details.inspector-other-actions[open] summary::after {
-    transform: rotate(180deg);
+  .inspector-inline-unlock {
+    margin: 0 0 8px;
+    padding: 7px 9px;
+    background: rgba(255, 217, 61, 0.18);
+    border: 1px solid var(--accent);
+    color: var(--accent-deep);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.35;
   }
   .inspector-other-action-list {
     display: grid;

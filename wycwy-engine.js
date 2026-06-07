@@ -48,7 +48,6 @@
       && !state.activePolicyDecision
       && !state.activePlayerStory
       && !state.activeStory
-      && !state.showTutorial
       && !state.showMonthlyReport
       && !state.debtCrisis
       && !state.gameOver;
@@ -63,7 +62,10 @@
     const now = Date.now();
     const prev = state.realTime || {};
     const alreadyStarted = !!prev.startedAt;
-    const shouldStart = alreadyStarted || state.hasStarted || actionType === 'SET_SPEED';
+    const shouldStart = alreadyStarted
+      || state.hasStarted
+      || actionType === 'SET_SPEED'
+      || actionType === 'PLAYER_STORY_SHOWN';
     const startedAt = shouldStart ? (prev.startedAt || now) : null;
     const lastUpdatedAt = prev.lastUpdatedAt || now;
     const delta = alreadyStarted ? Math.max(0, now - lastUpdatedAt) : 0;
@@ -610,14 +612,12 @@
   }
 
   function rollGoodReview(driver, vehicle) {
-    // V12: 服务系数 0.005 → 0.008,让"练服务"对好评率有更明显感知
-    const base = 0.5 + driver.stats.service * 0.008;
-    return Math.random() < base;
+    return Math.random() < getDriverGoodReviewRate(driver);
   }
 
-  // V12: 计算司机服务对应的好评率(用于 UI 展示和外部调用)
+  // 服务值直接对应好评率,稀有度服务上限会真实限制好评上限。
   function getDriverGoodReviewRate(driver) {
-    return Math.min(1, 0.5 + (driver.stats.service || 0) * 0.008);
+    return cap((driver?.stats?.service || 0) / 100, 0, 1);
   }
 
   function getDriverLoyaltyMultiplier(driver) {
@@ -855,7 +855,7 @@
       seenStories: loadSeenStories(),
       lastStoryDay: -999,
       // V15: 政策事件框架(按游戏绝对时间触发的链式黑天鹅事件)
-      // 详见「监管整改机制设计-V1.md」。仅本局有效,RESET 时重置。
+      // 详见「docs/监管整改机制设计-V1.md」。仅本局有效,RESET 时重置。
       policyState: {
         govBan: {
           notice1Fired: false,
@@ -1013,14 +1013,18 @@
     if (!gate || isUIGateUnlocked(state, gate.id)) return state;
     // V15.17:解锁时强制暂停 + 设 spotlight 让玩家关闭 splash 后能找到入口。
     // V15.22:splash=false 的辅助信息静默开放,避免同一阶段连续弹窗。
+    // V15.41p:splash=false + spotlight=true 可直接在真实入口上做非遮挡提示。
     const untilHour = (state.day || 1) * 24 + (state.hour || 6) + 12;
     let s = {
       ...state,
       unlockedUIGates: [...(state.unlockedUIGates || []), gate.id],
     };
-    if (gate.splash !== false && !s.activeUnlockSplash) {
-      s.paused = true;
+    const shouldShowSplash = gate.splash !== false && !s.activeUnlockSplash;
+    if (shouldShowSplash || gate.spotlight === true) {
       s.spotlight = { gateId: gate.id, untilHour };
+    }
+    if (shouldShowSplash) {
+      s.paused = true;
       s.activeUnlockSplash = gate;
     }
     s = pushLog(s, `🔓 解锁:${gate.title} — ${gate.hint}`, 'event');
@@ -1394,7 +1398,7 @@
   }
 
   function tick(state) {
-    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.showTutorial || state.activeStory || state.debtCrisis) return state;
+    if (state.gameOver || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.activeStory || state.debtCrisis) return state;
     let s = { ...state };
     s = openDueMonthlyReport(s);
     if (s.showMonthlyReport) return s;
@@ -2085,7 +2089,7 @@
 
   // === V15: 政策事件框架(按游戏绝对时间触发的链式黑天鹅事件) ===
   // 设计抽象为可扩展结构,V1 只填监管整改一个事件。
-  // 详见「监管整改机制设计-V1.md」。
+  // 详见「docs/监管整改机制设计-V1.md」。
 
   function getPolicyDef(eventId) {
     return (POLICY_EVENTS || []).find((e) => e.id === eventId);
@@ -3587,11 +3591,14 @@
         const story = state.activePlayerStory;
         const showTutorialNext = story.id === 'opening_layoff' && !action.skipTutorial;
         const allGateIds = (UI_GATES || []).map((g) => g.id);
+        const isOpeningStory = story.id === 'opening_layoff';
         const next = {
           ...state,
           activePlayerStory: null,
           showTutorial: showTutorialNext,
-          paused: true,
+          paused: isOpeningStory ? false : true,
+          hasStarted: isOpeningStory ? true : state.hasStarted,
+          speed: isOpeningStory ? (state.speed || 1) : state.speed,
           unlockedUIGates: action.skipTutorial ? allGateIds : state.unlockedUIGates,
           activeUnlockSplash: action.skipTutorial ? null : state.activeUnlockSplash,
           spotlight: action.skipTutorial ? null : state.spotlight,
@@ -3601,7 +3608,7 @@
           type: 'PLAYER_STORY_SHOWN',
           label: `玩家看完主线故事: ${story.title}`,
           before: state,
-          details: { storyId: story.id, showTutorial: showTutorialNext },
+          details: { storyId: story.id, showTutorial: showTutorialNext, startedRun: isOpeningStory },
         });
       }
       case 'TRAIN': return doTrain(state, action.driverId, action.trainingId);

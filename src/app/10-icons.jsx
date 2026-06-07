@@ -96,7 +96,7 @@ const CITY_MAP_IMAGE = 'assets/maps/city-map-clean-v1.png';
 function CityMap({ zones, drivers, state, selectedZoneId, onSelectZone }) {
   const floatGains = state?.floatGains || [];
   return (
-    <svg viewBox="0 0 100 100" className="city-map-svg" preserveAspectRatio="xMidYMid meet">
+    <svg viewBox="0 0 100 100" className="city-map-svg" preserveAspectRatio="xMidYMin meet">
       <defs>
         {/* V14.7.1: 战争迷雾 — 加强模糊半径(0.9 → 1.6)让边缘更柔,
             外溢区域扩大到 ±30% 避免雾被裁切。雾色改用项目主墨色调和暖色底图。 */}
@@ -138,13 +138,14 @@ function CityMap({ zones, drivers, state, selectedZoneId, onSelectZone }) {
             {points ? (
               <polygon
                 points={points}
-                fill={unlocked ? z.color : '#2A2320'}
-                opacity={unlocked ? '0.12' : '0.45'}
+                fill={unlocked ? '#FFF8E7' : '#2A2320'}
+                opacity={unlocked ? '0.01' : '0.36'}
                 filter={!unlocked ? 'url(#zone-fog)' : undefined}
+                pointerEvents="all"
               />
             ) : (
-              <circle cx={z.x} cy={z.y} r={10} fill={unlocked ? z.color : '#2A2320'} opacity={unlocked ? '0.12' : '0.45'}
-                filter={!unlocked ? 'url(#zone-fog)' : undefined} />
+              <circle cx={z.x} cy={z.y} r={10} fill={unlocked ? '#FFF8E7' : '#2A2320'} opacity={unlocked ? '0.01' : '0.36'}
+                filter={!unlocked ? 'url(#zone-fog)' : undefined} pointerEvents="all" />
             )}
             {/* V14.6: 删除 heat 圆圈/数字 ; V14.7: 战争迷雾 + 锁/解锁条件合并成单行 */}
             <text className="district-name" x={z.x} y={unlocked ? z.y + 0.6 : z.y - 2.5} fontSize="3.4" textAnchor="middle" fontWeight="800">{z.name}</text>

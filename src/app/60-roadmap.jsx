@@ -61,10 +61,7 @@ function MissionRoutePanel({ state, orderStatusById, onOpenShop }) {
     <>
       <div className="mission-route-focus">
         <div className="mission-route-focus-top">
-          <div>
-            <div className="roadmap-focus-tag">{currentMission ? '当前任务' : '主线完成'}</div>
-            <div className="roadmap-focus-title">{currentMission ? currentMission.title : '主线任务已完成'}</div>
-          </div>
+          <div className="roadmap-focus-tag">{currentMission ? '推进提示' : '主线完成'}</div>
           <span className="mission-route-progress">{visibleDoneCount} / {visibleMissions.length}</span>
         </div>
         <div className="mission-route-next">
@@ -212,7 +209,7 @@ function RunHistoryPanel({ onSelect }) {
   if (!currentRun && !history.length) {
     return (
       <div className="run-history-empty">
-        还没有运营记录。开始运营后会保存当前快照,通关或破产后会进入最近 20 局历史。
+        还没有运营记录。通关或破产后,这里会保留最近 20 局的结果。
       </div>
     );
   }
@@ -227,7 +224,7 @@ function RunHistoryPanel({ onSelect }) {
         const isWin = gameOver.type === 'win';
         const isLose = gameOver.type === 'lose';
         const cls = isCurrent ? 'outcome-current' : (isWin ? 'outcome-win' : (isLose ? 'outcome-lose' : 'outcome-end'));
-        const tagText = isCurrent ? '当前快照' : (isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '结束'));
+        const tagText = isCurrent ? '本局记录' : (isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '结束'));
         const titleText = isCurrent
           ? `自动记录 · 第 ${summary.day || '?'} 天 ${String(summary.hour || 0).padStart(2, '0')}:00`
           : isWin
@@ -261,7 +258,7 @@ function RunHistoryDetailModal({ record, onClose }) {
   const isCurrent = record?.result === 'in_progress' || !gameOver.type;
   const isWin = gameOver.type === 'win';
   const isLose = gameOver.type === 'lose';
-  const tag = isCurrent ? '当前快照' : (isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '本局结束'));
+  const tag = isCurrent ? '本局记录' : (isWin ? (gameOver.endingName || '通关') : (isLose ? '破产' : '本局结束'));
   const headline = isCurrent
     ? `自动记录 · 第 ${summary.day || '?'} 天 ${String(summary.hour || 0).padStart(2, '0')}:00`
     : isWin

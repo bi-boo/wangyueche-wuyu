@@ -142,7 +142,7 @@
       seenStories: loadSeenStories(),
       lastStoryDay: -999,
       // V15: 政策事件框架(按游戏绝对时间触发的链式黑天鹅事件)
-      // 详见「监管整改机制设计-V1.md」。仅本局有效,RESET 时重置。
+      // 详见「docs/监管整改机制设计-V1.md」。仅本局有效,RESET 时重置。
       policyState: {
         govBan: {
           notice1Fired: false,
@@ -300,14 +300,18 @@
     if (!gate || isUIGateUnlocked(state, gate.id)) return state;
     // V15.17:解锁时强制暂停 + 设 spotlight 让玩家关闭 splash 后能找到入口。
     // V15.22:splash=false 的辅助信息静默开放,避免同一阶段连续弹窗。
+    // V15.41p:splash=false + spotlight=true 可直接在真实入口上做非遮挡提示。
     const untilHour = (state.day || 1) * 24 + (state.hour || 6) + 12;
     let s = {
       ...state,
       unlockedUIGates: [...(state.unlockedUIGates || []), gate.id],
     };
-    if (gate.splash !== false && !s.activeUnlockSplash) {
-      s.paused = true;
+    const shouldShowSplash = gate.splash !== false && !s.activeUnlockSplash;
+    if (shouldShowSplash || gate.spotlight === true) {
       s.spotlight = { gateId: gate.id, untilHour };
+    }
+    if (shouldShowSplash) {
+      s.paused = true;
       s.activeUnlockSplash = gate;
     }
     s = pushLog(s, `🔓 解锁:${gate.title} — ${gate.hint}`, 'event');

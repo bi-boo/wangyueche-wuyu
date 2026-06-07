@@ -35,7 +35,7 @@
   }
   .mission-route-focus-top {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
   }
@@ -54,7 +54,7 @@
     grid-template-columns: auto minmax(0, 1fr);
     gap: 8px;
     align-items: start;
-    margin-top: 8px;
+    margin-top: 10px;
     color: var(--ink);
     line-height: 1.5;
   }

@@ -32,7 +32,7 @@ function getStatOrderLinks(stat, currentValue, vehicleData) {
 
 function getStatTrainHint(stat, currentValue, vehicleData, goodRate) {
   if (stat === 'service') {
-    return `当前好评率约 ${goodRate}%,好评会涨城市口碑,口碑高才有更多好单`;
+    return `好评率 ${goodRate}%,好评涨口碑,口碑高出好单`;
   }
   // V14.67: 从 ORDERS.req 动态推导门槛,避免数值后台改门槛后提示撒谎。
   const thresholds = ORDERS
@@ -42,12 +42,12 @@ function getStatTrainHint(stat, currentValue, vehicleData, goodRate) {
     const airport = thresholds.find((o) => o.id === 'airport') || thresholds[0];
     const luxury = thresholds.find((o) => o.id === 'luxury') || thresholds[thresholds.length - 1];
     if (airport && currentValue < airport.req[stat]) {
-      return `车技到 ${airport.req[stat]} 可接专车订单,到 ${luxury.req[stat]} 可接豪华车订单`;
+      return `车技到 ${airport.req[stat]} 可接${airport.name},到 ${luxury.req[stat]} 可接${luxury.name}`;
     }
     if (luxury && currentValue < luxury.req[stat]) {
-      return `专车订单已能接,车技到 ${luxury.req[stat]} 可接豪华车订单`;
+      return `${airport.name}已能接,车技到 ${luxury.req[stat]} 可接${luxury.name}`;
     }
-    return '高价订单门槛已达,继续练能提高专车和豪华车收入';
+    return '高价订单门槛已达,继续练能提高高价单收入';
   }
   const reqHints = thresholds.map((o) => `${o.name}需${getDriverStatLabel(stat)}${o.req[stat]}`);
   return reqHints.length > 0 ? reqHints.join(',') : '提升此属性可解锁更高级订单';
@@ -75,15 +75,15 @@ function getOrderShortName(order) {
 
 function getOrderOpportunityDiagnosis(reputation) {
   if (reputation >= 520) {
-    return { key: 'opportunity', label: '订单机会', state: '很多', tone: 'strong', hint: '高价片区更活跃,好单更多' };
+    return { key: 'opportunity', label: '订单量', state: '很多', tone: 'strong', hint: '高价片区更活跃,好单更多' };
   }
   if (reputation >= 180) {
-    return { key: 'opportunity', label: '订单机会', state: '正常', tone: 'normal', hint: '订单够用,继续稳住好评' };
+    return { key: 'opportunity', label: '订单量', state: '正常', tone: 'normal', hint: '订单够用,继续稳住好评' };
   }
   if (reputation >= 90) {
-    return { key: 'opportunity', label: '订单机会', state: '正常', tone: 'normal', hint: '基础片区有单,攒口碑开新区' };
+    return { key: 'opportunity', label: '订单量', state: '正常', tone: 'normal', hint: '基础片区有单,攒口碑开新区' };
   }
-  return { key: 'opportunity', label: '订单机会', state: '偏少', tone: 'warn', hint: '口碑还低,先稳完单和服务' };
+  return { key: 'opportunity', label: '订单量', state: '偏少', tone: 'warn', hint: '口碑还低,服务有待提升' };
 }
 
 function getDriverWillingnessDiagnosis(driver) {
@@ -91,15 +91,15 @@ function getDriverWillingnessDiagnosis(driver) {
   const bonus = driver.orderRateBonus || 1;
   const bonusText = bonus > 1 ? `,自带人气加成` : '';
   if (loyalty >= 80) {
-    return { key: 'willingness', label: '接单意愿', state: '很高', tone: 'strong', hint: `忠诚高,愿意多接单${bonusText}` };
+    return { key: 'willingness', label: '积极性', state: '很高', tone: 'strong', hint: `忠诚高,愿意多接单${bonusText}` };
   }
   if (loyalty >= 50) {
-    return { key: 'willingness', label: '接单意愿', state: '正常', tone: 'normal', hint: `忠诚正常,不用急着调薪${bonusText}` };
+    return { key: 'willingness', label: '积极性', state: '正常', tone: 'normal', hint: `忠诚正常,不用急着调薪${bonusText}` };
   }
   if (loyalty >= 30) {
-    return { key: 'willingness', label: '接单意愿', state: '偏低', tone: 'warn', hint: `忠诚偏低,可能少接单,建议加薪${bonusText}` };
+    return { key: 'willingness', label: '积极性', state: '偏低', tone: 'warn', hint: `忠诚偏低,建议加薪${bonusText}` };
   }
-  return { key: 'willingness', label: '接单意愿', state: '危险', tone: 'danger', hint: '忠诚危险,少接单且有离职风险' };
+  return { key: 'willingness', label: '积极性', state: '危险', tone: 'danger', hint: '忠诚危险,有离职风险' };
 }
 
 function getOrderAbilityDiagnosis(driver, vehicleData) {

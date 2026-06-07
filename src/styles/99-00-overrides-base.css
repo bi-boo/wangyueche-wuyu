@@ -281,9 +281,9 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  /* V14: 清新地图素材底图 + 数据驱动覆盖层 */
+  /* V15.41c: 地图图片作为主视觉,SVG 只保留交互热区和轻量状态反馈 */
   .city-wrap {
-    background: #D7E7C2 !important;
+    background: #E6D1A3 !important;
   }
 
   .city-map-bg {
@@ -296,8 +296,8 @@
   }
 
   .city-map-svg .district.unlocked polygon {
-    stroke: rgba(255,255,255,0.86);
-    stroke-width: 0.46;
+    stroke: rgba(255,248,231,0.72);
+    stroke-width: 0.34;
     stroke-dasharray: none;
     filter: none;
   }
@@ -312,8 +312,9 @@
   .city-map-svg .district:not(.locked):hover polygon,
   .city-map-svg .district:not(.locked):focus-visible polygon,
   .city-map-svg .district:not(.locked).selected polygon {
-    opacity: 0.24;
-    stroke: #FFFFFF;
+    opacity: 0.16;
+    fill: #FFF8E7;
+    stroke: var(--gold);
     stroke-width: 0.92;
     filter: drop-shadow(0.8px 0.8px 0 rgba(42,35,32,0.24));
   }

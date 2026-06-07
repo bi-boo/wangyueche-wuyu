@@ -26,12 +26,11 @@ function App() {
   const [showRecruit, setShowRecruit] = useState(false);
   const [salaryRaiseDriverId, setSalaryRaiseDriverId] = useState(null);  // V15.16:调薪弹窗目标司机 id
   const [showShop, setShowShop] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState('details');
+  const [opsView, setOpsView] = useState('map');
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [roadmapInitialTab, setRoadmapInitialTab] = useState('missions');
   const [showPauseMenu, setShowPauseMenu] = useState(false);
   const [resumeAfterPauseMenu, setResumeAfterPauseMenu] = useState(false);
-  const [muted, setMutedState] = useState(isMuted());
   const [configUpdated, setConfigUpdated] = useState(false);
   // V14.89: ConfirmModal 替代 native confirm()
   const [confirmOpts, setConfirmOpts] = useState(null);
@@ -46,25 +45,8 @@ function App() {
     };
     return () => ch.close();
   }, []);
-  const [crtOn, setCrtOn] = useState(() => {
-    if (localStorage.getItem('wycwy-visual-version') !== 'v10.3') {
-      localStorage.setItem('wycwy-visual-version', 'v10.3');
-      localStorage.setItem('wycwy-crt', '0');
-      return false;
-    }
-    return localStorage.getItem('wycwy-crt') === '1';
-  });
-  // V15.17:渐进解锁开关 — 默认关(走完整教学),开启后新游戏直接全解锁
-  const [skipOnboarding, setSkipOnboarding] = useState(() => {
-    return localStorage.getItem('wycwy-skip-onboarding') === '1';
-  });
-  const toggleSkipOnboarding = () => {
-    const v = !skipOnboarding;
-    setSkipOnboarding(v);
-    localStorage.setItem('wycwy-skip-onboarding', v ? '1' : '0');
-    // 立刻生效:如果开启,当前 state 一次性解锁所有 gate
-    if (v) dispatch({ type: 'UNLOCK_ALL_GATES' });
-  };
+  // V15.41v:音效与复古滤镜固定默认开启,教学默认开启,不再让玩家在暂停菜单里切换。
+  const skipOnboarding = false;
   // 上一次的关键状态 — 用于差分触发 sfx
   const prevRef = useRef({
     completedTotal: 0,
@@ -117,8 +99,9 @@ function App() {
   // V15: 8× 自适应空白压缩 — 上一 tick 无完单/无日切/无剧情/口碑无变化时,下次间隔压到 50ms;
   // 有事则保持 250ms。其他档位维持固定间隔行为不变。
   const lastTickSnapshotRef = useRef(null);
+  const hasUiBlockingModal = showRecruit || !!state.gachaCards || showShop || showRoadmap || salaryRaiseDriverId !== null || !!confirmOpts;
   useEffect(() => {
-    if (state.paused || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.activeStory || state.showTutorial || state.debtCrisis || state.gameOver) {
+    if (hasUiBlockingModal || state.paused || state.activeEvent || state.activePolicyDecision || state.activePlayerStory || state.activeStory || state.debtCrisis || state.gameOver) {
       lastTickSnapshotRef.current = null;
       return;
     }
@@ -140,7 +123,7 @@ function App() {
     const interval = (state.speed === 8 && !eventful) ? 50 : baseInterval;
     const t = setTimeout(() => dispatch({type: 'TICK'}), interval);
     return () => clearTimeout(t);
-  }, [state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activePlayerStory, state.activeStory, state.showTutorial, state.debtCrisis, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
+  }, [hasUiBlockingModal, state.paused, state.speed, state.activeEvent, state.activePolicyDecision, state.activePlayerStory, state.activeStory, state.debtCrisis, state.gameOver, state.hour, state.day, state.totalCompleted, state.reputation]);
 
   useEffect(() => {
     if (!selectedZoneId) return;
@@ -172,11 +155,13 @@ function App() {
     });
   }, [state.notifications]);
 
-  // CRT toggle
+  // V15.41v:复古滤镜固定开启。
   useEffect(() => {
-    document.body.classList.toggle('crt-on', crtOn);
-    localStorage.setItem('wycwy-crt', crtOn ? '1' : '0');
-  }, [crtOn]);
+    document.body.classList.add('crt-on');
+    localStorage.setItem('wycwy-crt', '1');
+    localStorage.setItem('wycwy-muted', '0');
+    localStorage.setItem('wycwy-skip-onboarding', '0');
+  }, []);
 
   // 音效触发(差分检测)
   useEffect(() => {
@@ -222,12 +207,26 @@ function App() {
     : selectedVehicle;
   const selectedZone = ZONES.find((z) => z.id === selectedZoneId);
   // V14.9: dispatchOffers 已删除,不再 derive selectedZoneOffers
-  const hasFinaleMissionNotice = !state.gameOver && !!state.newMissionComplete?.reward?.isFinale;
-  const showFeedbackStack = !state.gameOver && !!state.newMissionComplete && !hasFinaleMissionNotice;
+  // V15.41r:遮挡式弹窗排队显示。解锁引导可先进入 state,但必须等当前事件/月报/故事/操作弹窗处理完再出现。
+  const hasPrimaryBlockingModal = !!(
+    state.activePlayerStory
+    || state.showTutorial
+    || state.activeEvent
+    || state.activePolicyDecision
+    || state.debtCrisis
+    || state.activeStory
+    || state.showMonthlyReport
+    || state.newEndingUnlocked
+    || state.gameOver
+  );
+  const showUnlockSplash = !!state.activeUnlockSplash && !hasPrimaryBlockingModal && !hasUiBlockingModal;
+  const hasBlockingOverlay = hasPrimaryBlockingModal || hasUiBlockingModal || showUnlockSplash;
+  const hasFinaleMissionNotice = !hasBlockingOverlay && !!state.newMissionComplete?.reward?.isFinale;
+  const showFeedbackStack = !hasBlockingOverlay && !!state.newMissionComplete && !hasFinaleMissionNotice;
 
   // V14.34: 右侧调度台默认落到可操作车组,避免长期显示"从左侧选择车组"空状态。
   useEffect(() => {
-    if (selectedZoneId || inspectorTab === 'log') return;
+    if (selectedZoneId) return;
     const driverStillExists = selectedDriverId && state.drivers.some((d) => d.id === selectedDriverId);
     const vehicleStillExists = selectedVehicleId && state.vehicles.some((v) => v.id === selectedVehicleId);
     if (driverStillExists || vehicleStillExists) return;
@@ -246,24 +245,14 @@ function App() {
       setSelectedDriverId(null);
       setSelectedVehicleId(fallbackVehicle.id);
     }
-  }, [selectedZoneId, inspectorTab, selectedDriverId, selectedVehicleId, state.drivers, state.vehicles]);
+  }, [selectedZoneId, selectedDriverId, selectedVehicleId, state.drivers, state.vehicles]);
 
-  const toggleMute = () => {
-    const v = !muted;
-    setMutedState(v);
-    setMuted(v);
-    if (!v) SFX.click();
-  };
-  const toggleCrt = () => {
-    setCrtOn((v) => !v);
-    SFX.click();
-  };
   const selectZone = (zoneId) => {
     telemetry.trackUiEvent('select_zone', { zoneId });
     setSelectedZoneId(zoneId);
     setSelectedDriverId(null);
     setSelectedVehicleId(null);
-    setInspectorTab('details');
+    setOpsView('map');
     setMobileTab('inspector');
   };
 
@@ -271,7 +260,6 @@ function App() {
     setSelectedDriverId(null);
     setSelectedVehicleId(null);
     setSelectedZoneId(null);
-    setInspectorTab('details');
   };
 
   const openRoadmap = (tab = 'missions') => {
@@ -318,10 +306,6 @@ function App() {
         setShowPauseMenu(false);
         setResumeAfterPauseMenu(false);
         dispatch({ type: 'RESET' });
-        // V15.17:跳过教学开启时,新游戏立刻全解锁
-        if (skipOnboarding) {
-          setTimeout(() => dispatch({ type: 'UNLOCK_ALL_GATES' }), 0);
-        }
       },
     });
   };
@@ -403,8 +387,8 @@ function App() {
             selectedVehicleId={selectedVehicleId}
             selectedVehicle={selectedVehicle}
             selectedDriver={selectedDriver}
-            onSelectDriver={(driverId) => { telemetry.trackUiEvent('select_driver', { driverId }); setSelectedZoneId(null); setSelectedVehicleId(null); setSelectedDriverId(driverId); setInspectorTab('details'); setMobileTab('inspector'); }}
-            onSelectVehicle={(vehicleId) => { telemetry.trackUiEvent('select_vehicle', { vehicleId }); setSelectedZoneId(null); setSelectedDriverId(null); setSelectedVehicleId(vehicleId); setInspectorTab('details'); setMobileTab('inspector'); }}
+            onSelectDriver={(driverId) => { telemetry.trackUiEvent('select_driver', { driverId }); setSelectedZoneId(null); setSelectedVehicleId(null); setSelectedDriverId(driverId); setMobileTab('inspector'); }}
+            onSelectVehicle={(vehicleId) => { telemetry.trackUiEvent('select_vehicle', { vehicleId }); setSelectedZoneId(null); setSelectedDriverId(null); setSelectedVehicleId(vehicleId); setMobileTab('inspector'); }}
             onClearSelection={() => { telemetry.trackUiEvent('clear_selection'); setSelectedZoneId(null); setSelectedDriverId(null); setSelectedVehicleId(null); }}
             onRecruit={() => { telemetry.trackUiEvent('open_recruit_modal'); setShowRecruit(true); }}
             onShop={() => { telemetry.trackUiEvent('open_shop_modal'); setShowShop(true); }}
@@ -415,29 +399,49 @@ function App() {
         <div className="col ops-col">
           <div className="panel city-panel">
             <div className="panel-header">
-              <span className="panel-title">城市订单地图</span>
-              <span className="panel-sub">片区自动匹配 · 小车显示订单去向</span>
+              <span className="panel-title">{opsView === 'map' ? '城市订单地图' : '事件日志'}</span>
+              <div className="city-panel-tabs" role="tablist" aria-label="运营视图">
+                <button
+                  className={opsView === 'map' ? 'active' : ''}
+                  onClick={() => setOpsView('map')}
+                  role="tab"
+                  aria-selected={opsView === 'map'}
+                >
+                  地图
+                </button>
+                <button
+                  className={opsView === 'log' ? 'active' : ''}
+                  onClick={() => setOpsView('log')}
+                  role="tab"
+                  aria-selected={opsView === 'log'}
+                >
+                  日志
+                </button>
+              </div>
             </div>
             <div className="city-wrap">
-              <CityMap
-                zones={ZONES}
-                drivers={state.drivers}
-                hour={state.hour}
-                state={state}
-                selectedZoneId={selectedZoneId}
-                onSelectZone={selectZone}
-              />
-              <RunControlsFloating state={state} dispatch={dispatch} requestConfirm={requestConfirm} />
+              {opsView === 'log' ? (
+                <LogInspector state={state} embedded />
+              ) : (
+                <>
+                  <CityMap
+                    zones={ZONES}
+                    drivers={state.drivers}
+                    hour={state.hour}
+                    state={state}
+                    selectedZoneId={selectedZoneId}
+                    onSelectZone={selectZone}
+                  />
+                  <RunControlsFloating state={state} dispatch={dispatch} requestConfirm={requestConfirm} />
+                </>
+              )}
             </div>
           </div>
         </div>
 
         <div className="col inspector-col">
           <div className="inspector-tab-shell">
-            <InspectorTabs active={inspectorTab} onChange={setInspectorTab} />
-            {inspectorTab === 'log' ? (
-              <LogInspector state={state} />
-            ) : selectedZone ? (
+            {selectedZone ? (
               <ZoneInspector
                 zone={selectedZone}
                 state={state}
@@ -454,8 +458,8 @@ function App() {
                 reputation={state.reputation}
                 state={state}
                 requestConfirm={requestConfirm}
-                onSelectVehicle={(vid) => { telemetry.trackUiEvent('inspector_select_vehicle', { vehicleId: vid }); setSelectedDriverId(null); setSelectedVehicleId(vid); setInspectorTab('details'); }}
-                onSelectDriver={(did) => { telemetry.trackUiEvent('inspector_select_driver', { driverId: did }); setSelectedVehicleId(null); setSelectedDriverId(did); setInspectorTab('details'); }}
+                onSelectVehicle={(vid) => { telemetry.trackUiEvent('inspector_select_vehicle', { vehicleId: vid }); setSelectedDriverId(null); setSelectedVehicleId(vid); }}
+                onSelectDriver={(did) => { telemetry.trackUiEvent('inspector_select_driver', { driverId: did }); setSelectedVehicleId(null); setSelectedDriverId(did); }}
                 onRequestSalaryRaise={(driver) => { telemetry.trackUiEvent('open_salary_raise_modal', { driverId: driver.id }); setSalaryRaiseDriverId(driver.id); }}
               />
             ) : (
@@ -487,8 +491,8 @@ function App() {
         onResolve={(choice) => dispatch({type: 'RESOLVE_DEBT_CRISIS', choice})} />}
       {state.activeStory && <StoryModal story={state.activeStory} drivers={state.drivers} onClose={() => dispatch({type: 'STORY_SHOWN'})} />}
       {state.showMonthlyReport && <MonthlyReportModal report={state.showMonthlyReport} onClose={() => dispatch({type: 'CLOSE_MONTHLY_REPORT'})} />}
-      {/* V15.17:渐进解锁 splash — 不被其他 modal 遮挡,优先级仅次于 gameOver */}
-      {state.activeUnlockSplash && (
+      {/* V15.41r:渐进解锁 splash 排队显示,避免和事件/月报/招募等弹窗叠在一起。 */}
+      {showUnlockSplash && (
         <UnlockSplashModal
           gate={state.activeUnlockSplash}
           onClose={() => dispatch({type: 'CLOSE_UNLOCK_SPLASH'})}
@@ -545,14 +549,8 @@ function App() {
       {showPauseMenu && !state.gameOver && (
         <PauseMenu
           state={state}
-          muted={muted}
-          crtOn={crtOn}
-          skipOnboarding={skipOnboarding}
           onContinue={() => closePauseMenu({ resume: true })}
           onNewGame={startNewGameFromMenu}
-          onToggleMute={toggleMute}
-          onToggleCrt={toggleCrt}
-          onToggleSkipOnboarding={toggleSkipOnboarding}
           onShowTutorial={() => { closePauseMenu({ resume: false }); dispatch({type: 'OPEN_TUTORIAL'}); }}
           onOpenLeaderboard={openLeaderboardFromMenu}
           onExportDiagnostics={() => exportGameDiagnostics(state)}

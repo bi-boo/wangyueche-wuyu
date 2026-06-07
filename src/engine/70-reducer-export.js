@@ -57,11 +57,14 @@
         const story = state.activePlayerStory;
         const showTutorialNext = story.id === 'opening_layoff' && !action.skipTutorial;
         const allGateIds = (UI_GATES || []).map((g) => g.id);
+        const isOpeningStory = story.id === 'opening_layoff';
         const next = {
           ...state,
           activePlayerStory: null,
           showTutorial: showTutorialNext,
-          paused: true,
+          paused: isOpeningStory ? false : true,
+          hasStarted: isOpeningStory ? true : state.hasStarted,
+          speed: isOpeningStory ? (state.speed || 1) : state.speed,
           unlockedUIGates: action.skipTutorial ? allGateIds : state.unlockedUIGates,
           activeUnlockSplash: action.skipTutorial ? null : state.activeUnlockSplash,
           spotlight: action.skipTutorial ? null : state.spotlight,
@@ -71,7 +74,7 @@
           type: 'PLAYER_STORY_SHOWN',
           label: `玩家看完主线故事: ${story.title}`,
           before: state,
-          details: { storyId: story.id, showTutorial: showTutorialNext },
+          details: { storyId: story.id, showTutorial: showTutorialNext, startedRun: isOpeningStory },
         });
       }
       case 'TRAIN': return doTrain(state, action.driverId, action.trainingId);

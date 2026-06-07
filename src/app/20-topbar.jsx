@@ -108,21 +108,8 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
     supplyCls = 'supply-balanced';
     supplyCardCls = 'balanced';
   }
-  // V12: 流失副标 — 直接挂在口碑胶囊下方,把"流失 → 口碑"因果显式化。
-  const todayLost = state.todayLost || 0;
-  const todayRepLoss = state.todayRepLoss || 0;
-  let repSubText = null;
-  let repSubCls = '';
-  let repSubTitle = '';
-  if (todayRepLoss > 0) {
-    repSubText = `流失 −${todayRepLoss}`;
-    repSubTitle = `今日流失 ${todayLost} 单 · 城市口碑 −${todayRepLoss}`;
-    repSubCls = 'rep-sub-warn';
-  } else if (todayLost > 0) {
-    repSubText = `流失 ${todayLost} 单`;
-    repSubTitle = `今日流失 ${todayLost} 单`;
-    repSubCls = 'rep-sub-warn';
-  }
+  // V15.41x:订单流失是“当日累计、日结清零”的过程指标,不再挂在口碑数字旁边;
+  // 顶栏口碑保持稳定读数,流失原因由供给状态、日志和帮助说明承接。
   const unlockedZones = ZONES.filter((z) => E.isZoneUnlocked(state, z));
   const lockedZones = ZONES
     .filter((z) => !E.isZoneUnlocked(state, z))
@@ -161,10 +148,10 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
             <span className="ts-label">时间</span>
             <strong className="ts-value time-value">第 {state.day} 日 {hourText}</strong>
             <span className="ts-sub">{tierName}</span>
-            <TopbarHelp id="time-help-popover" title="时间规则">
-              <HelpRow label="推进">1× 速度下,现实约 {tickSeconds} 秒推进 1 个游戏小时;一天有 24 个游戏小时。</HelpRow>
-              <HelpRow label="倍速">2× / 4× / 8× 会按比例加快时间,也会更快触发接单、流失和事件判断。</HelpRow>
-              <HelpRow label="结算">每天 24:00 做日结;每满 30 天生成月报,统一结算司机工资、补偿和债务等支出。</HelpRow>
+            <TopbarHelp id="time-help-popover" title="时间">
+              <HelpRow label="速度">1× 时约 {tickSeconds} 秒走 1 小时。</HelpRow>
+              <HelpRow label="日结">每天 24:00 进入下一天。</HelpRow>
+              <HelpRow label="月报">每 30 天结算工资和债务。</HelpRow>
             </TopbarHelp>
           </div>
           <div className="ts-stat topbar-stat funds-stat has-help" tabIndex="0" aria-describedby="funds-help-popover" title="资金规则">
@@ -199,10 +186,10 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
                 </span>
               );
             })()}
-            <TopbarHelp id="funds-help-popover" title="资金规则">
-              <HelpRow label="收入">司机完成订单后入账,平台抽成 {commissionText}% 后剩余收入进入资金。</HelpRow>
-              <HelpRow label="支出">招募司机、购买车辆、训练能力、事件选择、还债和解雇补偿都会消耗资金。</HelpRow>
-              <HelpRow label="月结">司机工资按月累计,每满 30 天月报时统一扣除;月末临时扩招会带来额外工资压力。</HelpRow>
+            <TopbarHelp id="funds-help-popover" title="资金">
+              <HelpRow label="收入">完单后入账,已扣平台抽成 {commissionText}%。</HelpRow>
+              <HelpRow label="支出">招人、买车、训练和事件选择会花钱。</HelpRow>
+              <HelpRow label="月结">司机工资每 30 天集中扣一次。</HelpRow>
               {debtSummary.count > 0 && (
                 <HelpRow label="债务">
                   <span className="debt-help-list">
@@ -214,17 +201,17 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
                   </span>
                 </HelpRow>
               )}
-              <HelpRow label="破产">资金 &lt; 0 连续 5 天 → 公司破产。两种常见触发:现金流断裂 / 投资人 Q3 撤资大额扣款。</HelpRow>
+              <HelpRow label="风险">资金 &lt; 0 连续 5 天会破产。</HelpRow>
             </TopbarHelp>
           </div>
-          <div className="ts-stat topbar-stat rep-stat has-help" tabIndex="0" aria-describedby="rep-help-popover" title={repSubTitle || '城市口碑'}>
+          <div className="ts-stat topbar-stat rep-stat has-help" tabIndex="0" aria-describedby="rep-help-popover" title="城市口碑">
             <span className="ts-label">口碑</span>
             <strong className="ts-value green">{repDisplay ?? state.reputation}</strong>
-            {repSubText && <span className={`ts-rep-sub ${repSubCls}`}>{repSubText}</span>}
-            <TopbarHelp id="rep-help-popover" title="口碑规则">
-              <HelpRow label="怎么涨">司机完单拿到好评会累计,每 3 个好评 → 城市口碑 +1;提升服务质量能提高好评率。</HelpRow>
-              <HelpRow label="怎么降">投诉会让口碑 -2;订单 1 小时没人接会流失,每流失 1 单 → 城市口碑 -1。</HelpRow>
-              <HelpRow label="片区">口碑达到门槛会自动解锁片区;跌破门槛会反锁,回升后自动恢复。已解锁:{unlockedZoneText}<br /><span className="rep-help-next">下一片区:{nextZoneText}</span></HelpRow>
+            <TopbarHelp id="rep-help-popover" title="口碑">
+              <HelpRow label="提升">好评会涨口碑,服务越高越容易好评。</HelpRow>
+              <HelpRow label="下降">投诉或订单流失会扣口碑。</HelpRow>
+              <HelpRow label="用途">口碑高会解锁新区和更好订单。</HelpRow>
+              <HelpRow label="下一区"><span className="rep-help-next">{nextZoneText}</span></HelpRow>
             </TopbarHelp>
           </div>
           {E.isUIGateUnlocked(state, 'supply_chip') && (
@@ -249,11 +236,10 @@ function TopBar({ state, fundsDisplay, repDisplay, onOpenPauseMenu }) {
             ) : (
               <span className="ts-sub">{supplySubText}</span>
             )}
-            <TopbarHelp id="supply-help-popover" title="供给规则">
-              <HelpRow label="怎么看">这里看的是车队供给:当前司机和车辆够不够覆盖已解锁片区。绿色表示供给充足,红色表示供给不足。</HelpRow>
-              <HelpRow label="不足">司机太少、车不够或车型不对时,订单没人接就会流失;流失订单会让城市口碑下降。</HelpRow>
-              <HelpRow label="充足">车组足够覆盖当前片区时,显示“供给充足”。此时可以优先解锁更高价片区和订单。</HelpRow>
-              <HelpRow label="建议">供给不足就招司机、买合适车型或训练司机;供给充足就扩张片区和收入结构。</HelpRow>
+            <TopbarHelp id="supply-help-popover" title="供给">
+              <HelpRow label="判断">车队够不够接住当前片区订单。</HelpRow>
+              <HelpRow label="不足">订单没人接会流失,口碑会下降。</HelpRow>
+              <HelpRow label="处理">招司机、买合适车型、训练司机。</HelpRow>
             </TopbarHelp>
           </div>
           )}
