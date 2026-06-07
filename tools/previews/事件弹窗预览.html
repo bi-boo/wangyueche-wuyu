@@ -8,26 +8,26 @@
 <title>事件弹窗预览(实时数据 Storybook)</title>
 <link rel="icon" href="data:,">
 <!-- 预览页直接读取当前 data / engine。弹窗渲染器内置在本页,确保 file:// 双击也能预览。 -->
-<link rel="stylesheet" href="src/styles/00-tokens.css">
-<link rel="stylesheet" href="src/styles/10-base.css">
-<link rel="stylesheet" href="src/styles/20-topbar.css">
-<link rel="stylesheet" href="src/styles/30-modals.css">
-<link rel="stylesheet" href="src/styles/32-shop-coach-notifications.css">
-<link rel="stylesheet" href="src/styles/40-tasks-list.css">
-<link rel="stylesheet" href="src/styles/50-feedback.css">
-<link rel="stylesheet" href="src/styles/60-inspector.css">
-<link rel="stylesheet" href="src/styles/62-inspector-zones.css">
-<link rel="stylesheet" href="src/styles/64-inspector-crew-training.css">
-<link rel="stylesheet" href="src/styles/70-pixel-flytext.css">
-<link rel="stylesheet" href="src/styles/80-map-hud.css">
-<link rel="stylesheet" href="src/styles/82-roadmap-history.css">
-<link rel="stylesheet" href="src/styles/84-fleet-cards.css">
-<link rel="stylesheet" href="src/styles/86-monthly-investor.css">
-<link rel="stylesheet" href="src/styles/90-toggles-recruit.css">
-<link rel="stylesheet" href="src/styles/99-00-overrides-base.css">
-<link rel="stylesheet" href="src/styles/99-10-compact-layout.css">
-<link rel="stylesheet" href="src/styles/99-20-interactions-modals.css">
-<link rel="stylesheet" href="src/styles/99-30-policy-overrides.css">
+<link rel="stylesheet" href="../../src/styles/00-tokens.css">
+<link rel="stylesheet" href="../../src/styles/10-base.css">
+<link rel="stylesheet" href="../../src/styles/20-topbar.css">
+<link rel="stylesheet" href="../../src/styles/30-modals.css">
+<link rel="stylesheet" href="../../src/styles/32-shop-coach-notifications.css">
+<link rel="stylesheet" href="../../src/styles/40-tasks-list.css">
+<link rel="stylesheet" href="../../src/styles/50-feedback.css">
+<link rel="stylesheet" href="../../src/styles/60-inspector.css">
+<link rel="stylesheet" href="../../src/styles/62-inspector-zones.css">
+<link rel="stylesheet" href="../../src/styles/64-inspector-crew-training.css">
+<link rel="stylesheet" href="../../src/styles/70-pixel-flytext.css">
+<link rel="stylesheet" href="../../src/styles/80-map-hud.css">
+<link rel="stylesheet" href="../../src/styles/82-roadmap-history.css">
+<link rel="stylesheet" href="../../src/styles/84-fleet-cards.css">
+<link rel="stylesheet" href="../../src/styles/86-monthly-investor.css">
+<link rel="stylesheet" href="../../src/styles/90-toggles-recruit.css">
+<link rel="stylesheet" href="../../src/styles/99-00-overrides-base.css">
+<link rel="stylesheet" href="../../src/styles/99-10-compact-layout.css">
+<link rel="stylesheet" href="../../src/styles/99-20-interactions-modals.css">
+<link rel="stylesheet" href="../../src/styles/99-30-policy-overrides.css">
 <style>
   html, body { height: 100%; margin: 0; padding: 0; background: #f3eedb; }
   #root { height: 100vh; display: flex; flex-direction: row; overflow: hidden; }
@@ -210,11 +210,18 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<script src="wycwy-data.js"></script>
-<script src="wycwy-engine.js"></script>
+<script src="../../wycwy-data.js"></script>
+<script src="../../wycwy-engine.js"></script>
 
 <script type="text/babel">
   const { useState, useMemo } = React;
+  const PROJECT_ROOT_PREFIX = '../../';
+
+  function resolveProjectPath(path) {
+    if (!path) return path;
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:') || path.startsWith('/')) return path;
+    return `${PROJECT_ROOT_PREFIX}${path}`;
+  }
 
   // 组件未加载时的明确提示(替代空白)
   function ComponentMissingError({ name }) {
@@ -232,7 +239,7 @@
           <div style={{fontSize: 16, fontWeight: 600, marginBottom: 12}}>⚠ 组件 <code>{name}</code> 未定义</div>
           <div>当前预览页没有拿到 <code>{name}</code>。如果你看到这条提示,说明内置预览渲染器也没有启动,请重新打开本文件或检查控制台报错。</div>
           <ul style={{marginTop: 8, paddingLeft: 20}}>
-            <li>确认同目录下存在 <code>wycwy-data.js</code> 和 <code>wycwy-engine.js</code></li>
+            <li>确认项目根目录下存在 <code>wycwy-data.js</code> 和 <code>wycwy-engine.js</code></li>
             <li>刷新后仍异常时,查看 DevTools Console 的第一条红色报错</li>
           </ul>
         </div>
@@ -358,7 +365,7 @@
   function StoryPreviewImage({ story }) {
     return (
       <div className="story-image-frame">
-        <img src={story.image} alt="" draggable="false" />
+        <img src={resolveProjectPath(story.image)} alt="" draggable="false" />
       </div>
     );
   }

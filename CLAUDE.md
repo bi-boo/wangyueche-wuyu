@@ -13,7 +13,7 @@
 
 ---
 
-## 文件结构(V15.42 engine/styles 结构拆分后)
+## 文件结构(V15.42 engine/styles 结构拆分 + 2026-06 目录整理后)
 
 ```
 网约车物语/
@@ -25,6 +25,9 @@
 ├── PRODUCT.md / DESIGN.md       品牌定位与设计系统
 ├── CLAUDE.md                    项目协作约定真实文件
 ├── AGENTS.md                    → CLAUDE.md 软链接
+├── docs/                        辅助设计文档 / 流程速查 / 素材提示词
+├── tools/
+│   └── previews/                本地策划预览工具(事件弹窗 / 事件设计大表)
 ├── dist/                        线上入口构建产物(CSS bundle + React app bundle)
 ├── vendor/                      线上本地化 React production UMD
 ├── src/

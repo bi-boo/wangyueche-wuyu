@@ -1,6 +1,6 @@
   // === V15: 政策事件框架(按游戏绝对时间触发的链式黑天鹅事件) ===
   // 设计抽象为可扩展结构,V1 只填监管整改一个事件。
-  // 详见「监管整改机制设计-V1.md」。
+  // 详见「docs/监管整改机制设计-V1.md」。
 
   function getPolicyDef(eventId) {
     return (POLICY_EVENTS || []).find((e) => e.id === eventId);
